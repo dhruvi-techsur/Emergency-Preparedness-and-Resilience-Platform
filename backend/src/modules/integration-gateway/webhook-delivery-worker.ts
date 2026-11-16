@@ -85,20 +85,62 @@ export async function startWebhookDeliveryWorker(): Promise<void> {
           [decoded.event_type],
         );
 
+        // Tracks whether ANY subscription's delivery attempt for this
+        // message failed. If so, the whole message is nak'd below instead
+        // of acked, so JetStream actually redelivers it — this is what
+        // makes next_retry_at/failure_count a REAL retry mechanism rather
+        // than inert bookkeeping nothing ever consumes (see 01-REVIEW.md
+        // W2: previously every message was unconditionally acked
+        // regardless of delivery outcome, so a failed delivery was lost
+        // permanently after exactly one attempt).
+        let anyFailure = false;
+
         for (const subscription of subs) {
           const idempotencyKey = createHash('sha256')
             .update(`${subscription.id}:${msg.seq}`)
             .digest('hex');
 
-          const inserted = await query<{ id: string }>(
-            `INSERT INTO webhook_deliveries (subscription_id, idempotency_key, event_type, payload)
-             VALUES ($1, $2, $3, $4) ON CONFLICT (subscription_id, idempotency_key) DO NOTHING RETURNING id`,
-            [subscription.id, idempotencyKey, decoded.event_type, JSON.stringify(decoded.payload)],
+          // On a genuinely new delivery, this is the first time this
+          // (subscription_id, idempotency_key) pair is seen. On a JetStream
+          // REDELIVERY of this same message (same msg.seq) after a prior
+          // nak, a row already exists — fetch it instead of relying on
+          // `ON CONFLICT DO NOTHING`'s empty-result as a blanket "already
+          // processed, skip" signal, which would incorrectly skip
+          // re-attempting a row that previously FAILED (the exact case a
+          // retry exists to handle). Only a row that already succeeded is
+          // a true duplicate to ignore.
+          const existing = await query<{ id: string; delivery_status: string }>(
+            `SELECT id, delivery_status FROM webhook_deliveries WHERE subscription_id = $1 AND idempotency_key = $2`,
+            [subscription.id, idempotencyKey],
           );
 
-          if (inserted.length === 0) {
-            // DUPLICATE_DELIVERY_IGNORED — already processed, silent no-op per Y2-errors.md.
-            continue;
+          let deliveryRowId: string;
+          if (existing[0]) {
+            if (existing[0].delivery_status === 'delivered') {
+              // DUPLICATE_DELIVERY_IGNORED — already processed, silent no-op per Y2-errors.md.
+              continue;
+            }
+            deliveryRowId = existing[0].id;
+          } else {
+            const inserted = await query<{ id: string }>(
+              `INSERT INTO webhook_deliveries (subscription_id, idempotency_key, event_type, payload)
+               VALUES ($1, $2, $3, $4) ON CONFLICT (subscription_id, idempotency_key) DO NOTHING RETURNING id`,
+              [subscription.id, idempotencyKey, decoded.event_type, JSON.stringify(decoded.payload)],
+            );
+            if (inserted.length === 0) {
+              // Lost a race with a concurrent redelivery that inserted the
+              // same key between our SELECT and this INSERT — re-select to
+              // find the row it created rather than silently dropping this
+              // delivery attempt.
+              const raced = await query<{ id: string; delivery_status: string }>(
+                `SELECT id, delivery_status FROM webhook_deliveries WHERE subscription_id = $1 AND idempotency_key = $2`,
+                [subscription.id, idempotencyKey],
+              );
+              if (!raced[0] || raced[0].delivery_status === 'delivered') continue;
+              deliveryRowId = raced[0].id;
+            } else {
+              deliveryRowId = inserted[0].id;
+            }
           }
 
           try {
@@ -114,25 +156,35 @@ export async function startWebhookDeliveryWorker(): Promise<void> {
             });
 
             await query(
-              `UPDATE webhook_deliveries SET delivery_status = $1, attempt_count = attempt_count + 1
-               WHERE subscription_id = $2 AND idempotency_key = $3`,
-              [res.ok ? 'delivered' : 'failed', subscription.id, idempotencyKey],
+              `UPDATE webhook_deliveries SET delivery_status = $1, attempt_count = attempt_count + 1, next_retry_at = $2
+               WHERE id = $3`,
+              [res.ok ? 'delivered' : 'failed', res.ok ? null : computeBackoff(msg.info.deliveryCount), deliveryRowId],
             );
 
             if (!res.ok) {
+              anyFailure = true;
               await bumpJobFailure();
             }
           } catch {
             await query(
               `UPDATE webhook_deliveries SET delivery_status = 'failed', attempt_count = attempt_count + 1, next_retry_at = $1
-               WHERE subscription_id = $2 AND idempotency_key = $3`,
-              [computeBackoff(1), subscription.id, idempotencyKey],
+               WHERE id = $2`,
+              [computeBackoff(msg.info.deliveryCount), deliveryRowId],
             );
+            anyFailure = true;
             await bumpJobFailure();
           }
         }
 
-        msg.ack();
+        if (anyFailure) {
+          // nak (not ack): JetStream will actually redeliver this message
+          // after the backoff delay, driven by the server's own
+          // redelivery mechanism rather than a separate polling job.
+          const delayMs = computeBackoff(msg.info.deliveryCount).getTime() - Date.now();
+          msg.nak(Math.max(delayMs, 0));
+        } else {
+          msg.ack();
+        }
       } catch (err) {
         console.warn('webhook delivery worker: error processing message', err);
         msg.ack();
