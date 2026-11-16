@@ -3,15 +3,15 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-02-PLAN.md
-last_updated: "2026-11-16T03:05:16.889Z"
-last_activity: 2026-11-16 — Plan 01-02 complete (EPMP design system foundation: tokens + 8 components)
+stopped_at: Completed 01-06-PLAN.md
+last_updated: "2026-11-16T03:12:30.000Z"
+last_activity: 2026-11-16 — Plan 01-06 complete (EPMP design system: Table, Timeline, Stat, Tabs, Modal); Plan 01-04 also complete in parallel (Card, PageHeader, Breadcrumbs, SideNav, Avatar)
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 13
-  completed_plans: 2
-  percent: 15
+  completed_plans: 4
+  percent: 31
 ---
 
 # Project State
@@ -26,19 +26,19 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 1 of 6 (Platform Foundation & Deployable Shell)
-Plan: 2 of 13 in current phase
+Plan: 6 of 13 in current phase (01-03/01-05/01-07+ executing in parallel per wave)
 Status: In progress
-Last activity: 2026-11-16 — Plan 01-02 complete (EPMP design system foundation: tokens + 8 components)
+Last activity: 2026-11-16 — Plan 01-04 complete (layout/navigation component layer: Card, PageHeader, Breadcrumbs, SideNav, Avatar); Plan 01-06 also complete (Table, Timeline, Stat, Tabs, Modal)
 
-Progress: [░░░░░░░░░░] 15%
+Progress: [███░░░░░░░] 31%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 2
-- Average duration: 30 min
-- Total execution time: 1.0 hours
+- Total plans completed: 4
+- Average duration: 22 min
+- Total execution time: 1.5 hours
 
 **By Phase:**
 
@@ -46,10 +46,12 @@ Progress: [░░░░░░░░░░] 15%
 |-------|-------|-------|----------|
 | Phase 01 P01 | 25 min | 3 tasks | 11 files |
 | Phase 01 P02 | 35 min | 3 tasks | 24 files |
+| Phase 01 P04 | 5 min | - tasks | 11 files |
+| Phase 01 P06 | 25 min | 3 tasks | 11 files |
 
 **Recent Trend:**
 
-- Last 5 plans: 25 min, 35 min
+- Last 5 plans: 25 min, 35 min, 5 min, 25 min
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -68,6 +70,10 @@ Recent decisions affecting current work:
 - [Phase 01-01]: OPA image pinned to openpolicyagent/opa:0.68.0-debug (not the plain tag) because the Chainguard static base ships no shell/wget needed for its own healthcheck
 - [Phase 01-01]: Seed idempotency implemented as explicit find-or-insert (SELECT then INSERT) rather than ON CONFLICT, since several auth-org tables have no UNIQUE constraint on their natural seed key per TechArch's verbatim DDL
 - [Phase 01-02]: Cross-theme token-wiring proof reads cascaded CSS custom-property values (getPropertyValue('--success-subtle')) directly rather than computed color/background-color, since jsdom's cssstyle engine does not substitute var() inside shorthand color properties
+- [Phase 01-04]: PageHeader is structurally the sole `<h1>` source in the design system (verified by the plan's own `grep -rn '<h1' src/` check), so "exactly one h1 per page" holds as long as every page composes exactly one PageHeader
+- [Phase 01-04]: SideNav's bottom-bar variant slices `mobileBottomBarItems` to the first 4 unconditionally, enforcing the role_landing_config max-4 DB constraint from 01-01 structurally at the component level, not just by caller convention
+- [Phase 01-06]: Modal's focus-trap/focus-return implemented with one internal useEffect (no external focus-trap library) — store document.activeElement on open, cycle Tab/Shift+Tab through a querySelectorAll focusable-elements set, Escape calls onClose, restore focus to the stored trigger on cleanup
+- [Phase 01-06]: Table owns its own loading/empty/error presentation via props (delegating to Skeleton/EmptyState/Alert) rather than leaving every consumer screen to reimplement F0's "every list/table/panel has loading/empty/error" rule
 
 ### Pending Todos
 
@@ -79,6 +85,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-16T03:05:16.889Z
-Stopped at: Completed 01-02-PLAN.md
+Last session: 2026-11-16T03:12:30.000Z
+Stopped at: Completed 01-06-PLAN.md
 Resume file: None
