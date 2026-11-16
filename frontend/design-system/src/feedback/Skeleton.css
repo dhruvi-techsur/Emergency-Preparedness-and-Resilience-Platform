@@ -1,0 +1,28 @@
+/*
+ * Skeleton (FEEDBACK) — token-only styling.
+ */
+
+.ep-skeleton {
+  background: var(--bg-sunken);
+  border-radius: var(--radius-sm);
+  animation: ep-skeleton-pulse var(--duration-slow) var(--ease-standard) infinite alternate;
+}
+
+.ep-skeleton--circle {
+  border-radius: var(--radius-full);
+}
+
+@keyframes ep-skeleton-pulse {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: var(--opacity-disabled);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ep-skeleton {
+    animation: none;
+  }
+}
