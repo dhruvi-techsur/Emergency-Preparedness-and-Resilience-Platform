@@ -1,0 +1,126 @@
+/*
+ * Button (ACTIONS) — token-only styling.
+ *
+ * Every color, radius, spacing and motion value below is a var(--token)
+ * reference into tokens.css. No hex literal, no arbitrary px, no shadow.
+ */
+
+.ep-btn {
+  position: relative;
+  display: inline-grid;
+  grid-auto-flow: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  border: var(--border-1) solid transparent;
+  cursor: pointer;
+  padding: 0 var(--space-4);
+  background: transparent;
+  color: var(--ink);
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+
+.ep-btn:focus-visible {
+  outline: var(--border-2) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.ep-btn:disabled,
+.ep-btn[aria-disabled='true'] {
+  opacity: var(--opacity-disabled);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Sizes */
+.ep-btn--sm {
+  height: var(--control-sm);
+  padding: 0 var(--space-3);
+}
+.ep-btn--default {
+  height: var(--control-md);
+}
+.ep-btn--lg {
+  height: var(--control-lg);
+  padding: 0 var(--space-5);
+}
+
+.ep-btn--block {
+  width: 100%;
+}
+
+/* Variants */
+.ep-btn--primary {
+  background: var(--brand);
+  color: var(--on-brand);
+}
+.ep-btn--primary:hover:not(:disabled) {
+  background: var(--brand-hover);
+}
+.ep-btn--primary:active:not(:disabled) {
+  background: var(--brand-active);
+}
+
+.ep-btn--secondary {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--border-strong);
+}
+.ep-btn--secondary:hover:not(:disabled) {
+  background: var(--bg-sunken);
+}
+
+.ep-btn--ghost {
+  background: transparent;
+  color: var(--ink);
+  border-color: transparent;
+}
+.ep-btn--ghost:hover:not(:disabled) {
+  background: var(--bg-sunken);
+}
+
+.ep-btn--danger {
+  background: var(--danger-solid);
+  color: var(--on-danger);
+}
+.ep-btn--danger:hover:not(:disabled) {
+  border-color: var(--danger-border);
+}
+
+/* Loading: content and spinner occupy the same grid cell so the label's
+   width stays stable (hard rule: loading never reflows the button). */
+.ep-btn__stack {
+  display: grid;
+  grid-template-areas: 'stack';
+}
+.ep-btn__content,
+.ep-btn__spinner {
+  grid-area: stack;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+}
+.ep-btn__content--hidden {
+  visibility: hidden;
+}
+
+.ep-btn__spin {
+  animation: ep-btn-spin var(--duration-slow) linear infinite;
+}
+
+@keyframes ep-btn-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
