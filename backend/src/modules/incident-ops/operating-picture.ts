@@ -114,9 +114,16 @@ export default async function operatingPictureRoutes(app: FastifyInstance) {
           throw new Error('TEST_INJECTED_GIS_FAILURE');
         }
         const bboxParam = req.query.bbox;
-        const bbox: [number, number, number, number] = bboxParam
-          ? (bboxParam.split(',').map(Number) as [number, number, number, number])
-          : [-180, -90, 180, 90];
+        const parsedBbox = bboxParam ? bboxParam.split(',').map(Number) : [-180, -90, 180, 90];
+        // A malformed bbox (wrong length, or any non-finite entry — NaN
+        // from e.g. `bbox=abc`, or Infinity) must not silently produce an
+        // invalid polygon that still gets recorded as a provenanced 'ok'
+        // fetch. Treat it identically to an adapter failure: fall through
+        // to the schematic default already set above (W3 fix).
+        if (parsedBbox.length !== 4 || !parsedBbox.every(Number.isFinite)) {
+          throw new Error('INVALID_BBOX: malformed bbox query parameter');
+        }
+        const bbox = parsedBbox as [number, number, number, number];
         const gisResponse = await fetchGisFeatures('agency-base-boundary', bbox);
         if (gisResponse.source && gisResponse.as_of) {
           baseLayerSource = `agency GIS (${gisResponse.source})`;

@@ -169,6 +169,22 @@ describe('incident-ops operating-picture routes', () => {
     expect(marker.shape).toBe('diamond');
   });
 
+  it('a malformed bbox query param falls through to the schematic fallback instead of an invalid polygon (W3 fix)', async () => {
+    const token = await mintSessionToken({
+      id: testUserId,
+      role_id: testRoleId,
+      jurisdiction_scope: [testJurisdictionId],
+    });
+
+    const malformedRes = await request(app.server)
+      .get('/api/v1/operating-picture/markers')
+      .query({ bbox: '1,2,notanumber' })
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(malformedRes.status).toBe(200);
+    expect(malformedRes.body.status_bar.base_layer_source).toBe('Schematic base map, offline');
+  });
+
   it('GET /api/v1/operating-picture/layers returns at least one layer with non-null source and as_of', async () => {
     const token = await mintSessionToken({
       id: testUserId,
