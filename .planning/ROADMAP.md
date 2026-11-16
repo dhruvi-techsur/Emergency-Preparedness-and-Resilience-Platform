@@ -94,7 +94,17 @@ Plans:
   2. A user can link a plan section to a task template, and when an incident references that plan, the linked template is offered for one-click task creation rather than writing the task from scratch.
   3. A user can create, assign (to a named person or role), approve, track, and close a task, and a task left open past its due time automatically flips to Overdue without any manual status update.
   4. A user can create a resource request linked to an incident or task and move it through Draft → Awaiting approval → Approved → Fulfilled (or Declined with a required reason), with its current status visible on both the operating picture and in reporting without a page reload.
-**Plans**: TBD
+**Plans:** 8 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Backend tasks schema + CRUD + state-machine-enforced status transitions
+- [ ] 03-02-PLAN.md — Backend time-based Overdue sweep (distinct from Phase 2's closure cascade)
+- [ ] 03-03-PLAN.md — Backend plans module: Draft→Review→Approved workflow, no-self-approval, task-template linkage + materialization
+- [ ] 03-04-PLAN.md — Backend resource-request lifecycle (create/approve/decline/fulfill) with event-bus publish
+- [ ] 03-05-PLAN.md — Frontend: Plan Repository, Detail/Reading View, Editor, Link Tasks Modal, Approval Workflow Modal
+- [ ] 03-06-PLAN.md — Frontend: Task List/Create/Detail, Resource Request List/Create/Detail
+- [ ] 03-07-PLAN.md — Seed role-permission grants for plans/tasks/resource_requests features
+- [ ] 03-08-PLAN.md — Integration: wire Tasks/Resources tabs into Incident Workspace, end-to-end plan-to-task materialization proof
 
 ### Phase 4: Notifications & Reporting/Learning
 **Goal**: Communications staff can send accountable, approval-gated notifications with tracked delivery and acknowledgment, and planning staff can turn incident activity into ICS output, SITREPs, and after-action reports — closing the preparedness loop so every incident leaves a reusable evidence trail.
@@ -140,7 +150,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Platform Foundation & Deployable Shell | 0/TBD | In progress | - |
 | 2. Incident Command & Operating Picture | 0/7 | Ready to execute | - |
-| 3. Plans, Tasks & Resource Requests | 0/TBD | Not started | - |
+| 3. Plans, Tasks & Resource Requests | 0/8 | Ready to execute | - |
 | 4. Notifications & Reporting/Learning | 0/TBD | Not started | - |
 | 5. Mobile Field Operations | 0/TBD | Not started | - |
 | 6. Persona Dashboards & AI Assistance | 0/TBD | Not started | - |
