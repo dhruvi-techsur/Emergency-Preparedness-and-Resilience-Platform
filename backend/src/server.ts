@@ -6,6 +6,8 @@ import webhookSubscriptionRoutes from './modules/integration-gateway/webhook-sub
 import openApiRoutes from './openapi/spec.js';
 import platformHealthRoutes from './modules/auth-org/platform-health.js';
 import adminIntegrationHealthRoutes from './modules/auth-org/admin-integration-health.js';
+import healthzRoutes from './modules/platform/healthz.js';
+import staticRoutes from './static.js';
 import { connectNats } from './modules/integration-gateway/nats-client.js';
 import { startWebhookDeliveryWorker } from './modules/integration-gateway/webhook-delivery-worker.js';
 
@@ -31,6 +33,14 @@ export function buildApp() {
   app.register(adminIntegrationHealthRoutes);
 
   // HEALTHZ_INSERTION_POINT
+  // Unauthenticated liveness probe — DEPLOY-01 D4/D5. Registered with no
+  // dependency on DATABASE_URL/NATS_URL/OPA_URL/KEYCLOAK_ISSUER being set.
+  app.register(healthzRoutes);
+  // Serves frontend/app/dist for GET / (and SPA client-side-routing
+  // fallback for any other non-API, non-/healthz GET) — DEPLOY-01 success
+  // criterion 6. Registered LAST so its catch-all 404 handler never
+  // shadows /api/* or /healthz routes registered above.
+  app.register(staticRoutes);
 
   return app;
 }
