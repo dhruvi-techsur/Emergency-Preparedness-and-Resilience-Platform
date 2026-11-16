@@ -2,6 +2,10 @@ import type { FastifyInstance } from 'fastify';
 import { handleSsoCallback, SsoAuthError, RoleUnresolvedError } from './sso.js';
 import { requirePermission } from './rbac.js';
 import { query } from '../../db/client.js';
+import adminUsersRoutes from './admin-users.js';
+import adminRolesRoutes from './admin-roles.js';
+import adminSsoConfigRoutes from './admin-sso-config.js';
+import adminAuditRoutes from './admin-audit.js';
 
 interface UserRow {
   id: string;
@@ -96,16 +100,56 @@ export default async function authOrgRoutes(app: FastifyInstance) {
     }
   });
 
-  app.get('/api/v1/me', { preHandler: requirePermission('platform', 'view') }, async (req, reply) => {
-    const user = await fetchUserShape(req.epmpUser!.id);
-    if (!user) {
-      return reply.code(401).send({
-        error_code: 'SESSION_EXPIRED',
-        message: 'Your session has ended. Sign in again to continue.',
-      });
-    }
-    return reply.code(200).send(user);
-  });
+  app.get(
+    '/api/v1/me',
+    {
+      preHandler: requirePermission('platform', 'view'),
+      schema: {
+        tags: ['platform'],
+        summary: 'Returns the current authenticated user',
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              email: { type: 'string' },
+              name: { type: 'string' },
+              role: {
+                type: 'object',
+                nullable: true,
+                properties: {
+                  id: { type: 'string' },
+                  name: { type: 'string' },
+                  persona_id: { type: 'string' },
+                },
+              },
+              jurisdiction_scope: { type: 'array', items: { type: 'string' } },
+              theme_preference: { type: 'string', enum: ['light', 'dark', 'contrast'] },
+              status: { type: 'string', enum: ['Active', 'Suspended'] },
+              last_login_at: { type: 'string', nullable: true },
+            },
+          },
+          401: {
+            type: 'object',
+            properties: {
+              error_code: { type: 'string' },
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    async (req, reply) => {
+      const user = await fetchUserShape(req.epmpUser!.id);
+      if (!user) {
+        return reply.code(401).send({
+          error_code: 'SESSION_EXPIRED',
+          message: 'Your session has ended. Sign in again to continue.',
+        });
+      }
+      return reply.code(200).send(user);
+    },
+  );
 
   app.patch<{ Body: { theme_preference: 'light' | 'dark' | 'contrast' } }>(
     '/api/v1/me/preferences',
@@ -142,4 +186,12 @@ export default async function authOrgRoutes(app: FastifyInstance) {
       return reply.code(200).send({ nav_groups });
     },
   );
+
+  // F8 admin console backend surface (S8.2-S8.5): users, roles, SSO
+  // config, audit log — each route guarded by its own
+  // requirePermission('admin', <action>) preHandler.
+  await app.register(adminUsersRoutes);
+  await app.register(adminRolesRoutes);
+  await app.register(adminSsoConfigRoutes);
+  await app.register(adminAuditRoutes);
 }

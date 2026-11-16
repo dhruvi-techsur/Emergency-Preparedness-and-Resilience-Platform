@@ -9,6 +9,10 @@ interface RecordAuthorityRow {
   notes: string | null;
 }
 
+interface RecordAuthorityDbRow extends RecordAuthorityRow {
+  id: string;
+}
+
 /**
  * Looks up which system is authoritative for a given record type, defaulting
  * to 'EPMP' when no row is registered (i.e. EPMP itself is authoritative
@@ -62,7 +66,7 @@ export default async function recordAuthorityRoutes(app: FastifyInstance) {
         [record_type],
       );
 
-      const rows = await query<RecordAuthorityRow>(
+      const rows = await query<RecordAuthorityDbRow>(
         `INSERT INTO record_authority_registry (record_type, authoritative_system, notes, updated_by)
          VALUES ($1, $2, $3, $4)
          ON CONFLICT (record_type) DO UPDATE SET
@@ -70,17 +74,24 @@ export default async function recordAuthorityRoutes(app: FastifyInstance) {
            notes = EXCLUDED.notes,
            updated_by = EXCLUDED.updated_by,
            updated_at = now()
-         RETURNING record_type, authoritative_system, notes`,
+         RETURNING id, record_type, authoritative_system, notes`,
         [record_type, authoritative_system, notes ?? null, req.epmpUser!.id],
       );
       const after = rows[0];
 
-      await AuditService.record(req.epmpUser!.id, 'record_authority_change', 'record_authority_registry', record_type, {
+      // AuditService.record's recordId column is UUID — pass the row's own
+      // id, never the natural-key record_type string (which is not a UUID
+      // and would fail the column's type constraint on every call).
+      await AuditService.record(req.epmpUser!.id, 'record_authority_change', 'record_authority_registry', after.id, {
         before: before[0] ?? null,
-        after,
+        after: { record_type: after.record_type, authoritative_system: after.authoritative_system, notes: after.notes },
       });
 
-      return reply.code(200).send(after);
+      return reply.code(200).send({
+        record_type: after.record_type,
+        authoritative_system: after.authoritative_system,
+        notes: after.notes,
+      });
     },
   );
 }

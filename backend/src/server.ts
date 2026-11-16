@@ -1,7 +1,11 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import authOrgRoutes from './modules/auth-org/routes.js';
+import integrationGatewayRoutes from './modules/integration-gateway/routes.js';
 import webhookSubscriptionRoutes from './modules/integration-gateway/webhook-subscriptions.js';
+import openApiRoutes from './openapi/spec.js';
+import platformHealthRoutes from './modules/auth-org/platform-health.js';
+import adminIntegrationHealthRoutes from './modules/auth-org/admin-integration-health.js';
 import { connectNats } from './modules/integration-gateway/nats-client.js';
 import { startWebhookDeliveryWorker } from './modules/integration-gateway/webhook-delivery-worker.js';
 
@@ -14,8 +18,17 @@ export function buildApp() {
   // origin, so do not restrict to a single hardcoded origin here.
   app.register(cors, { origin: true });
 
+  // Registered first so @fastify/swagger's onRoute hook observes every
+  // subsequently-registered route's schema (Fastify defers actual route
+  // binding until after the register() chain resolves, but registering the
+  // swagger plugin first keeps the dependency explicit and documented).
+  app.register(openApiRoutes);
+
   app.register(authOrgRoutes);
+  app.register(integrationGatewayRoutes);
   app.register(webhookSubscriptionRoutes);
+  app.register(platformHealthRoutes);
+  app.register(adminIntegrationHealthRoutes);
 
   // HEALTHZ_INSERTION_POINT
 
