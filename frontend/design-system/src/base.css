@@ -1,0 +1,22 @@
+/*
+ * EPMP Design System — component base styles.
+ *
+ * This file (and every component's own .css file) is bundled by Vite into
+ * dist/bundle.css — the "components/bundle.css" half of the loading contract
+ * in EPMP-llm-build-guide.md. It is deliberately separate from tokens.css
+ * (which ships unbundled, hand-authored, and is loaded via its own <link>
+ * tag): component rules here reference tokens exclusively via var(--token),
+ * never redefine them.
+ */
+
+.ep-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
