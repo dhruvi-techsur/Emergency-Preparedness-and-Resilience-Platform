@@ -28,3 +28,11 @@ export { EmptyState } from './feedback/EmptyState';
 export type { EmptyStateProps } from './feedback/EmptyState';
 export { Toast } from './feedback/Toast';
 export type { ToastProps, ToastTone } from './feedback/Toast';
+
+// LAYOUT
+export { Card } from './layout/Card';
+export type { CardProps } from './layout/Card';
+
+// DATA
+export { Avatar } from './data/Avatar';
+export type { AvatarProps, AvatarSize } from './data/Avatar';

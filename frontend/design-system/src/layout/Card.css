@@ -1,0 +1,130 @@
+/*
+ * Card (LAYOUT) — token-only styling.
+ *
+ * No box-shadow at rest, by hard rule: shadows do not separate surfaces,
+ * borders do. `.ep-card--interactive` adds only a border-color hover, never
+ * a shadow.
+ *
+ * Breakpoint exception: CSS custom properties cannot be referenced inside an
+ * `@media` condition (a CSS-language limitation, not an escape hatch for
+ * colors/spacing/radius), so the padding breakpoint below uses the literal
+ * px value that `--bp-md` holds in tokens.css (768px) directly in the media
+ * query. The token name `--bp-md` remains the single source of truth for
+ * every other breakpoint-aware value in the system; only the bare numeric
+ * threshold is duplicated here because the language requires it.
+ */
+
+.ep-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-raised);
+  border: var(--border-1) solid var(--border);
+  border-radius: var(--radius-lg);
+  /* Explicitly no box-shadow at rest. */
+}
+
+.ep-card--padded .ep-card__header,
+.ep-card--padded .ep-card__body,
+.ep-card--padded .ep-card__footer {
+  padding-left: var(--space-6);
+  padding-right: var(--space-6);
+}
+.ep-card--padded .ep-card__header,
+.ep-card--padded .ep-card__body:first-child {
+  padding-top: var(--space-6);
+}
+.ep-card--padded .ep-card__body:last-child,
+.ep-card--padded .ep-card__footer {
+  padding-bottom: var(--space-6);
+}
+.ep-card--padded .ep-card__body {
+  padding-top: var(--space-4);
+  padding-bottom: var(--space-4);
+}
+.ep-card--padded .ep-card__header + .ep-card__body {
+  padding-top: 0;
+}
+
+/* --bp-md literal value (768px) — see file header comment. */
+@media (max-width: 768px) {
+  .ep-card--padded .ep-card__header,
+  .ep-card--padded .ep-card__body,
+  .ep-card--padded .ep-card__footer {
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+  }
+  .ep-card--padded .ep-card__header,
+  .ep-card--padded .ep-card__body:first-child {
+    padding-top: var(--space-4);
+  }
+  .ep-card--padded .ep-card__body:last-child,
+  .ep-card--padded .ep-card__footer {
+    padding-bottom: var(--space-4);
+  }
+}
+
+.ep-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  border-bottom: var(--border-1) solid var(--border);
+  padding-bottom: var(--space-4);
+}
+
+.ep-card__heading {
+  min-width: 0;
+}
+
+.ep-card__title {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--ink);
+}
+
+.ep-card__subtitle {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 16px;
+  margin: var(--space-1) 0 0;
+  color: var(--ink-muted);
+}
+
+.ep-card__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+}
+
+.ep-card__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ep-card__footer {
+  border-top: var(--border-1) solid var(--border);
+  padding-top: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+/* Interactive: hover border only, never a shadow. */
+.ep-card--interactive {
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color var(--duration-fast) var(--ease-standard);
+}
+.ep-card--interactive:hover {
+  border-color: var(--border-strong);
+}
+.ep-card--interactive:focus-visible {
+  outline: var(--border-2) solid var(--focus-ring);
+  outline-offset: 2px;
+}
