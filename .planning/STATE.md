@@ -3,14 +3,14 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-08-PLAN.md
-last_updated: "2026-11-16T03:35:59.489Z"
-last_activity: "2026-11-16 — Plan 01-08 complete (F10 registry/governance endpoints: API clients one-time-secret issuance, record-authority registry, federation grants with synchronous OPA resync)"
+stopped_at: Completed 01-09-PLAN.md
+last_updated: "2026-11-16T03:45:00.000Z"
+last_activity: "2026-11-16 — Plan 01-09 complete (NATS JetStream event bus + idempotent webhook delivery worker + OpenAPI 3.1 document + platform/integration-health endpoints)"
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 13
-  completed_plans: 8
+  completed_plans: 9
   percent: 46
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 1 of 6 (Platform Foundation & Deployable Shell)
-Plan: 8 of 13 in current phase (01-09+ executing next per wave)
+Plan: 9 of 13 in current phase (01-10+ executing next per wave)
 Status: In progress
-Last activity: 2026-11-16 — Plan 01-08 complete (F10 registry/governance endpoints: API clients one-time-secret issuance, record-authority registry, federation grants with synchronous OPA resync)
+Last activity: 2026-11-16 — Plan 01-09 complete (NATS JetStream event bus + idempotent webhook delivery worker + OpenAPI 3.1 document + platform/integration-health endpoints)
 
 Progress: [████░░░░░░] 46%
 
@@ -36,9 +36,9 @@ Progress: [████░░░░░░] 46%
 
 **Velocity:**
 
-- Total plans completed: 8
-- Average duration: 24 min
-- Total execution time: 3.2 hours
+- Total plans completed: 9
+- Average duration: 25 min
+- Total execution time: 4.4 hours
 
 **By Phase:**
 
@@ -52,11 +52,12 @@ Progress: [████░░░░░░] 46%
 | Phase 01 P05 | 25 min | 3 tasks | 14 files |
 | Phase 01 P08 | 22 min | 3 tasks | 7 files |
 | Phase 01 P07 | 28 min | 3 tasks | 6 files |
+| Phase 01 P09 | 70 min | 3 tasks | 11 files |
 
 **Recent Trend:**
 
-- Last 5 plans: 25 min, 30 min, 25 min, 22 min, 28 min
-- Trend: Stable
+- Last 5 plans: 30 min, 25 min, 22 min, 28 min, 70 min
+- Trend: Plan 09 longer than average (event-bus/OpenAPI debugging against real nats.js API + fastify-plugin encapsulation fix)
 
 *Updated after each plan completion*
 
@@ -86,6 +87,9 @@ Recent decisions affecting current work:
 - [Phase 01-07]: No DELETE route built for /api/v1/admin/roles — Phase 1's fixed 5-persona-role model means the FRD's 409 ROLE_IN_USE conflict is satisfied structurally (the deletion path itself doesn't exist), matching S8.3's permission-editing-only scope
 - [Phase 01-07]: Role-permission edits call syncRolePermissionsToOpa() with the FULL current role_permissions table (not just changed rows) synchronously before responding, guaranteeing zero caching window for a client polling immediately after a PATCH
 - [Phase 01-07]: SSO config PATCH activation always re-verifies IdP metadata reachability server-side at write time — never trusts a client-asserted tested_at/success flag from a prior /test call
+- [Phase 01-09]: JetStream delivery worker uses nats.js's modern consumers.get(stream,durable)+.consume() async-iterable API instead of the plan's pseudocode pullSubscribe snippet, which never re-issues pull requests and would stall after the first batch
+- [Phase 01-09]: @fastify/swagger's registration plugin must itself be wrapped with fastify-plugin (fp()) — without it its onRoute hook can't see sibling route plugins registered on the Fastify root, and GET /api/v1/openapi.json returns an empty paths object regardless of schema completeness
+- [Phase 01-09]: background_jobs rows are find-or-updated by job_type (no UNIQUE constraint exists on that column) rather than INSERTed on every server boot, since startWebhookDeliveryWorker() runs once per start() and a bare INSERT silently accumulates duplicate rows across restarts
 
 ### Pending Todos
 
@@ -97,6 +101,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-16T03:33:35.000Z
-Stopped at: Completed 01-08-PLAN.md
+Last session: 2026-11-16T03:45:00.000Z
+Stopped at: Completed 01-09-PLAN.md
 Resume file: None
