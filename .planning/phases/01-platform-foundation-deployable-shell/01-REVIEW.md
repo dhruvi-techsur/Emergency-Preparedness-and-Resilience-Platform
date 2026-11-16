@@ -29,11 +29,15 @@ Read the full diff and the resulting file (`admin-sso-config.ts:132-230`). `PATC
 
 Full backend suite (22/22, run directly against the live stack) and `tsc --noEmit` (backend + frontend) both pass. B1 is genuinely closed — the real-deployment bootstrap path works as the fix claims. Restored the original row afterward; `sso_config` count is back to 1.
 
+**Resolution:** no action needed — already fixed in prior iteration, re-confirmed above.
+
 ### W1 (dead "Record Authority" nav item) — VERIFIED FIXED, but introduces a new defect (see W-new below)
 
 `RecordAuthority.tsx` (175 lines, new file) + the `<Route path="admin/record-authority" ...>` wired into `main.tsx:65` close the original gap: the nav item now lands on a real list+modal screen that calls the already-complete `GET`/`POST /api/v1/admin/record-authority` endpoints. Response/request shapes match exactly (`record_type`/`authoritative_system`/`notes`, matching `record-authority.ts:6-10` and `:90-94`). `vite build` succeeds, `tsc --noEmit` is clean, and `gateway.test.ts`'s existing coverage of the same backend endpoints (test 4/5) still passes, confirming the contract the new screen depends on is unchanged. Playwright e2e has no spec covering this new screen (not a blocker — Record Authority wasn't in scope for any existing e2e file, and its omission isn't a regression from this fix).
 
 However, see the new WARNING below: the "Edit" modal this fix adds lets the admin change the `record_type` field itself, which the backend contract doesn't support as an edit — it creates a duplicate registry entry instead.
+
+**Resolution:** no action needed on W1 itself (already fixed in prior iteration, re-confirmed above); the defect it introduced is tracked and fixed as W-new-1 below.
 
 ### W2 (webhook delivery worker never retries) — VERIFIED FIXED
 
@@ -42,6 +46,8 @@ However, see the new WARNING below: the "Edit" modal this fix adds lets the admi
 The outer `catch (err)` block (line 188-191, unrelated to this fix, pre-existing) still unconditionally `ack()`s on a genuinely unexpected processing exception (e.g. a decode failure) — this is intentionally out of scope for W2 (W2 was specifically about per-subscription *delivery* failures being silently swallowed, which is now fixed) and is a defensible choice (an unparseable/corrupt message should not infinitely redeliver). Not re-flagging this as a new issue.
 
 Full backend suite (22/22) passes, including `eventbus.test.ts`'s delivery-mechanics coverage, which exercises the same code path (though it does not specifically assert on the nak/redelivery branch — only the happy-path ack branch is exercised by any automated test currently in the repo; the fix's retry behavior was verified by the fixer manually against a flaky receiver per the commit message, and independently confirmed here via direct code/type-signature inspection rather than re-running that manual scenario).
+
+**Resolution:** no action needed — already fixed in prior iteration, re-confirmed above.
 
 ## WARNINGs
 
@@ -56,6 +62,8 @@ Full backend suite (22/22) passes, including `eventbus.test.ts`'s delivery-mecha
 
   Net effect: `checkRecordAuthority(recordType)` (the function every future Phase 2+ write-path call site depends on per this file's own doc comment) would continue resolving the OLD `record_type` to its stale authoritative_system, since the "edit" silently created a new, differently-keyed row rather than correcting the existing one — the admin has no visible indication their edit didn't apply to the record they thought they were editing.
 - **Fix direction:** Disable/lock the "Record type" field when the modal is opened via `openEditModal` (i.e. derive a `isEditMode` flag from whether a row was passed in, and set the TextField's `disabled` prop accordingly), matching the backend's actual edit semantics (record_type is an immutable natural key once registered; only `authoritative_system`/`notes` are editable in place).
+
+**Resolution:** fixed (5e0813b) — added `isEditMode` state set by `openCreateModal`/`openEditModal`, passed as `disabled` on the "Record type" `TextField` plus an explanatory hint shown only in edit mode. Verified: `tsc --noEmit` clean, `vite build` succeeds.
 
 ## Cross-file seams checked (this iteration's scope)
 
