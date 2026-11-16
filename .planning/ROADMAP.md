@@ -45,7 +45,22 @@ capabilities that reach across (rather than own) the rest of the platform.
   5. `docker build .` succeeds at the repository root, and the image runs as a numeric non-root `USER`.
   6. Started with only `PORT` set, the app answers `GET /healthz` with 200, without authentication, within 30 seconds, and `GET /` shows its main page (or redirects to it).
   7. `pivota-deploy.yaml` at the root reads `port: 8080`, `healthPath: /healthz`, `size: small`, `database: postgres`, the app migrates its schema at start, and the dev-server preview still starts as before.
-**Plans**: TBD
+**Plans:** 13 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Dev infrastructure: docker-compose (Postgres+PostGIS, NATS, OPA, Keycloak), exact auth-org schema migration, idempotent seed, OPA policy, Keycloak realm import
+- [ ] 01-02-PLAN.md — Design system: token system + build pipeline, Icon/Button/IconButton, Skeleton/Badge/Alert/EmptyState/Toast
+- [ ] 01-03-PLAN.md — Backend auth-org core: server bootstrap, OPA client, session JWT, AuditService, RBAC middleware, SSO callback, session/theme/nav routes
+- [ ] 01-04-PLAN.md — Design system: Card, Avatar, PageHeader, Breadcrumbs, SideNav
+- [ ] 01-05-PLAN.md — Design system: TextField, Select, Checkbox, Switch, Combobox, DatePicker
+- [ ] 01-06-PLAN.md — Design system: Table, Timeline, Stat, Tabs, Modal
+- [ ] 01-07-PLAN.md — Backend F8 admin API: Users, Roles & Permissions, SSO config (test-before-activate), Audit Log
+- [ ] 01-08-PLAN.md — Backend F10 registry: API Clients (one-time secret), Record Authority Registry, Federation Grants (immediate revocation)
+- [ ] 01-09-PLAN.md — Backend F10 event bus: NATS JetStream, webhook delivery worker (idempotent), OpenAPI document, platform/integration health
+- [ ] 01-10-PLAN.md — Frontend app shell: Vite SPA, OIDC auth flow, AppShell, ThemeSwitcher, typed API client, Playwright e2e
+- [ ] 01-11-PLAN.md — Frontend admin console: Users list/detail, Roles & Permissions, Audit Log view, Playwright e2e
+- [ ] 01-12-PLAN.md — Frontend admin console: SSO Config form, Platform Monitoring, Integration Health, API Clients, Federation Grants, Playwright e2e
+- [ ] 01-13-PLAN.md — Deployability: /healthz, static serving, baseline role migration, Dockerfile, pivota-deploy.yaml, .env.example, deploy-check verification
 
 ### Phase 2: Incident Command & Operating Picture
 **Goal**: Command staff can intake and activate an incident, assign named command roles, and see a shared, time-stamped operating picture that never fails to render — even when the live GIS feed is unavailable.
