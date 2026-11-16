@@ -1,0 +1,34 @@
+/*
+ * F2 S2.1 — Operating Picture layout. MapCanvas at roughly 8 of 12 columns,
+ * right column (Timeline + task-list placeholder for the selected incident)
+ * at 4 of 12, collapsing to a single column below the design system's
+ * --bp-md breakpoint (same value AppShell.css/IncidentWorkspace.css use for
+ * their own responsive switches).
+ */
+
+.ep-operating-picture__layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-6);
+  align-items: start;
+  margin-top: var(--space-4);
+}
+
+@media (max-width: 767px) {
+  .ep-operating-picture__layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ep-operating-picture__side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.ep-operating-picture__top-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
