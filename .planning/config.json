@@ -7,7 +7,10 @@
   "workflow_mode": "phase",
   "workflow": {
     "research": false,
-    "plan_check": true
+    "plan_check": true,
+    "build_command": "rc=0; npm run build || rc=$?; (cd frontend/design-system && npm run build) || rc=$?; (cd frontend/app && npm run build) || rc=$?; exit $rc",
+    "test_command": "rc=0; npm test || rc=$?; (cd frontend/design-system && npm test) || rc=$?; exit $rc",
+    "commands_generated": true
   },
   "auto_advance": false,
   "nyquist_validation": true
