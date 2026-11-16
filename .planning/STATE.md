@@ -3,14 +3,14 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-11-16T13:20:02.844Z"
-last_activity: 2026-11-16 — Plan 02-03 complete (F11 GIS adapter stub enforcing mandatory source/as_of provenance, feeding F2's operating-picture markers/layers endpoints where the 'Schematic base map, offline' fallback is the structural default code path — not a bolted-on catch block — so the page is incapable of 500ing even under total GIS outage; proven directly by an integration test that forces the adapter to throw and asserts 200 + the exact fallback label; 0 deviations beyond a trivial @types/geojson devDependency install needed to compile the plan's own specified GeoJSON.Feature[] type)
+stopped_at: Completed 02-05-PLAN.md
+last_updated: "2026-11-16T13:55:00.000Z"
+last_activity: 2026-11-16 — Plan 02-05 complete (Incident List (S1.1) and Create Incident (S1.2) screens wired into AppShell's new "Activate" SideNav group; severity rendered exclusively via Table.StatusCell/Badge; the FRD's 409-duplicate-name warning resolved as a non-blocking confirm-and-resubmit flow; 2 auto-fixed deviations — Rule 3 (seeded a second Keycloak identity since admin@epmp.local's secops_admin role deliberately holds no incidents permissions) and Rule 1 (Playwright getByLabel exact:true didn't match required fields' " *"-suffixed accessible name))
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 31
-  completed_plans: 19
+  completed_plans: 20
   percent: 19
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 2 of 6 (Incident Command & Operating Picture)
-Plan: 4 of 7 complete in current phase (02-01, 02-04 — wave 1; 02-02 — wave 2, depends_on 02-01; 02-03 — wave 3, depends_on 02-01+02-02 — all COMPLETE; 02-05/02-06/02-07 remain)
-Status: In progress — ready for 02-05/02-06/02-07 (frontend plans; 02-07 consumes 02-03's operating-picture endpoints directly)
-Last activity: 2026-11-16 — Plan 02-03 complete (F11 GIS adapter stub enforcing mandatory source/as_of provenance, feeding F2's operating-picture markers/layers endpoints where the 'Schematic base map, offline' fallback is the structural default code path — not a bolted-on catch block — so the page is incapable of 500ing even under total GIS outage; proven directly by an integration test that forces the adapter to throw and asserts 200 + the exact fallback label; 0 deviations beyond a trivial @types/geojson devDependency install needed to compile the plan's own specified GeoJSON.Feature[] type)
+Plan: 5 of 7 complete in current phase (02-01, 02-04 — wave 1; 02-02 — wave 2, depends_on 02-01; 02-03 — wave 3, depends_on 02-01+02-02; 02-05 — wave 3, depends_on 02-01 — all COMPLETE; 02-06/02-07 remain)
+Status: In progress — ready for 02-06/02-07 (02-06 is the Incident Workspace this plan's create-redirect and list row-click both target; 02-07 consumes 02-03's operating-picture endpoints directly)
+Last activity: 2026-11-16 — Plan 02-05 complete (Incident List (S1.1) and Create Incident (S1.2) screens wired into AppShell's new "Activate" SideNav group; severity rendered exclusively via Table.StatusCell/Badge; the FRD's 409-duplicate-name warning resolved as a non-blocking confirm-and-resubmit flow; 2 auto-fixed deviations — Rule 3 (seeded a second Keycloak identity since admin@epmp.local's secops_admin role deliberately holds no incidents permissions) and Rule 1 (Playwright getByLabel exact:true didn't match required fields' " *"-suffixed accessible name))
 
 Progress: [██░░░░░░░░] 19%
 
@@ -36,9 +36,9 @@ Progress: [██░░░░░░░░] 19%
 
 **Velocity:**
 
-- Total plans completed: 19
+- Total plans completed: 20
 - Average duration: 24 min
-- Total execution time: 8.5 hours
+- Total execution time: 9.1 hours
 
 **By Phase:**
 
@@ -63,11 +63,12 @@ Progress: [██░░░░░░░░] 19%
 | Phase 02 P04 | 18 min | 3 tasks | 14 files |
 | Phase 02 P02 | 9 min | 3 tasks | 6 files |
 | Phase 02 P03 | 12 min | 3 tasks | 7 files |
+| Phase 02 P05 | 35 min | 3 tasks | 9 files |
 
 **Recent Trend:**
 
-- Last 5 plans: 45 min, 18 min, 9 min, 12 min
-- Trend: Phase 1 is now fully complete: all 15 plans (13 original + 2 gap-closure) done. Phase 2 is underway with a parallel-wave structure (02-01 and 02-04 are both wave 1, no interdependency between the backend incident-ops foundation and the design-system MAPS component family); 02-02 (wave 2, depends_on 02-01) extended the incident-ops backend with command-role assignment, activation gating, and closure; 02-03 (wave 3, depends_on 02-01+02-02 solely to serialize edits to the shared routes.ts file) added the F11 GIS adapter stub and F2's operating-picture markers/layers endpoints. Plan 02-01 ran one trivial auto-fixed deviation — a backtick-in-SQL-comment template-literal break. Plan 02-04 ran one trivial test-infrastructure-only deviation. Plan 02-02 ran one auto-fixed Rule 1 bug: the plan's specified plain try/catch around a forward-compatible "tasks table doesn't exist yet" UPDATE didn't actually prevent Postgres's all-or-nothing transaction abort — needed a real SAVEPOINT, caught immediately by the plan's own integration test. Plan 02-03 ran clean with zero deviations beyond a trivial @types/geojson devDependency install. All four Phase 2 backend plans' own verify commands (build + full test suite, with 02-01/02-02/02-03 also running a live-stack integration test) passed clean.
+- Last 5 plans: 18 min, 9 min, 12 min, 35 min
+- Trend: Phase 1 is now fully complete: all 15 plans (13 original + 2 gap-closure) done. Phase 2 is underway with a parallel-wave structure (02-01 and 02-04 are both wave 1, no interdependency between the backend incident-ops foundation and the design-system MAPS component family); 02-02 (wave 2, depends_on 02-01) extended the incident-ops backend with command-role assignment, activation gating, and closure; 02-03 and 02-05 are both wave 3 (depends_on 02-01, and for 02-03 also 02-02 solely to serialize edits to the shared routes.ts file). 02-05 is the first Phase 2 frontend plan, shipping the Incident List/Create Incident screens and making success criterion 1 observable end-to-end. Plan 02-01 ran one trivial auto-fixed deviation — a backtick-in-SQL-comment template-literal break. Plan 02-04 ran one trivial test-infrastructure-only deviation. Plan 02-02 ran one auto-fixed Rule 1 bug (SAVEPOINT needed, not just try/catch, around a forward-compatible defensive UPDATE). Plan 02-03 ran clean with zero deviations beyond a trivial @types/geojson devDependency install. Plan 02-05 ran two auto-fixed deviations: a Rule 3 blocker (seeded a second Keycloak identity since the existing admin seed deliberately holds no incidents permissions) and a Rule 1 bug (Playwright's getByLabel needed exact:false for required fields whose accessible name includes a " *" suffix). All five Phase 2 plans' own verify commands (build + full test suite, with 02-01/02-02/02-03/02-05 also running a live-stack integration/Playwright test) passed clean.
 
 *Updated after each plan completion*
 
@@ -124,6 +125,10 @@ Recent decisions affecting current work:
 - [Phase 02-03]: GIS adapter stub recognizes exactly one layer_id ('agency-base-boundary'); any other value deterministically simulates a vendor timeout (GIS_FEED_TIMEOUT) — gives tests a reliable way to exercise the real adapter-throws path without random failure injection
 - [Phase 02-03]: baseLayerSource/baseLayerAsOf are initialized to the schematic-degraded values BEFORE the GIS fetch is attempted, overwritten only on a fully provenanced success — makes the fallback structurally the default code path, not a catch-block afterthought, and is what the plan's own integration test proves directly by forcing the adapter to throw
 - [Phase 02-03]: status_bar.as_of reduces to the single base layer's as_of for Phase 2 (no other provenanced layer exists yet) — documented inline as a TODO for F12/F17 to extend to the FRD's true stalest-across-all-visible-layers rule
+- [Phase 02-05]: Added GET /api/v1/jurisdictions (incidents:view gated) since no prior plan exposed a jurisdictions-list endpoint and the Create Incident form's Combobox needs a real options source
+- [Phase 02-05]: nav-config's new "Activate" group reuses 01-03's exact role_permissions-driven derivation pattern — any role with ANY incidents permission sees it, reconciling 02-01's seeded view-only vs full-access role split with the nav the shell renders
+- [Phase 02-05]: Seeded a second Keycloak identity (commander@epmp.local, incident_commander role, /epmp-incident-commanders group) for e2e sign-in, since admin@epmp.local's secops_admin role deliberately holds no incidents permissions (02-01's own seed decision)
+- [Phase 02-05]: Alert's warning tone stays non-dismissable-by-button for the duplicate-name 409 (Phase 1's PERSISTENT_TONES contract) — "does not block" is satisfied via confirm-and-resubmit + auto-clear-on-name-edit, not by adding a dismiss affordance that would contradict Alert's documented persistence rule
 
 ### Pending Todos
 
@@ -135,6 +140,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-16T13:18:26.100Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-11-16T13:55:00.000Z
+Stopped at: Completed 02-05-PLAN.md
 Resume file: None
