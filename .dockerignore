@@ -1,0 +1,10 @@
+.git
+.planning
+project_specs
+node_modules
+**/node_modules
+**/dist
+**/test
+**/*.test.ts
+**/e2e
+.env
