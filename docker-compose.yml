@@ -14,7 +14,9 @@ services:
       retries: 30
   nats:
     image: nats:2.10-alpine
-    command: ["-js"]
+    # -m 8222 enables the HTTP monitoring endpoint (incl. /healthz) that the
+    # healthcheck below needs; -js alone starts no HTTP listener at all.
+    command: ["-js", "-m", "8222"]
     ports: ["4222:4222", "8222:8222"]
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8222/healthz"]
@@ -22,7 +24,10 @@ services:
       timeout: 3s
       retries: 30
   opa:
-    image: openpolicyagent/opa:0.68.0
+    # -debug tag (not the default static/Chainguard base) because the
+    # default image ships no shell and no wget/curl, which the healthcheck
+    # below needs. Dev-only backing service; still pinned to 0.68.0.
+    image: openpolicyagent/opa:0.68.0-debug
     command: ["run", "--server", "--addr", "0.0.0.0:8181", "/policies/policy.rego"]
     ports: ["8181:8181"]
     volumes: ["./backend/opa:/policies:ro"]
