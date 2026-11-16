@@ -74,3 +74,19 @@ export { PageHeader } from './navigation/PageHeader';
 export type { PageHeaderProps } from './navigation/PageHeader';
 export { SideNav } from './navigation/SideNav';
 export type { SideNavProps, SideNavGroup, SideNavItem } from './navigation/SideNav';
+
+// MAPS
+export { MapCanvas } from './maps/MapCanvas';
+export type { MapCanvasProps, MapMarker, MapMarkerType, MapArea, MapLine } from './maps/MapCanvas';
+export { MapControls } from './maps/MapControls';
+export type { MapControlsProps } from './maps/MapControls';
+export { MapLegend } from './maps/MapLegend';
+export type { MapLegendProps, MapLegendItem, MapLegendItemKind } from './maps/MapLegend';
+export { MapPopup } from './maps/MapPopup';
+export type { MapPopupProps } from './maps/MapPopup';
+export { LayerPanel } from './maps/LayerPanel';
+export type { LayerPanelProps, MapLayer } from './maps/LayerPanel';
+
+// PRODUCT PATTERNS
+export { Provenance } from './product-patterns/Provenance';
+export type { ProvenanceProps } from './product-patterns/Provenance';
