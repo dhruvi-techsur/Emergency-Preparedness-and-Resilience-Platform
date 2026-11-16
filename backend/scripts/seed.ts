@@ -165,6 +165,16 @@ async function main() {
   // sso_config (natural key: protocol — no UNIQUE constraint in the schema,
   // but this seed only ever creates one OIDC config, so protocol='OIDC' is
   // the natural identity for this row)
+  const groupToRoleMapping = [
+    { idp_group: '/epmp-admins', role_id: secopsAdminId },
+    // Phase 2 (F1): a second seeded Keycloak group/user so this phase's
+    // Playwright suite can sign in as a role that actually holds
+    // `incidents` permissions (admin@epmp.local's secops_admin role
+    // deliberately does NOT, per this file's own documented decision
+    // above) — see backend/keycloak/epmp-realm.json's
+    // "epmp-incident-commanders" group + "commander@epmp.local" user.
+    { idp_group: '/epmp-incident-commanders', role_id: roleIds['incident_commander'] },
+  ];
   const ssoConfig = await findOrInsert(
     'sso_config',
     ['protocol'],
@@ -174,12 +184,19 @@ async function main() {
       'OIDC',
       'http://keycloak:8080/realms/epmp/.well-known/openid-configuration',
       JSON.stringify({ email_attr: 'email', name_attr: 'name', group_attr: 'groups' }),
-      JSON.stringify([{ idp_group: '/epmp-admins', role_id: secopsAdminId }]),
+      JSON.stringify(groupToRoleMapping),
       true,
       new Date().toISOString(),
     ],
   );
   record('sso_config', ssoConfig);
+  // The row may already exist from an earlier plan's seed run (persisted
+  // compose volume) without this phase's new mapping entry — findOrInsert
+  // only inserts on first-ever creation, so re-assert the full mapping
+  // idempotently on every run rather than leaving a stale array behind.
+  await pool.query(`UPDATE sso_config SET group_to_role_mapping = $1 WHERE protocol = 'OIDC'`, [
+    JSON.stringify(groupToRoleMapping),
+  ]);
 
   // record_authority_registry baseline rows (natural key: record_type, which IS unique)
   const authorityRows = [

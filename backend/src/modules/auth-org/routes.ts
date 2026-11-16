@@ -178,10 +178,27 @@ export default async function authOrgRoutes(app: FastifyInstance) {
         [req.epmpUser!.role_id],
       );
       const hasAdmin = permRows.some((r) => r.feature === 'admin' && r.actions.length > 0);
+      // Phase 2 (F1): any role with ANY 'incidents' permission (view or
+      // above — 02-01's seed grants view-only to planning_logistics_chief/
+      // field_responder and full access to incident_commander/eoc_director)
+      // sees the "Activate" SideNav group's "Incidents" item, per the UX
+      // mockup's Navigation Map. Reuses the same role_permissions-driven
+      // derivation 01-03 established for the Admin group — this is the
+      // single cross-cutting fix reconciling 02-01's newly-seeded
+      // `incidents` permissions with the nav the shell actually renders.
+      const hasIncidents = permRows.some((r) => r.feature === 'incidents' && r.actions.length > 0);
 
-      const nav_groups = hasAdmin
-        ? [{ label: 'Admin', items: ADMIN_NAV_ITEMS }]
-        : [];
+      const nav_groups = [
+        ...(hasIncidents
+          ? [
+              {
+                label: 'Activate',
+                items: [{ id: 'incidents', label: 'Incidents', icon: 'flag', href: '/incidents' }],
+              },
+            ]
+          : []),
+        ...(hasAdmin ? [{ label: 'Admin', items: ADMIN_NAV_ITEMS }] : []),
+      ];
 
       return reply.code(200).send({ nav_groups });
     },
