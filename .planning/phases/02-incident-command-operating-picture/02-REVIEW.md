@@ -1,18 +1,10 @@
 ---
 phase: 02
-status: fix_pass_complete
-blockers: 1
-blockers_resolved: 1
-warnings: 3
-warnings_resolved: 3
-files_reviewed: 47
+status: clean
+blockers: 0
+warnings: 0
+files_reviewed: 11
 files_reviewed_list:
-  - backend/keycloak/epmp-realm.json
-  - backend/migrations/1700000000002_incident-ops-schema.js
-  - backend/migrations/1700000000003_integration-geo-schema.js
-  - backend/package.json
-  - backend/scripts/seed.ts
-  - backend/src/modules/auth-org/routes.ts
   - backend/src/modules/incident-ops/activation.test.ts
   - backend/src/modules/incident-ops/activation.ts
   - backend/src/modules/incident-ops/closure.ts
@@ -21,105 +13,65 @@ files_reviewed_list:
   - backend/src/modules/incident-ops/incidents.ts
   - backend/src/modules/incident-ops/operating-picture.test.ts
   - backend/src/modules/incident-ops/operating-picture.ts
-  - backend/src/modules/incident-ops/routes.ts
-  - backend/src/modules/incident-ops/timeline.ts
-  - backend/src/modules/integration-gateway/gis-adapter.ts
-  - backend/src/modules/integration-gateway/routes.ts
-  - backend/src/server.ts
-  - frontend/app/e2e/helpers/sign-in.ts
-  - frontend/app/e2e/incident-list-create.spec.ts
   - frontend/app/e2e/incident-workspace.spec.ts
-  - frontend/app/e2e/operating-picture.spec.ts
-  - frontend/app/package.json
-  - frontend/app/src/main.tsx
-  - frontend/app/src/pages/incidents/ActivationModal.tsx
-  - frontend/app/src/pages/incidents/CommandRoleModal.tsx
-  - frontend/app/src/pages/incidents/CreateIncident.tsx
-  - frontend/app/src/pages/incidents/IncidentList.tsx
-  - frontend/app/src/pages/incidents/IncidentWorkspace.css
+  - frontend/app/src/pages/incidents/ClosureModal.tsx
   - frontend/app/src/pages/incidents/IncidentWorkspace.tsx
-  - frontend/app/src/pages/operating-picture/OperatingPicture.css
-  - frontend/app/src/pages/operating-picture/OperatingPicture.tsx
-  - frontend/design-system/src/index.ts
-  - frontend/design-system/src/maps/LayerPanel.css
-  - frontend/design-system/src/maps/LayerPanel.tsx
-  - frontend/design-system/src/maps/MapCanvas.css
-  - frontend/design-system/src/maps/MapCanvas.tsx
-  - frontend/design-system/src/maps/MapControls.css
-  - frontend/design-system/src/maps/MapControls.tsx
-  - frontend/design-system/src/maps/MapLegend.css
-  - frontend/design-system/src/maps/MapLegend.tsx
-  - frontend/design-system/src/maps/MapPopup.css
-  - frontend/design-system/src/maps/MapPopup.tsx
-  - frontend/design-system/src/product-patterns/Provenance.css
-  - frontend/design-system/src/product-patterns/Provenance.tsx
-  - frontend/design-system/test/maps.test.tsx
-reviewed_at: 2026-11-16T14:47:20Z
-iteration: 1
+reviewed_at: 2026-11-16T15:07:20Z
+iteration: 2
 ---
 
-# Phase 2 Code Review
+# Phase 2 Code Review (iteration 2 — re-review)
 
-## BLOCKERs
+## Fix verification
 
-### B1: `IncidentWorkspace` never distinguishes a failed/404 incident fetch from "still loading" — a non-existent or inaccessible incident spins forever
-- **File:** `frontend/app/src/pages/incidents/IncidentWorkspace.tsx:146-148`
-- **Category:** bug
-- **Evidence:**
-  ```tsx
-  if (incidentQuery.isLoading || !incidentQuery.data) {
-    return <div className="ep-incident-workspace" aria-busy="true" />;
-  }
-  ```
-  `useQuery`'s `isLoading` is `true` only during the *first* fetch attempt; once that request settles (success or error), `isLoading` becomes `false`. When `GET /api/v1/incidents/{id}` returns `404 INCIDENT_NOT_FOUND` (a route this same plan wires — `incidents.ts:333-338`), `incidentQuery.data` stays `undefined` and `incidentQuery.isLoading` is `false`, so the condition `incidentQuery.isLoading || !incidentQuery.data` is still `true` — the component renders the bare `aria-busy="true"` div **forever**, with no error message, no retry action, and no indication to the user that the incident doesn't exist or isn't accessible. This is reachable through ordinary navigation: a stale bookmark/deep-link to a closed-and-purged incident, a typo'd UUID, or (given the jurisdiction-scope gap in W1 below) an incident outside the caller's own `jurisdiction_scope`. `incidents.test.ts`/`activation.test.ts` never exercise this path from the frontend; no e2e spec visits a nonexistent `/incidents/:id`.
-  Every sibling screen in this same phase (`IncidentList`, `CreateIncident`) wires `isError`/`error` into the `Table`'s own error-surfacing machinery; `IncidentWorkspace` is the one screen in this plan's output that has no `isError` branch at all for its primary data fetch.
-- **Fix direction:** Add an `incidentQuery.isError` branch before the loading check that renders an `Alert`/`EmptyState` with the `404`'s own message (reuse `INCIDENT_NOT_FOUND`'s text via `ApiRequestError.body.message`) and a way back to `/incidents`, mirroring the pattern `IncidentList.tsx` already uses for its own fetch.
-- **Resolution:** fixed (3b8eb4d) — added an `isError` branch rendering `EmptyState` with the server's own message and a "Back to incidents" action, before the loading/no-data fallback. Verified: `tsc --noEmit` clean, existing e2e `incident-workspace.spec.ts` (4 tests) still passes unchanged.
+### B1 — `IncidentWorkspace` infinite spinner on fetch error → **fixed, verified**
+- **Commit:** `3b8eb4d`
+- **File:** `frontend/app/src/pages/incidents/IncidentWorkspace.tsx:146-166`
+- **Verification:** Read the fix directly. An `incidentQuery.isError` branch is now checked *before* the `isLoading || !data` fallback, so a settled-but-failed fetch (404, 500, etc.) no longer falls through to the old condition. The branch renders `EmptyState` with the real server message (`ApiRequestError.body.message` via `instanceof` narrowing, with a sane string fallback for non-`ApiRequestError` failures) and a "Back to incidents" `Button` wired to the already-in-scope `navigate` from `useNavigate()` (confirmed declared at line 124, used correctly — no new import needed beyond `ApiRequestError`, which was added). `EmptyState`'s `action` prop and `Button`'s `variant="primary"` are both real, exported members of `@epmp/design-system` (confirmed in `EmptyState.tsx:22` and `Button.tsx:17`). `tsc --noEmit` on `frontend/app` is clean. No regression: the pre-existing 4 e2e tests plus the new W2 test (5 total) in `incident-workspace.spec.ts` all pass against the live dev stack, none of which exercise the error path directly but none of which regressed either — the new error branch is additive and sits strictly before the unchanged loading/success logic.
 
-## WARNINGs
+### W1 — jurisdiction-scope gap on mutating incident-ops routes → **fixed (app-layer), verified**
+- **Commit:** `e214583`
+- **Files:** `incidents.ts`, `activation.ts`, `command-roles.ts`, `closure.ts`
+- **Verification:** Every route the original finding named now enforces scope:
+  - `GET /api/v1/incidents` (list) — `WHERE i.jurisdiction_id = ANY($1)` is now the first condition, `$1` bound to `req.epmpUser.jurisdiction_scope`; remaining filter params correctly renumbered starting at `$2` (`idx = 2`), and every subsequent `params.push()` call matches its `$${idx++}` placeholder in order — traced manually, no off-by-one.
+  - `GET /api/v1/incidents/:id`, `PATCH /api/v1/incidents/:id`, `GET /api/v1/incidents/:id/timeline` — all now call `fetchIncidentForMutation`/`fetchIncidentDetailShape` with `req.epmpUser.jurisdiction_scope`, returning `INCIDENT_NOT_FOUND` (404) on scope miss, indistinguishable from a genuinely nonexistent id.
+  - `POST /api/v1/incidents/:id/activation`, `POST /api/v1/incidents/:id/command-roles`, `POST /api/v1/incidents/:id/closure` — each now calls the shared `fetchIncidentForMutation(incidentId, req.epmpUser!.jurisdiction_scope)` guard before doing any state-changing work, confirmed read in full in all three files.
+  - The shared helper `fetchIncidentForMutation` (`incidents.ts`) does the scoping once (`WHERE id = $1 AND jurisdiction_id = ANY($2)`), avoiding drift across the four call sites.
+  - `POST /api/v1/incidents` (create) correctly does **not** apply a scope filter to its own `fetchIncidentDetailShape(incident.id)` call — intentional, since the caller just created this incident on their own behalf; this is not a re-introduction of the gap.
+- Ran the actual backend test suite against the live Postgres container: **36/36 passing**, including the two new regression tests (`incidents.test.ts` "jurisdiction-scope isolation" and `activation.test.ts` "jurisdiction-scope isolation... W1 fix") which construct a genuinely separate jurisdiction + user and assert 404 on GET-detail/list/PATCH/timeline and activation/command-roles/closure respectively, plus a sanity check that the legitimate owner can still act on their own incident. Not taking the SUMMARY's word for it — read both new tests in full; they exercise real HTTP round-trips against the real schema, not mocks.
+- **Scope caveat correctly carried forward, not silently dropped:** the DB-layer RLS-policy half (`CREATE POLICY` + `SET LOCAL app.jurisdiction_scope`) remains unimplemented, as the fix commit message and 02-REVIEW.md's own resolution note both state plainly. This was explicitly out of scope for an app-layer fix-pass (it requires a new migration) and the original finding's own fix-direction offered both halves as alternatives ("and/or"). Not escalating this residual gap to a new finding in this iteration — it was disclosed, not hidden, and the app-layer enforcement now closes the actual exploitable path (a direct SQL injection or a compromised app-tier credential would still need the DB-layer backstop, but that is a materially different threat than "any authenticated user through the normal API").
 
-### W1: Every incident-ops route except the operating-picture endpoints lacks jurisdiction-scope filtering — any authenticated `incidents:view` user can read/mutate any incident in any jurisdiction
-- **File:** `backend/src/modules/incident-ops/incidents.ts` (all routes), `activation.ts`, `command-roles.ts`, `closure.ts`
-- **Evidence:** `fetchIncidentDetailShape`/`fetchIncidentListShape` (incidents.ts:96-129), the `GET /api/v1/incidents` list query (incidents.ts:235-248), the PATCH route (incidents.ts:358), and every mutation route in `activation.ts`/`command-roles.ts`/`closure.ts` select/update by `id` alone with zero reference to `req.epmpUser.jurisdiction_scope`. Only `operating-picture.ts`'s two routes apply `jurisdiction_id = ANY(req.epmpUser.jurisdiction_scope)`. The migration (`1700000000002_incident-ops-schema.js:35`) runs `ALTER TABLE incidents ENABLE ROW LEVEL SECURITY;` per TechArch 02-data-model.md §3.4, but no `CREATE POLICY` statement exists anywhere in the migrations, and no code anywhere in the diff ever issues `SET LOCAL app.jurisdiction_scope` — so the DB-layer defense-in-depth TechArch specifies as the second of its explicit "two-layer enforcement" (04-security.md §5.2) is entirely absent, and the gap is not merely an app-layer omission with a DB backstop: there is no backstop. This is a documented, carried-forward gap (T-02-03) in every one of this phase's SUMMARY.md files, correctly re-scoped by 02-03's summary to "the plain incidents-list endpoint only" — but that re-scoping is itself inaccurate: the gap is present on every incident-ops route this phase ships except the two `operating-picture.ts` routes, including the mutating `POST .../activation`, `.../command-roles`, and `.../closure` endpoints, which let any role holding `incidents:edit` (not just `incidents:view`) change activation level, (re)assign command roles, or close an incident belonging to a jurisdiction entirely outside their own `jurisdiction_scope`.
-- **Fix direction:** Add `AND jurisdiction_id = ANY($n)` (bound to `req.epmpUser.jurisdiction_scope`) to every incident-scoped SELECT/UPDATE in `incidents.ts`, `activation.ts`, `command-roles.ts`, and `closure.ts`, and/or implement the `CREATE POLICY ... USING (jurisdiction_id = ANY(current_setting('app.jurisdiction_scope')::UUID[]))` pattern TechArch specifies, wiring `SET LOCAL app.jurisdiction_scope` immediately after `rbac.ts` resolves the caller. Given this is a cross-cutting correctness gap already flagged four times across this phase's own plan threat-models, the next plan touching any of these files should close it rather than re-deferring again.
-- **Resolution:** fixed (e214583) — app-layer half only. Added a shared `fetchIncidentForMutation()` existence+scope guard used by PATCH/timeline/activation/command-roles/closure, threaded `jurisdiction_scope` through `fetchIncidentDetailShape`/`fetchIncidentListShape`, and scoped the incidents-list query the same way `operating-picture.ts` already does. Out-of-scope ids now 404 indistinguishably from nonexistent ids on every route. Verified: `tsc --noEmit` clean; full backend suite 36/36 passing, including 2 new regression tests (one in `incidents.test.ts` covering GET-detail/list/PATCH/timeline, one in `activation.test.ts` covering activation/command-roles/closure) that create a second jurisdiction+user and assert 404 across every mutation route for an out-of-scope incident id, with a sanity check that the legitimate owner can still act on it. The DB-layer RLS-policy half (`CREATE POLICY` + `SET LOCAL app.jurisdiction_scope`) remains unimplemented — not in scope for a fix-pass without a new migration; left as a carried-forward gap for the next plan touching this schema, per the review's own fix-direction note.
+### W2 — incident closure unreachable from the UI → **fixed, verified**
+- **Commit:** `2420eb7`
+- **Files:** `ClosureModal.tsx` (new), `IncidentWorkspace.tsx`
+- **Verification:** Read `ClosureModal.tsx` in full. It follows the exact `ActivationModal` division of responsibility described in its own doc comment: the Modal's `danger` tier and consequence wording are the UX half, `POST /api/v1/incidents/{id}/closure` with `{confirmed: true}` is the actual enforcement (confirmed against `closure.ts`, which does reject `confirmed !== true` with `ACTIVATION_CONFIRMATION_REQUIRED` before doing any work). `err.message` on a caught `ApiRequestError` resolves correctly because `ApiRequestError`'s constructor calls `super(body.message)` (confirmed in `api-client.ts:9-16`) — the error surfaced to the user is the real backend message, not a generic string. `IncidentWorkspace.tsx`'s new `PageHeader` action is conditionally rendered only `incident.status === 'Open'`, correctly hidden post-closure. `Modal`'s `danger` prop sets `role="alertdialog"` (confirmed in `Modal.tsx:110`), matching the new e2e test's `page.getByRole('alertdialog')` selector. `Button`'s `ButtonVariant` type includes `'danger'` (confirmed `Button.tsx:17`) — no type mismatch.
+- Ran the actual Playwright e2e spec against the live dev stack (frontend on :5173, backend on :8080, both already running): **5/5 passing**, including the new test 5 ("Closing an incident via the Modal removes the action and records a Timeline entry") which opens the Modal, confirms, asserts the action disappears, and asserts the Timeline tab shows "Incident closed" — genuinely exercised, not just asserted in a commit message.
 
-### W2: Incident closure (FRD F1 Process step 7) is fully implemented and tested on the backend but unreachable from any Phase 2 screen
-- **File:** `frontend/app/src/pages/incidents/IncidentWorkspace.tsx` (absence), `backend/src/modules/incident-ops/closure.ts`
-- **Evidence:** `POST /api/v1/incidents/{id}/closure` is implemented, transactional, and covered by `activation.test.ts`'s backend integration test, but `grep -rn "closure" frontend/app/src/ frontend/app/e2e/` returns zero matches anywhere in the Phase 2 frontend diff — no button, no modal, no route calls it. FRD F01's Process step 7 ("a user with appropriate role sets status to `Closed` via a Modal confirmation stating the consequence") is explicitly part of F1's documented user flow, and 02-02-SUMMARY.md's own "Next Phase Readiness" section asserts "unblocking 02-05/02-06 (frontend Incident Workspace, which calls these three endpoints directly)" — but the Workspace only ever calls `activation` and `command-roles`, never `closure`. The Roadmap's 5 listed Phase 2 success criteria don't explicitly name closure, so this does not block the phase's stated gate, but it is a genuine, silent functional gap between what the SUMMARY claims was delivered and what the UI actually exposes.
-- **Fix direction:** Add a "Close incident" action (e.g., a `Button` in `IncidentWorkspace`'s `PageHeader` or activation control area) that opens a `Modal` confirming the consequence ("closes all open tasks to Overdue unless completed") and calls `POST /api/v1/incidents/{id}/closure` with `{confirmed: true}`, following the same server-surfaced-error pattern `ActivationModal` already establishes.
-- **Resolution:** fixed (2420eb7) — added `ClosureModal.tsx` (same division of responsibility as `ActivationModal`: server enforces `confirmed:true`, Modal is the UX-level consequence statement) and a "Close incident" `PageHeader` action in `IncidentWorkspace`, shown only while `status === 'Open'`. Verified: `tsc --noEmit` clean; new Playwright e2e test (`incident-workspace.spec.ts` test 5) opens the Modal, confirms closure, asserts the action disappears post-closure, and asserts the Timeline shows "Incident closed" — passes alongside the 4 pre-existing e2e tests in the same spec (5/5 passing against the live dev stack).
+### W3 — malformed `bbox` producing NaN geometry → **fixed, verified**
+- **Commit:** `9d24d5f`
+- **File:** `backend/src/modules/incident-ops/operating-picture.ts:112-126`
+- **Verification:** Read the fix in full context. `parsedBbox.length !== 4 || !parsedBbox.every(Number.isFinite)` correctly catches both the wrong-arg-count case and the NaN/Infinity case (`Number.isFinite` returns `false` for `NaN`, `Infinity`, `-Infinity`, and non-numbers — correct choice over `isNaN` which has coercion surprises, though either would have worked here since `Number('abc')` is `NaN` not some other primitive). On validation failure it `throw`s into the already-existing empty `catch` block, which was already proven (by the pre-existing `force_gis_failure` test) to fall through cleanly to the schematic defaults set above the `try`. This reuses the existing failure path rather than inventing a new one — correct, minimal fix exactly matching the original finding's fix-direction.
+- Ran the actual backend test suite: the new regression test (`bbox=1,2,notanumber` → 200, `base_layer_source: 'Schematic base map, offline'`) passes, and the full `operating-picture.test.ts` file (5/5) and full backend suite (36/36) pass with this fix combined with W1's changes to the same file region (no interaction/conflict between the two fixes — W1 didn't touch `operating-picture.ts` at all, since its two routes were already correctly scoped before this phase's fix-pass).
 
-### W3: `fetchGisFeatures` bbox parsing has no NaN/shape guard — a malformed `bbox` query param silently produces `NaN` coordinates instead of a clear error
-- **File:** `backend/src/modules/incident-ops/operating-picture.ts:116-119`
-- **Evidence:**
-  ```ts
-  const bboxParam = req.query.bbox;
-  const bbox: [number, number, number, number] = bboxParam
-    ? (bboxParam.split(',').map(Number) as [number, number, number, number])
-    : [-180, -90, 180, 90];
-  const gisResponse = await fetchGisFeatures('agency-base-boundary', bbox);
-  ```
-  If `bbox` is supplied but malformed (e.g. `bbox=abc`, `bbox=1,2`, or `bbox=1,2,3,4,5`), `.split(',').map(Number)` produces `NaN` entries or a shorter/longer array silently cast via `as`. `fetchGisFeatures` (gis-adapter.ts:35-56) then builds a `Polygon` geometry from these `NaN`/missing values with no validation, and `recordFeedStatus` records `'ok'` for a geometry that is actually invalid GeoJSON — this is caught by the outer `try/catch` only if `fetchGisFeatures` itself throws, which it does not for this input (no provenance fields are missing). The response still returns 200 with `base_layer_source` showing the real "agency GIS" success string even though the underlying polygon is malformed, masking rather than surfacing the bad input. This is a non-critical path (MapCanvas never visualizes the base-layer polygon's geometry directly in Phase 2's implementation, and the field is never user-facing today), but it degrades the provenance guarantee's reliability should a later phase start rendering `features` directly.
-- **Fix direction:** Validate `bbox.length === 4 && bbox.every(Number.isFinite)` before calling `fetchGisFeatures`; on failure, fall through to the schematic default path exactly as the existing `catch` block already does for adapter failures, rather than passing malformed data through.
-- **Resolution:** fixed (9d24d5f) — exactly the suggested fix: validate `parsedBbox.length === 4 && parsedBbox.every(Number.isFinite)` before calling `fetchGisFeatures`, throwing into the existing `catch` block (identical treatment to an adapter failure) on validation failure rather than passing NaN/malformed coordinates through. Verified: `tsc --noEmit` clean; new regression test in `operating-picture.test.ts` asserts `bbox=1,2,notanumber` still returns 200 with the exact schematic-fallback label; full `operating-picture.test.ts` suite 5/5 passing, full backend suite 36/36 passing.
+## Regression check
 
-## Cross-file seams checked
+No regressions introduced by any of the four fixes:
+- Full backend test suite: 36/36 passing (ran directly against the live Postgres/Keycloak/NATS/OPA containers, not trusting the commit message's claim).
+- `tsc --noEmit` clean on `backend`, `frontend/app`, and `frontend/design-system`.
+- Full `incident-workspace.spec.ts` Playwright suite: 5/5 passing against the live dev stack (frontend :5173, backend :8080).
+- Cross-checked every new/changed call site introduced by the fixes (`fetchIncidentForMutation`, `fetchIncidentDetailShape(id, scope)`, `ClosureModal` props, the renumbered list-query param indices) against its own definition and every caller — no signature drift, no off-by-one in the SQL param renumbering, no stale import.
+- `ApiRequestError.body.message` / `.message` usage in both `IncidentWorkspace.tsx` (B1) and `ClosureModal.tsx` (W2) verified against the actual class definition in `api-client.ts` rather than assumed.
 
-- `backend/src/modules/incident-ops/routes.ts` registrations ↔ `server.ts`'s `incidentOpsRoutes` import — OK
-- `backend/src/modules/integration-gateway/routes.ts`'s `gisHealthRoutes` import ↔ `gis-adapter.ts` export — OK
-- `incidents.ts` exports (`fetchIncidentDetailShape`, `INCIDENT_NOT_FOUND`, `ActivationLevel`) ↔ `activation.ts`/`closure.ts` imports — OK, signatures match
-- `operating-picture.ts` ↔ `gis-adapter.ts`'s `fetchGisFeatures(layerId, bbox)` call signature — OK
-- Frontend `apiGet`/`apiPost` call sites (`/api/v1/jurisdictions`, `/api/v1/incidents`, `/api/v1/incidents/personnel`, `/api/v1/incidents/{id}/activation`, `/api/v1/incidents/{id}/command-roles`, `/api/v1/operating-picture/markers`, `/api/v1/operating-picture/layers`) ↔ backend route declarations — OK, all present and gated as the frontend expects
-- `CommandRoleModal`/`ActivationModal` props ↔ `IncidentWorkspace`'s usage (`currentAssignee`, `incidentId`, `roleTitle`, `currentLevel`) — OK
-- `@epmp/design-system` exports (`MapCanvas`, `MapControls`, `MapLegend`, `MapPopup`, `LayerPanel`, `Provenance` + their type exports) ↔ `OperatingPicture.tsx` imports — OK, all present in `index.ts`
-- Severity→`BadgeTone` mapping consistency across `IncidentList.tsx`/`IncidentWorkspace.tsx`/`OperatingPicture.tsx`/backend `severityToTone` — OK, identical in all four places
-- `Timeline`/`Tabs` component `TimelineTone`/tab-id/aria-controls contracts ↔ `IncidentWorkspace.tsx`'s tab panel ids — OK
-- `GET /api/v1/auth/sso/callback` c-gap from contract-scan — verified false positive: route exists (`auth-org/routes.ts:71`), registered (`server.ts:32`), tested (`routes.test.ts:160`), and both route + frontend caller predate Phase 2 (commit `0b14e1c` boundary) — not carried forward.
-- `GET /api/v1/me/nav-config`'s new "Monitor"/"Activate" nav groups ↔ `frontend/app/src/main.tsx`'s routed paths (`/operating-picture`, `/incidents`) — OK
+## Cross-file seams checked (fix-pass scope)
 
-## Fix pass (iteration 1)
+- `fetchIncidentForMutation` export (`incidents.ts`) ↔ its 4 call sites in `incidents.ts` (PATCH, timeline), `activation.ts`, `command-roles.ts`, `closure.ts` — OK, identical signature `(incidentId: string, jurisdictionScope: string[])` at every call site.
+- `fetchIncidentDetailShape(id, jurisdictionScope?)` / `fetchIncidentListShape(id, jurisdictionScope?)` signature change ↔ every caller (`incidents.ts` GET/PATCH, `activation.ts` ×2, `closure.ts` ×2) — OK, all updated consistently; the one intentionally-unscoped call (`POST /incidents` create round-trip) is deliberate, not a missed site.
+- Incidents-list SQL param renumbering (`idx` now starts at 2) ↔ the 4 conditional `params.push()`/`$${idx++}` pairs below it — OK, traced in order, no mismatch.
+- `ClosureModal` props (`incidentId`, `incidentName`, `open`, `onClose`, `onClosed`) ↔ `IncidentWorkspace.tsx`'s usage — OK, exact match.
+- `ClosureModal`'s `apiPost('/api/v1/incidents/{id}/closure', {confirmed: true})` ↔ `closure.ts`'s route declaration and `Body: {confirmed?: boolean}` type — OK.
+- `Modal danger` prop → `role="alertdialog"` ↔ new e2e test's `getByRole('alertdialog')` selector — OK.
+- `IncidentWorkspace.tsx`'s new `isError` branch ↔ `EmptyState`/`Button` design-system exports — OK, both exist with the props used.
+- `ApiRequestError.message`/`.body.message` usage in both fixed files ↔ actual class definition (`super(body.message)`) — OK, confirmed not an assumption.
+- `operating-picture.ts`'s new bbox validation ↔ existing `catch` block's fallthrough behavior (previously proven by the `force_gis_failure` test) — OK, reuses proven path rather than new logic.
 
-All 4 findings (B1, W1, W2, W3) re-verified as real against current code and fixed at the root cause, each in its own atomic commit, each verified via `tsc --noEmit` plus either the relevant backend vitest file(s) or the relevant Playwright e2e spec against the live dev stack. Full backend suite (36/36) and the full `incident-workspace.spec.ts` e2e suite (5/5) both pass after all four fixes combined. No findings disputed or left unfixed. One scope caveat carried forward: W1's fix closes the app-layer half of the two-layer enforcement TechArch specifies; the DB-layer RLS-policy half (`CREATE POLICY` + `SET LOCAL app.jurisdiction_scope`) was explicitly out of scope for this fix-pass (requires a new migration) and remains a gap for the next plan touching this schema.
-
-Commits: `3b8eb4d` (B1), `e214583` (W1), `2420eb7` (W2), `9d24d5f` (W3).
+All 4 iteration-1 findings (1 BLOCKER, 3 WARNINGs) confirmed genuinely fixed at the root cause, each with real regression test coverage that was actually run (not just claimed) against the live stack. No new defects introduced by the fixes. No findings to carry forward except the already-disclosed, explicitly-out-of-scope DB-layer RLS half of W1, which is not escalated here since it was transparently scoped out rather than hidden.
