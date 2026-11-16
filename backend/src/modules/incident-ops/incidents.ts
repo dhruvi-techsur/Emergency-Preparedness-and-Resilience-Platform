@@ -3,10 +3,10 @@ import { requirePermission } from '../auth-org/rbac.js';
 import { query } from '../../db/client.js';
 import { TimelineService, withTimelineTransaction } from './timeline.js';
 
-type IncidentType = 'Flood' | 'Wildfire' | 'Severe Weather' | 'HazMat' | 'Public Health' | 'Other';
-type Severity = 'Critical' | 'Elevated' | 'Watch' | 'Normal';
-type ActivationLevel = 'Monitoring' | 'Partial' | 'Full';
-type CommandRoleTitle =
+export type IncidentType = 'Flood' | 'Wildfire' | 'Severe Weather' | 'HazMat' | 'Public Health' | 'Other';
+export type Severity = 'Critical' | 'Elevated' | 'Watch' | 'Normal';
+export type ActivationLevel = 'Monitoring' | 'Partial' | 'Full';
+export type CommandRoleTitle =
   | 'Incident Commander'
   | 'Planning'
   | 'Logistics'
@@ -110,7 +110,7 @@ async function fetchIncidentListShape(incidentId: string) {
   return row ? shapeIncidentListRow(row) : null;
 }
 
-async function fetchIncidentDetailShape(incidentId: string) {
+export async function fetchIncidentDetailShape(incidentId: string) {
   const listShape = await fetchIncidentListShape(incidentId);
   if (!listShape) return null;
 
@@ -128,7 +128,7 @@ async function fetchIncidentDetailShape(incidentId: string) {
   };
 }
 
-const INCIDENT_NOT_FOUND = {
+export const INCIDENT_NOT_FOUND = {
   error_code: 'INCIDENT_NOT_FOUND',
   message: 'This incident no longer exists or you don\u2019t have access.',
 } as const;
