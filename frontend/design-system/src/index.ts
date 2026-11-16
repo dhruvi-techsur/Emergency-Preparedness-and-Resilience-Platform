@@ -29,6 +29,20 @@ export type { EmptyStateProps } from './feedback/EmptyState';
 export { Toast } from './feedback/Toast';
 export type { ToastProps, ToastTone } from './feedback/Toast';
 
+// FORMS
+export { TextField } from './forms/TextField';
+export type { TextFieldProps, TextFieldSize } from './forms/TextField';
+export { Select } from './forms/Select';
+export type { SelectProps, SelectOption, SelectSize } from './forms/Select';
+export { Checkbox } from './forms/Checkbox';
+export type { CheckboxProps, CheckboxSize } from './forms/Checkbox';
+export { Switch } from './forms/Switch';
+export type { SwitchProps } from './forms/Switch';
+export { Combobox } from './forms/Combobox';
+export type { ComboboxProps, ComboboxOption, ComboboxSize } from './forms/Combobox';
+export { DatePicker } from './forms/DatePicker';
+export type { DatePickerProps, DatePickerSize } from './forms/DatePicker';
+
 // DATA
 export { Table } from './data/Table';
 export type { TableProps, TableColumn, TableErrorState, StatusCellProps } from './data/Table';
