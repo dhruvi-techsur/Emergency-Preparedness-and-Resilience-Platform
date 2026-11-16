@@ -35,6 +35,7 @@ import { RecordAuthority } from './pages/admin/RecordAuthority';
 import { IncidentList } from './pages/incidents/IncidentList';
 import { CreateIncident } from './pages/incidents/CreateIncident';
 import { IncidentWorkspace } from './pages/incidents/IncidentWorkspace';
+import { OperatingPicture } from './pages/operating-picture/OperatingPicture';
 
 const queryClient = new QueryClient();
 
@@ -69,6 +70,7 @@ root.render(
               <Route path="incidents" element={<IncidentList />} />
               <Route path="incidents/new" element={<CreateIncident />} />
               <Route path="incidents/:id" element={<IncidentWorkspace />} />
+              <Route path="operating-picture" element={<OperatingPicture />} />
             </Route>
           </Routes>
         </RouteGuard>

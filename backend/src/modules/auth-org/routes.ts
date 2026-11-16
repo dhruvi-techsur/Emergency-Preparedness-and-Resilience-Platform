@@ -189,6 +189,25 @@ export default async function authOrgRoutes(app: FastifyInstance) {
       const hasIncidents = permRows.some((r) => r.feature === 'incidents' && r.actions.length > 0);
 
       const nav_groups = [
+        // Phase 2 (F2/F11, 02-07): the operating picture reads incident
+        // data and is gated server-side by the SAME 'incidents'/'view'
+        // permission as the markers/layers endpoints
+        // (backend/src/modules/incident-ops/operating-picture.ts) — the
+        // FRD doesn't name a separate "operating-picture" feature
+        // permission string, so this reuses `hasIncidents` rather than
+        // inventing a new one. Per the UX mockup's Navigation Map
+        // ("Reached from: SideNav → Monitor: 'Operating picture'"), this
+        // is its own "Monitor" group, distinct from "Activate".
+        ...(hasIncidents
+          ? [
+              {
+                label: 'Monitor',
+                items: [
+                  { id: 'operating-picture', label: 'Operating picture', icon: 'map', href: '/operating-picture' },
+                ],
+              },
+            ]
+          : []),
         ...(hasIncidents
           ? [
               {
