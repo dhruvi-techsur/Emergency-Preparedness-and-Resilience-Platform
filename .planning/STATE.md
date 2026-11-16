@@ -3,15 +3,15 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-11-16T03:02:30.631Z"
-last_activity: 2026-11-16 — Plan 01-01 complete (data foundation + backing services)
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-11-16T03:05:16.889Z"
+last_activity: 2026-11-16 — Plan 01-02 complete (EPMP design system foundation: tokens + 8 components)
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 13
-  completed_plans: 1
-  percent: 1
+  completed_plans: 2
+  percent: 15
 ---
 
 # Project State
@@ -26,29 +26,30 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 1 of 6 (Platform Foundation & Deployable Shell)
-Plan: 1 of 13 in current phase
+Plan: 2 of 13 in current phase
 Status: In progress
-Last activity: 2026-11-16 — Plan 01-01 complete (data foundation + backing services)
+Last activity: 2026-11-16 — Plan 01-02 complete (EPMP design system foundation: tokens + 8 components)
 
-Progress: [░░░░░░░░░░] 1%
+Progress: [░░░░░░░░░░] 15%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 1
-- Average duration: 25 min
-- Total execution time: 0.4 hours
+- Total plans completed: 2
+- Average duration: 30 min
+- Total execution time: 1.0 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | Phase 01 P01 | 25 min | 3 tasks | 11 files |
+| Phase 01 P02 | 35 min | 3 tasks | 24 files |
 
 **Recent Trend:**
 
-- Last 5 plans: 25 min
+- Last 5 plans: 25 min, 35 min
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -66,6 +67,7 @@ Recent decisions affecting current work:
 - [Phase 01-01]: audit_log immutability via BEFORE UPDATE/DELETE trigger instead of TechArch's REVOKE-based approach, since DEPLOY-01 gives the app one DATABASE_URL role that must also run DDL
 - [Phase 01-01]: OPA image pinned to openpolicyagent/opa:0.68.0-debug (not the plain tag) because the Chainguard static base ships no shell/wget needed for its own healthcheck
 - [Phase 01-01]: Seed idempotency implemented as explicit find-or-insert (SELECT then INSERT) rather than ON CONFLICT, since several auth-org tables have no UNIQUE constraint on their natural seed key per TechArch's verbatim DDL
+- [Phase 01-02]: Cross-theme token-wiring proof reads cascaded CSS custom-property values (getPropertyValue('--success-subtle')) directly rather than computed color/background-color, since jsdom's cssstyle engine does not substitute var() inside shorthand color properties
 
 ### Pending Todos
 
@@ -77,6 +79,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-16T03:02:30.630Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-11-16T03:05:16.889Z
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None
