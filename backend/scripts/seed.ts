@@ -110,6 +110,48 @@ async function main() {
     record('role_permissions', result);
   }
 
+  // incidents feature (Phase 2, F1): incident_commander and eoc_director are
+  // the FRD's "typically PER-01 or PER-02" creators/commanders of incidents,
+  // so they get view/create/edit. planning_logistics_chief and
+  // field_responder get read-only view access for situational awareness —
+  // Phase 2's RBAC model grants no incident-mutation rights to either role.
+  // secops_admin deliberately gets NO explicit 'incidents' row here: it
+  // already has blanket admin/platform access from the grants above, and
+  // that access is scoped to the admin console (user/role/SSO/audit
+  // management), not incident-command operations — omitting it is
+  // intentional, not an oversight.
+  const incidentsFullAccessRoles = ['incident_commander', 'eoc_director'] as const;
+  const incidentsViewOnlyRoles = ['planning_logistics_chief', 'field_responder'] as const;
+
+  for (const roleName of incidentsFullAccessRoles) {
+    const result = await findOrInsert(
+      'role_permissions',
+      ['role_id', 'feature'],
+      [roleIds[roleName], 'incidents'],
+      ['role_id', 'feature', 'actions'],
+      [roleIds[roleName], 'incidents', ['view', 'create', 'edit']],
+    );
+    record('role_permissions', result);
+  }
+
+  for (const roleName of incidentsViewOnlyRoles) {
+    const result = await findOrInsert(
+      'role_permissions',
+      ['role_id', 'feature'],
+      [roleIds[roleName], 'incidents'],
+      ['role_id', 'feature', 'actions'],
+      [roleIds[roleName], 'incidents', ['view']],
+    );
+    record('role_permissions', result);
+  }
+
+  // No explicit call to syncRolePermissionsToOpa here: unlike this plan's
+  // earlier concern, OPA's data document is re-synced fresh from
+  // role_permissions at every server.ts startup (see server.ts's `start()`),
+  // so `npm run migrate && npm run seed` followed by a normal app boot is
+  // sufficient — the newly-seeded rows reach OPA on the next server start
+  // with no separate sync step needed from this script.
+
   // 1 admin user (natural key: email, which IS unique in the schema)
   const adminUser = await findOrInsert(
     'users',
