@@ -3,14 +3,14 @@ phase: 01
 gate_status: passed
 build_command: "npm run build -w backend; (cd frontend/design-system && npm run build); npm run build -w frontend/app"
 test_command: "npm test -w backend; (cd frontend/design-system && npm test)"
-last_updated: 2026-11-16T10:01:39Z
+last_updated: 2026-11-16T10:25:28Z
 tests_disabled_during_fixes: none
 shadowed_sources: 0
 review_blockers_open: 0
 boot_smoke: skipped
 browser_suite: skipped
-browser_headroom_mb: 3363
-browser_headroom_naive_mb: 1798
+browser_headroom_mb: 5307
+browser_headroom_naive_mb: 1764
 waves:
   - wave: 1
     build: pass
