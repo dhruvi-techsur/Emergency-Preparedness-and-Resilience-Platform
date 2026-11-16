@@ -1,0 +1,171 @@
+/*
+ * MapCanvas (MAPS) — token-only styling.
+ *
+ * Base fill (non-offline) is a flat var(--map-land) rect. Offline fill is a
+ * diagonal-hatch repeating-linear-gradient built from var(--map-land) and
+ * var(--bg-sunken) — no raw hex. Marker outline is always var(--ink) for
+ * 3:1 contrast against any base, regardless of fill tone. Selection adds a
+ * var(--focus-ring) halo via box-shadow (layers over the outline, not a
+ * border swap).
+ */
+
+.ep-map-canvas {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border: var(--border-1) solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.ep-map-canvas--basemap {
+  background: var(--map-land);
+}
+
+.ep-map-canvas--transparent {
+  background: transparent;
+}
+
+.ep-map-canvas--offline.ep-map-canvas--basemap {
+  background-color: var(--map-land);
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--bg-sunken) 0,
+    var(--bg-sunken) 6px,
+    var(--map-land) 6px,
+    var(--map-land) 12px
+  );
+}
+
+.ep-map-canvas__offline-badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 700;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--warning-subtle);
+  color: var(--warning-text);
+}
+
+.ep-map-canvas__slot {
+  position: absolute;
+  z-index: var(--z-sticky);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  pointer-events: none;
+}
+.ep-map-canvas__slot > * {
+  pointer-events: auto;
+}
+
+.ep-map-canvas__slot--top-left {
+  top: var(--space-3);
+  left: var(--space-3);
+}
+.ep-map-canvas__slot--top-right {
+  top: var(--space-3);
+  right: var(--space-3);
+}
+.ep-map-canvas__slot--bottom-left {
+  bottom: var(--space-3);
+  left: var(--space-3);
+}
+
+.ep-map-canvas__overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.ep-map-area {
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.ep-map-line {
+  fill: none;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.ep-map-canvas__markers {
+  position: absolute;
+  inset: 0;
+}
+
+.ep-map-marker {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  transform: translate(-50%, -50%);
+  border: var(--border-2) solid var(--ink);
+  cursor: pointer;
+}
+.ep-map-marker:focus-visible {
+  outline: none;
+}
+.ep-map-marker--selected,
+.ep-map-marker:focus-visible {
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.ep-map-marker--diamond {
+  border-radius: 2px;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.ep-map-marker--square {
+  border-radius: 2px;
+}
+.ep-map-marker--circle {
+  border-radius: var(--radius-full);
+}
+.ep-map-marker--triangle {
+  width: 0;
+  height: 0;
+  background: transparent !important;
+  border: none;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-bottom: 16px solid var(--ink);
+}
+.ep-map-marker--triangle::after {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 3px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 10px solid inherit;
+}
+
+.ep-map-canvas__popup-slot {
+  position: absolute;
+  z-index: var(--z-sticky);
+  bottom: var(--space-10);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.ep-map-canvas__status-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-3);
+  background: var(--bg-raised);
+  border-top: var(--border-1) solid var(--border);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--ink-muted);
+}
