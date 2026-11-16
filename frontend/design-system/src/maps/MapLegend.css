@@ -1,0 +1,71 @@
+/*
+ * MapLegend (MAPS) — token-only styling.
+ *
+ * Reuses Card with padded={false}; internal list padding applied here
+ * instead, per Card's "edge-to-edge tables/lists" convention.
+ */
+
+.ep-map-legend__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  list-style: none;
+}
+
+.ep-map-legend__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ep-map-legend__glyph {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border: var(--border-2) solid var(--ink);
+}
+
+.ep-map-legend__glyph--diamond {
+  border-radius: 2px;
+  transform: rotate(45deg);
+}
+.ep-map-legend__glyph--square {
+  border-radius: 2px;
+}
+.ep-map-legend__glyph--circle {
+  border-radius: var(--radius-full);
+}
+.ep-map-legend__glyph--triangle {
+  width: 0;
+  height: 0;
+  background: transparent !important;
+  border: none;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 11px solid var(--ink);
+}
+
+.ep-map-legend__glyph--area {
+  border-radius: var(--radius-sm);
+  opacity: var(--opacity-hazard);
+}
+
+.ep-map-legend__glyph--line {
+  border: none;
+  border-top: var(--border-2) solid var(--ink);
+  height: 0;
+  width: 16px;
+}
+.ep-map-legend__glyph--line.ep-map-legend__glyph--dashed {
+  border-top-style: dashed;
+}
+
+.ep-map-legend__glyph--boundary {
+  border: none;
+  border-top: var(--border-2) dashed var(--map-boundary);
+  height: 0;
+  width: 16px;
+}
