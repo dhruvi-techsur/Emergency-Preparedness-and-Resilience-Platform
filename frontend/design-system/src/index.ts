@@ -29,6 +29,22 @@ export type { EmptyStateProps } from './feedback/EmptyState';
 export { Toast } from './feedback/Toast';
 export type { ToastProps, ToastTone } from './feedback/Toast';
 
+// DATA
+export { Table } from './data/Table';
+export type { TableProps, TableColumn, TableErrorState, StatusCellProps } from './data/Table';
+export { Timeline } from './data/Timeline';
+export type { TimelineProps, TimelineItem, TimelineTone } from './data/Timeline';
+export { Stat } from './data/Stat';
+export type { StatProps, StatTrend } from './data/Stat';
+
+// NAVIGATION
+export { Tabs } from './navigation/Tabs';
+export type { TabsProps, TabItem } from './navigation/Tabs';
+
+// OVERLAYS
+export { Modal } from './overlays/Modal';
+export type { ModalProps } from './overlays/Modal';
+
 // LAYOUT
 export { Card } from './layout/Card';
 export type { CardProps } from './layout/Card';
@@ -42,3 +58,5 @@ export { Breadcrumbs } from './navigation/Breadcrumbs';
 export type { BreadcrumbsProps, BreadcrumbItem } from './navigation/Breadcrumbs';
 export { PageHeader } from './navigation/PageHeader';
 export type { PageHeaderProps } from './navigation/PageHeader';
+export { SideNav } from './navigation/SideNav';
+export type { SideNavProps, SideNavGroup, SideNavItem } from './navigation/SideNav';

@@ -1,0 +1,41 @@
+/*
+ * Modal (OVERLAYS) — token-only styling.
+ */
+
+.ep-modal-scrim {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  z-index: var(--z-modal);
+}
+
+.ep-modal {
+  width: 100%;
+  background: var(--bg-raised);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-6);
+}
+
+.ep-modal__title {
+  margin: 0 0 var(--space-3);
+  color: var(--ink);
+}
+
+.ep-modal__body {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink-muted);
+}
+
+.ep-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
