@@ -24,7 +24,7 @@ capabilities that reach across (rather than own) the rest of the platform.
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: Platform Foundation & Deployable Shell** - SSO/RBAC/audit, the API/event-bus backbone, and the application shell, running as a real deployed service
+- [x] **Phase 1: Platform Foundation & Deployable Shell** - SSO/RBAC/audit, the API/event-bus backbone, and the application shell, running as a real deployed service (completed 2026-11-16)
 - [ ] **Phase 2: Incident Command & Operating Picture** - Incident/ICS activation and command, backed by a shared, GIS-grounded operating picture
 - [ ] **Phase 3: Plans, Tasks & Resource Requests** - Versioned plan/SOP repository linked to a full task and resource-request lifecycle
 - [ ] **Phase 4: Notifications & Reporting/Learning** - Accountable, approval-gated notifications and ICS/SITREP/AAR reporting that closes the preparedness loop
@@ -152,7 +152,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Platform Foundation & Deployable Shell | 0/TBD | Passed | - |
+| 1. Platform Foundation & Deployable Shell | 0/TBD | Complete | 2026-11-16 |
 | 2. Incident Command & Operating Picture | 0/7 | Ready to execute | - |
 | 3. Plans, Tasks & Resource Requests | 0/9 | Ready to execute | - |
 | 4. Notifications & Reporting/Learning | 0/TBD | Not started | - |
