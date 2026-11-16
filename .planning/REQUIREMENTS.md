@@ -85,27 +85,27 @@ Populated during roadmap creation by the roadmapper agent.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| F0 | TBD | Pending |
-| F1 | TBD | Pending |
-| F2 | TBD | Pending |
-| F3 | TBD | Pending |
-| F4 | TBD | Pending |
-| F5 | TBD | Pending |
-| F6 | TBD | Pending |
-| F7 | TBD | Pending |
-| F8 | TBD | Pending |
-| F9 | TBD | Pending |
-| F10 | TBD | Pending |
-| F11 | TBD | Pending |
-| F16-SSO | TBD | Pending |
-| F18 | TBD | Pending |
-| DEPLOY-01 | TBD | Pending |
+| F0 | Phase 1 | Pending |
+| F8 | Phase 1 | Pending |
+| F10 | Phase 1 | Pending |
+| F1 | Phase 2 | Pending |
+| F2 | Phase 2 | Pending |
+| F3 | Phase 3 | Pending |
+| F4 | Phase 3 | Pending |
+| F5 | Phase 4 | Pending |
+| F6 | Phase 5 | Pending |
+| F7 | Phase 4 | Pending |
+| F9 | Phase 6 | Pending |
+| F11 | Phase 2 | Pending |
+| F16-SSO | Phase 1 | Pending |
+| F18 | Phase 6 | Pending |
+| DEPLOY-01 | Phase 1 | Pending |
 
 **Coverage:**
 - v1 requirements: 15 total (12 P0 features + F9 + F16-SSO sub-scope + DEPLOY-01)
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 15 ⚠️ (expected — filled by roadmapper)
+- Mapped to phases: 15 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-11-16*
-*Last updated: 2026-11-16 after initial definition*
+*Last updated: 2026-11-16 after roadmap creation (6 phases, 100% coverage)*
