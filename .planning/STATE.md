@@ -2,16 +2,16 @@
 pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 02-06-PLAN.md
-last_updated: "2026-11-16T13:59:25.378Z"
-last_activity: "2026-11-16 — Plan 02-06 complete (Incident Workspace (S1.3) with fixed Timeline/Tasks/Resources/Reports tab order and pinned 6-role command-role Card, plus Command Role Assignment (S1.4) and danger-tier Activation Level Change (S1.5) Modals; 1 auto-fixed deviation — Rule 3 (added GET /api/v1/incidents/personnel since incident_commander/eoc_director hold no admin:view permission needed to reuse /api/v1/admin/users))"
+status: planning
+stopped_at: Completed 02-07-PLAN.md
+last_updated: "2026-11-16T14:22:16.215Z"
+last_activity: 2026-11-16 — Plan 02-07 complete (Operating Picture (S2.1) map screen; status bar + MapCanvas offline prop both derived from the same backend status_bar.base_layer_source string; 2 auto-fixed deviations, both confined to the new Playwright spec — a test-fixture jurisdiction-scope grant and a marker-overlap selector fix)
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 31
-  completed_plans: 21
-  percent: 17
+  completed_plans: 22
+  percent: 33
 ---
 
 # Project State
@@ -25,20 +25,20 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 
 ## Current Position
 
-Phase: 2 of 6 (Incident Command & Operating Picture)
-Plan: 6 of 7 complete in current phase (02-01, 02-04 — wave 1; 02-02 — wave 2, depends_on 02-01; 02-03, 02-05 — wave 3, depends_on 02-01[+02-02]; 02-06 — wave 4, depends_on 02-01+02-02+02-05 — all COMPLETE; 02-07 remains)
-Status: In progress — ready for 02-07 (02-07 consumes 02-03's operating-picture endpoints directly, no dependency on 02-06's screens)
-Last activity: 2026-11-16 — Plan 02-06 complete (Incident Workspace (S1.3) with fixed Timeline/Tasks/Resources/Reports tab order and pinned 6-role command-role Card, plus Command Role Assignment (S1.4) and danger-tier Activation Level Change (S1.5) Modals; 1 auto-fixed deviation — Rule 3 (added GET /api/v1/incidents/personnel since incident_commander/eoc_director hold no admin:view permission needed to reuse /api/v1/admin/users))
+Phase: 2 of 6 (Incident Command & Operating Picture) — COMPLETE
+Plan: 7 of 7 complete in current phase (02-01, 02-04 — wave 1; 02-02 — wave 2, depends_on 02-01; 02-03, 02-05 — wave 3, depends_on 02-01[+02-02]; 02-06 — wave 4, depends_on 02-01+02-02+02-05; 02-07 — wave 5, depends_on 02-03+02-04+02-06 — ALL COMPLETE)
+Status: Phase 2 fully complete — ready for Phase 3 planning (Plans, Tasks & Resource Requests)
+Last activity: 2026-11-16 — Plan 02-07 complete (Operating Picture (S2.1) map screen; status bar + MapCanvas offline prop both derived from the same backend status_bar.base_layer_source string; 2 auto-fixed deviations, both confined to the new Playwright spec — a test-fixture jurisdiction-scope grant and a marker-overlap selector fix)
 
-Progress: [██░░░░░░░░] 17%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 21
+- Total plans completed: 22
 - Average duration: 24 min
-- Total execution time: 9.5 hours
+- Total execution time: 9.9 hours
 
 **By Phase:**
 
@@ -65,13 +65,15 @@ Progress: [██░░░░░░░░] 17%
 | Phase 02 P03 | 12 min | 3 tasks | 7 files |
 | Phase 02 P05 | 35 min | 3 tasks | 9 files |
 | Phase 02 P06 | 25 min | 3 tasks | 7 files |
+| Phase 02 P07 | 25 min | 2 tasks | 6 files |
 
 **Recent Trend:**
 
-- Last 5 plans: 9 min, 12 min, 35 min, 25 min
-- Trend: Phase 1 is now fully complete: all 15 plans (13 original + 2 gap-closure) done. Phase 2 is underway with a parallel-wave structure (02-01 and 02-04 are both wave 1, no interdependency between the backend incident-ops foundation and the design-system MAPS component family); 02-02 (wave 2, depends_on 02-01) extended the incident-ops backend with command-role assignment, activation gating, and closure; 02-03 and 02-05 are both wave 3 (depends_on 02-01, and for 02-03 also 02-02 solely to serialize edits to the shared routes.ts file). 02-05 is the first Phase 2 frontend plan, shipping the Incident List/Create Incident screens and making success criterion 1 observable end-to-end. 02-06 (wave 4, depends_on 02-01+02-02+02-05) shipped the Incident Workspace plus the Command Role Assignment and Activation Level Change Modals, making success criteria 2 and 3 observable end-to-end. Plan 02-01 ran one trivial auto-fixed deviation — a backtick-in-SQL-comment template-literal break. Plan 02-04 ran one trivial test-infrastructure-only deviation. Plan 02-02 ran one auto-fixed Rule 1 bug (SAVEPOINT needed, not just try/catch, around a forward-compatible defensive UPDATE). Plan 02-03 ran clean with zero deviations beyond a trivial @types/geojson devDependency install. Plan 02-05 ran two auto-fixed deviations: a Rule 3 blocker (seeded a second Keycloak identity since the existing admin seed deliberately holds no incidents permissions) and a Rule 1 bug (Playwright's getByLabel needed exact:false for required fields whose accessible name includes a " *" suffix). Plan 02-06 ran one auto-fixed Rule 3 deviation — added GET /api/v1/incidents/personnel since the only roles that can assign command roles (incident_commander/eoc_director) hold no admin:view permission needed to reuse /api/v1/admin/users. All six Phase 2 plans' own verify commands (build + full test suite, with 02-01/02-02/02-03/02-05/02-06 also running a live-stack integration/Playwright test) passed clean.
+- Last 5 plans: 12 min, 35 min, 25 min, 25 min
+- Trend: Phase 1 is now fully complete: all 15 plans (13 original + 2 gap-closure) done. Phase 2 is now ALSO fully complete: all 7 plans done, with a parallel-wave structure (02-01 and 02-04 both wave 1; 02-02 wave 2 depends_on 02-01; 02-03/02-05 wave 3; 02-06 wave 4; 02-07 wave 5, depends_on 02-03+02-04+02-06). 02-05 shipped the Incident List/Create Incident screens (success criterion 1). 02-06 shipped the Incident Workspace plus the Command Role Assignment and Activation Level Change Modals (success criteria 2 and 3). 02-07 shipped the Operating Picture map screen (success criteria 4 and 5), composing 02-04's MAPS component family over 02-03's markers/layers endpoints, with its Playwright suite proving the page survives a forced GIS outage end-to-end. Plan 02-01 ran one trivial auto-fixed deviation. Plan 02-04 ran one trivial test-infrastructure-only deviation. Plan 02-02 ran one auto-fixed Rule 1 bug (SAVEPOINT). Plan 02-03 ran clean. Plan 02-05 ran two auto-fixed deviations (Rule 3 Keycloak identity seed, Rule 1 Playwright label fix). Plan 02-06 ran one auto-fixed Rule 3 deviation (GET /api/v1/incidents/personnel). Plan 02-07 ran two auto-fixed deviations, both confined to its own new Playwright spec file (no production code touched): a Rule 3 test-fixture jurisdiction-scope grant for commander@epmp.local (the markers endpoint correctly enforces jurisdiction_scope filtering where the plain incidents-list endpoint doesn't yet — T-02-03) and a Rule 1 marker-overlap selector fix (exact-name aria-label matching instead of `.first()`, plus per-incident lat/lng jitter). All seven Phase 2 plans' own verify commands (build + full test suite, with 02-01/02-02/02-03/02-05/02-06/02-07 also running a live-stack integration/Playwright test) passed clean.
 
 *Updated after each plan completion*
+| Phase 02-incident-command-operating-picture P07 | 25 min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -132,6 +134,10 @@ Recent decisions affecting current work:
 - [Phase 02-05]: Alert's warning tone stays non-dismissable-by-button for the duplicate-name 409 (Phase 1's PERSISTENT_TONES contract) — "does not block" is satisfied via confirm-and-resubmit + auto-clear-on-name-edit, not by adding a dismiss affordance that would contradict Alert's documented persistence rule
 - [Phase 02-06]: Added GET /api/v1/incidents/personnel (incidents:view gated) instead of reusing GET /api/v1/admin/users for the Command Role Modal's Combobox — incident_commander/eoc_director (the only roles holding incidents:edit) deliberately hold no admin:view permission per 02-01's seed, so reusing the admin endpoint would have required widening admin access to a role with no business there
 - [Phase 02-06]: ActivationModal's 422 NO_COMMANDER_ASSIGNED path deliberately skips the parent's onChanged() refetch callback — the activation-level display visibly stays unchanged because the client never re-fetches, not because of any extra client-side state check duplicating the server's own gate
+- [Phase 02-07]: Operating Picture's /operating-picture route added to main.tsx (not AppShell.tsx) — consistent with 02-05/02-06's established convention that main.tsx owns the nested route tree; AppShell.tsx is layout/chrome only
+- [Phase 02-07]: Status bar text and MapCanvas's offline prop are both derived from the identical backend status_bar.base_layer_source string (never independently tracked) — structurally impossible to show contradictory GIS-outage states
+- [Phase 02-07]: projectToPercent(lat, lng, bbox) colocated in the page file (not the design system) — a documented linear approximation standing in for a real MapLibre/Leaflet/ArcGIS JS integration's own screen-coordinate output, since no map-engine license/tile-server credential exists in this sandbox
+- [Phase 02-07]: Discovered (not caused by this plan) that commander@epmp.local's JIT-provisioned jurisdiction_scope is empty by design, and that operating-picture.ts's markers query (unlike the still-unscoped GET /api/v1/incidents list endpoint, T-02-03) correctly enforces it — fixed via a test-fixture-only grant in the new Playwright spec, not a production code change
 
 ### Pending Todos
 
@@ -143,6 +149,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-16T13:59:25.377Z
-Stopped at: Completed 02-06-PLAN.md
+Last session: 2026-11-16T14:22:03.751Z
+Stopped at: Completed 02-07-PLAN.md
 Resume file: None
