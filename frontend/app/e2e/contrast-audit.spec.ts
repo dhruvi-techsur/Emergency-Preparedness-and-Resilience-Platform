@@ -109,6 +109,32 @@ test.describe('WCAG contrast audit', () => {
         auditLogViolations,
         `/admin/audit-log color-contrast violations in ${theme} theme:\n${JSON.stringify(auditLogViolations, null, 2)}`,
       ).toEqual([]);
+
+      // 3. The plan also named /admin/federation-grants as a second
+      //    DatePicker-mounting screen (it shares the same DatePicker
+      //    component/token as audit-log, but checking it directly covers
+      //    the plan's full stated scope rather than relying on inference).
+      //    Only exercised in dark theme — the theme this review's B1
+      //    finding was specifically about — to avoid tripling runtime for
+      //    a screen that shares the same component/token already proven
+      //    compliant above.
+      if (theme === 'dark') {
+        await page.goto('/admin/federation-grants');
+        await expect(page.getByRole('button', { name: 'Grant access' })).toBeVisible({
+          timeout: 10_000,
+        });
+        await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+
+        await page.getByRole('button', { name: 'Grant access' }).click();
+        await page.getByRole('button', { name: 'Open calendar' }).first().click();
+        await expect(page.locator('.ep-datepicker__popover')).toBeVisible({ timeout: 5_000 });
+
+        const federationGrantsViolations = await scanForColorContrastViolations(page);
+        expect(
+          federationGrantsViolations,
+          `/admin/federation-grants color-contrast violations in ${theme} theme:\n${JSON.stringify(federationGrantsViolations, null, 2)}`,
+        ).toEqual([]);
+      }
     });
   }
 });
