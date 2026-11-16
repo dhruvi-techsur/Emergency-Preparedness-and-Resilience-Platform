@@ -3,15 +3,15 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-10-PLAN.md
-last_updated: "2026-11-16T04:17:27.907Z"
-last_activity: 2026-11-16 — Plan 01-10 complete (React/Vite app shell with real Keycloak OIDC SSO, role-scoped SideNav, theme switcher, Playwright e2e coverage)
+stopped_at: Completed 01-12-PLAN.md
+last_updated: "2026-11-16T05:35:00.000Z"
+last_activity: 2026-11-16 — Plan 01-12 complete (SSO config test-before-activate gate, Platform Monitoring, Integration Health, API Clients one-time-secret, Federation Grants immediate-revoke admin screens)
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 13
-  completed_plans: 10
-  percent: 54
+  completed_plans: 12
+  percent: 92
 ---
 
 # Project State
@@ -26,19 +26,19 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 1 of 6 (Platform Foundation & Deployable Shell)
-Plan: 10 of 13 in current phase (01-11+ executing next per wave)
+Plan: 12 of 13 in current phase (01-13 — final deploy-packaging plan — next per wave 6)
 Status: In progress
-Last activity: 2026-11-16 — Plan 01-10 complete (React/Vite app shell with real Keycloak OIDC SSO, role-scoped SideNav, theme switcher, Playwright e2e coverage)
+Last activity: 2026-11-16 — Plan 01-12 complete (SSO config test-before-activate gate, Platform Monitoring, Integration Health, API Clients one-time-secret, Federation Grants immediate-revoke admin screens)
 
-Progress: [█████░░░░░] 54%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 10
-- Average duration: 27 min
-- Total execution time: 5.0 hours
+- Total plans completed: 12
+- Average duration: 28 min
+- Total execution time: 5.9 hours
 
 **By Phase:**
 
@@ -54,11 +54,13 @@ Progress: [█████░░░░░] 54%
 | Phase 01 P07 | 28 min | 3 tasks | 6 files |
 | Phase 01 P09 | 70 min | 3 tasks | 11 files |
 | Phase 01 P10 | 35 min | 3 tasks | 17 files |
+| Phase 01 P11 | 48 min | 3 tasks | 6 files |
+| Phase 01 P12 | 35 min | 3 tasks | 6 files |
 
 **Recent Trend:**
 
-- Last 5 plans: 22 min, 28 min, 70 min, 35 min
-- Trend: Plan 10 landed close to average despite 5 cross-cutting deviations (2 Keycloak realm config fixes + 3 React/StrictMode timing bugs), all found and fixed via the plan's own live-stack Playwright verify command
+- Last 5 plans: 70 min, 35 min, ~30 min, 35 min
+- Trend: Plan 12 landed at average with only one environment-recovery deviation (a silently-dead Vite dev server process, not a code bug) — all 4 of this plan's Playwright assertions plus the full 13-test cross-plan suite (01-10/01-11/01-12) passed on the first real run against the live stack
 
 *Updated after each plan completion*
 
@@ -95,6 +97,9 @@ Recent decisions affecting current work:
 - [Phase 01-10]: Keycloak realm fix — groups protocol mapper's full.path must be true (not false) for sso.ts's group_to_role_mapping ('/epmp-admins', with leading slash) to ever match; also added seeded user firstName/lastName to avoid Keycloak's VERIFY_PROFILE required-action blocking every login. Both carried forward in backend/keycloak/epmp-realm.json for any future plan touching it.
 - [Phase 01-10]: RouteGuard applies the resolved theme_preference to the DOM via useLayoutEffect on session resolution (not just on ThemeSwitcher's onChange) — this is what actually satisfies "no flash of wrong theme" on reload, since main.tsx's pre-render default can only ever be the static 'light' fallback
 - [Phase 01-10]: SignInCallback's OIDC-callback effect has no cleanup-based cancellation guard — React.StrictMode's synthetic double-invoke was observed to silently drop a legitimately successful sign-in's navigate() via a stale cancelled=true; a useRef (not a cleanup flag) is the correct one-time guard for the non-idempotent OAuth code exchange
+- [Phase 01-12]: SSO config's Save-gate uses a stable JSON fingerprint comparison (not a boolean "hasBeenTested" flag) over every field a Test call validates, so any field edit — not just a hardcoded set — invalidates the gate automatically
+- [Phase 01-12]: API-client secret reveal uses one local-only useState in the Create modal, never the React Query cache, cleared entirely on "Done" — the backend (01-08) never returns it again on any GET, so client and server agree on exactly one moment the plaintext exists
+- [Phase 01-12]: Federation Grants' jurisdiction picker derives its single option from any admin user's jurisdiction_scope[0] rather than hardcoding a UUID, since no jurisdictions-list endpoint exists yet in Phase 1
 
 ### Pending Todos
 
@@ -106,6 +111,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-16T04:17:27.906Z
-Stopped at: Completed 01-10-PLAN.md
+Last session: 2026-11-16T05:35:00.000Z
+Stopped at: Completed 01-12-PLAN.md
 Resume file: None
