@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { requirePermission } from '../auth-org/rbac.js';
 import { TimelineService, withTimelineTransaction } from './timeline.js';
+import { fetchIncidentForMutation, INCIDENT_NOT_FOUND } from './incidents.js';
 
 type CommandRoleTitle =
   | 'Incident Commander'
@@ -46,6 +47,14 @@ export default async function commandRolesRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const incidentId = req.params.id;
       const { role_title, person_id } = req.body ?? ({} as never);
+
+      // Jurisdiction-scope enforcement (W1 fix, TechArch 04-security.md
+      // §5.2): a caller holding incidents:edit can only (re)assign command
+      // roles on incidents in their own jurisdiction_scope.
+      const scoped = await fetchIncidentForMutation(incidentId, req.epmpUser!.jurisdiction_scope);
+      if (!scoped) {
+        return reply.code(404).send(INCIDENT_NOT_FOUND);
+      }
 
       try {
         const result = await withTimelineTransaction(async (client) => {

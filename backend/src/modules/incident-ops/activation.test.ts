@@ -237,6 +237,56 @@ describe('incident-ops activation / command-roles / closure routes', () => {
     expect(planningEntries).toHaveLength(1);
   });
 
+  it('jurisdiction-scope isolation: a caller cannot activate, assign command roles on, or close an incident outside their own jurisdiction_scope (W1 fix)', async () => {
+    const otherJurisdictionId = await findOrCreateJurisdiction('Activation Test Jurisdiction (Other)');
+
+    const otherEmail = `activation-test-other-${Date.now()}@epmp.local`;
+    const otherUserRows = await query<{ id: string }>(
+      `INSERT INTO users (email, name, role_id, jurisdiction_scope, status) VALUES ($1, $2, $3, $4, 'Active') RETURNING id`,
+      [otherEmail, 'Activation Test Other User', testRoleId, [otherJurisdictionId]],
+    );
+    const otherToken = await mintSessionToken({
+      id: otherUserRows[0].id,
+      role_id: testRoleId,
+      jurisdiction_scope: [otherJurisdictionId],
+    });
+    const otherIncidentId = await createTestIncident(otherToken, otherJurisdictionId);
+
+    const ownToken = await mintSessionToken({
+      id: testUserId,
+      role_id: testRoleId,
+      jurisdiction_scope: [testJurisdictionId],
+    });
+
+    const activationRes = await request(app.server)
+      .post(`/api/v1/incidents/${otherIncidentId}/activation`)
+      .set('Authorization', `Bearer ${ownToken}`)
+      .send({ activation_level: 'Full', confirmed: true });
+    expect(activationRes.status).toBe(404);
+    expect(activationRes.body.error_code).toBe('INCIDENT_NOT_FOUND');
+
+    const commandRoleRes = await request(app.server)
+      .post(`/api/v1/incidents/${otherIncidentId}/command-roles`)
+      .set('Authorization', `Bearer ${ownToken}`)
+      .send({ role_title: 'Incident Commander', person_id: testUserId });
+    expect(commandRoleRes.status).toBe(404);
+    expect(commandRoleRes.body.error_code).toBe('INCIDENT_NOT_FOUND');
+
+    const closureRes = await request(app.server)
+      .post(`/api/v1/incidents/${otherIncidentId}/closure`)
+      .set('Authorization', `Bearer ${ownToken}`)
+      .send({ confirmed: true });
+    expect(closureRes.status).toBe(404);
+    expect(closureRes.body.error_code).toBe('INCIDENT_NOT_FOUND');
+
+    // Sanity: the other jurisdiction's own caller can still act on it.
+    const legitActivationRes = await request(app.server)
+      .post(`/api/v1/incidents/${otherIncidentId}/activation`)
+      .set('Authorization', `Bearer ${otherToken}`)
+      .send({ activation_level: 'Monitoring', confirmed: true });
+    expect(legitActivationRes.status).toBe(200);
+  });
+
   it('closing an already-closed incident returns 409', async () => {
     const token = await mintSessionToken({
       id: testUserId,

@@ -2,18 +2,18 @@ import type { FastifyInstance } from 'fastify';
 import { requirePermission } from '../auth-org/rbac.js';
 import { query } from '../../db/client.js';
 import { TimelineService, withTimelineTransaction } from './timeline.js';
-import { fetchIncidentDetailShape, INCIDENT_NOT_FOUND, type ActivationLevel } from './incidents.js';
+import {
+  fetchIncidentDetailShape,
+  fetchIncidentForMutation,
+  INCIDENT_NOT_FOUND,
+  type ActivationLevel,
+} from './incidents.js';
 
 const ACTIVATION_LEVEL_RANK: Record<ActivationLevel, number> = {
   Monitoring: 0,
   Partial: 1,
   Full: 2,
 };
-
-interface IncidentActivationRow {
-  id: string;
-  activation_level: ActivationLevel;
-}
 
 interface CommanderCountRow {
   count: string;
@@ -59,11 +59,12 @@ export default async function activationRoutes(app: FastifyInstance) {
         });
       }
 
-      const incidentRows = await query<IncidentActivationRow>(
-        `SELECT id, activation_level FROM incidents WHERE id = $1`,
-        [incidentId],
-      );
-      const incident = incidentRows[0];
+      // Jurisdiction-scope enforcement (W1 fix, TechArch 04-security.md
+      // §5.2): a caller holding incidents:edit can only act on incidents
+      // in their own jurisdiction_scope — this existence+scope check
+      // doubles as the 404 for "doesn't exist" vs "exists elsewhere",
+      // deliberately indistinguishable to the caller.
+      const incident = await fetchIncidentForMutation(incidentId, req.epmpUser!.jurisdiction_scope);
       if (!incident) {
         return reply.code(404).send(INCIDENT_NOT_FOUND);
       }
@@ -73,7 +74,7 @@ export default async function activationRoutes(app: FastifyInstance) {
       // 2. No-op if the target level is the same as current — not a real
       // change, so no Timeline entry.
       if (activation_level === priorLevel) {
-        const detail = await fetchIncidentDetailShape(incidentId);
+        const detail = await fetchIncidentDetailShape(incidentId, req.epmpUser!.jurisdiction_scope);
         return reply.code(200).send(detail);
       }
 
@@ -118,7 +119,7 @@ export default async function activationRoutes(app: FastifyInstance) {
           );
         });
 
-        const detail = await fetchIncidentDetailShape(incidentId);
+        const detail = await fetchIncidentDetailShape(incidentId, req.epmpUser!.jurisdiction_scope);
         return reply.code(200).send(detail);
       } catch (err) {
         req.log.error(err, 'Activation-level change transaction failed');

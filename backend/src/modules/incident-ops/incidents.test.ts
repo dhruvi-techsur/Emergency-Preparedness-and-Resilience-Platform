@@ -190,6 +190,72 @@ describe('incident-ops incidents routes', () => {
     ).toBe(true);
   });
 
+  it('jurisdiction-scope isolation: a caller scoped to jurisdiction A cannot read, list, or edit an incident in jurisdiction B (W1 fix)', async () => {
+    const otherJurisdictionId = await findOrCreateJurisdiction('Incidents Test Jurisdiction (Other)');
+
+    const ownToken = await mintSessionToken({
+      id: testUserId,
+      role_id: testRoleId,
+      jurisdiction_scope: [testJurisdictionId],
+    });
+
+    // Create an incident scoped to the OTHER jurisdiction using a second
+    // user whose own scope includes it (bypassing the own-scope caller
+    // entirely, so this doesn't depend on POST's own scoping).
+    const otherEmail = `incidents-test-other-${Date.now()}@epmp.local`;
+    const otherUserRows = await query<{ id: string }>(
+      `INSERT INTO users (email, name, role_id, jurisdiction_scope, status) VALUES ($1, $2, $3, $4, 'Active') RETURNING id`,
+      [otherEmail, 'Incidents Test Other User', testRoleId, [otherJurisdictionId]],
+    );
+    const otherToken = await mintSessionToken({
+      id: otherUserRows[0].id,
+      role_id: testRoleId,
+      jurisdiction_scope: [otherJurisdictionId],
+    });
+    const createRes = await request(app.server)
+      .post('/api/v1/incidents')
+      .set('Authorization', `Bearer ${otherToken}`)
+      .send({
+        name: `Other-Jurisdiction Incident ${Date.now()}`,
+        type: 'Flood',
+        severity: 'Normal',
+        jurisdiction_id: otherJurisdictionId,
+        opened_at: new Date().toISOString(),
+      });
+    expect(createRes.status).toBe(201);
+    const otherIncidentId = createRes.body.id;
+
+    // GET detail by id -> 404, not 200 with someone else's data.
+    const getRes = await request(app.server)
+      .get(`/api/v1/incidents/${otherIncidentId}`)
+      .set('Authorization', `Bearer ${ownToken}`);
+    expect(getRes.status).toBe(404);
+    expect(getRes.body.error_code).toBe('INCIDENT_NOT_FOUND');
+
+    // List -> does not include the other jurisdiction's incident.
+    const listRes = await request(app.server)
+      .get('/api/v1/incidents')
+      .query({ page_size: 100 })
+      .set('Authorization', `Bearer ${ownToken}`);
+    expect(listRes.status).toBe(200);
+    const ids = listRes.body.items.map((i: { id: string }) => i.id);
+    expect(ids).not.toContain(otherIncidentId);
+
+    // PATCH -> 404, update does not leak through.
+    const patchRes = await request(app.server)
+      .patch(`/api/v1/incidents/${otherIncidentId}`)
+      .set('Authorization', `Bearer ${ownToken}`)
+      .send({ name: 'Should not apply' });
+    expect(patchRes.status).toBe(404);
+
+    // Timeline -> 404, not an accidental leak of another jurisdiction's
+    // Timeline entries.
+    const timelineRes = await request(app.server)
+      .get(`/api/v1/incidents/${otherIncidentId}/timeline`)
+      .set('Authorization', `Bearer ${ownToken}`);
+    expect(timelineRes.status).toBe(404);
+  });
+
   it('a direct UPDATE against incident_timeline throws the append-only exception, proving the trigger is live', async () => {
     const token = await mintSessionToken({
       id: testUserId,

@@ -93,7 +93,21 @@ async function fetchCommandRoles(incidentId: string) {
   }));
 }
 
-async function fetchIncidentListShape(incidentId: string) {
+// `jurisdictionScope`, when passed, restricts the lookup to incidents
+// whose jurisdiction_id is in the caller's own jurisdiction_scope — the
+// app-layer enforcement half of TechArch 04-security.md §5.2's two-layer
+// jurisdiction isolation (see W1 fix). Omitting it (undefined) means "no
+// jurisdiction restriction", used only by call sites that have already
+// established the caller is allowed to see this exact incident (e.g. the
+// POST /incidents creation round-trip fetching the incident it just
+// created on the caller's own behalf).
+async function fetchIncidentListShape(incidentId: string, jurisdictionScope?: string[]) {
+  const params: unknown[] = [incidentId];
+  let scopeClause = '';
+  if (jurisdictionScope) {
+    params.push(jurisdictionScope);
+    scopeClause = ` AND i.jurisdiction_id = ANY($${params.length})`;
+  }
   const rows = await query<IncidentListRow>(
     `SELECT i.id, i.name, i.type, i.severity, i.jurisdiction_id, j.name AS jurisdiction_name,
             i.activation_level, i.status, i.opened_at,
@@ -103,15 +117,15 @@ async function fetchIncidentListShape(incidentId: string) {
      LEFT JOIN incident_command_roles icr
        ON icr.incident_id = i.id AND icr.role_title = 'Incident Commander' AND icr.unassigned_at IS NULL
      LEFT JOIN users u ON u.id = icr.person_id
-     WHERE i.id = $1`,
-    [incidentId],
+     WHERE i.id = $1${scopeClause}`,
+    params,
   );
   const row = rows[0];
   return row ? shapeIncidentListRow(row) : null;
 }
 
-export async function fetchIncidentDetailShape(incidentId: string) {
-  const listShape = await fetchIncidentListShape(incidentId);
+export async function fetchIncidentDetailShape(incidentId: string, jurisdictionScope?: string[]) {
+  const listShape = await fetchIncidentListShape(incidentId, jurisdictionScope);
   if (!listShape) return null;
 
   const detailRows = await query<IncidentRow>(`SELECT * FROM incidents WHERE id = $1`, [incidentId]);
@@ -126,6 +140,21 @@ export async function fetchIncidentDetailShape(incidentId: string) {
     closed_at: detail.closed_at,
     command_roles,
   };
+}
+
+/**
+ * Shared existence+scope guard used by every mutation route that acts on
+ * an existing incident by id (activation, command-roles, closure, PATCH).
+ * Returns the row (scoped) or null — callers send INCIDENT_NOT_FOUND on
+ * null, which is deliberately indistinguishable from "doesn't exist" so
+ * an out-of-jurisdiction id doesn't leak whether it's a real incident.
+ */
+export async function fetchIncidentForMutation(incidentId: string, jurisdictionScope: string[]) {
+  const rows = await query<IncidentRow>(
+    `SELECT * FROM incidents WHERE id = $1 AND jurisdiction_id = ANY($2)`,
+    [incidentId, jurisdictionScope],
+  );
+  return rows[0] ?? null;
 }
 
 export const INCIDENT_NOT_FOUND = {
@@ -201,9 +230,13 @@ export default async function incidentsRoutes(app: FastifyInstance) {
       const page_size = Math.max(1, parseInt(req.query.page_size ?? '25', 10) || 25);
       const offset = (page - 1) * page_size;
 
-      const conditions: string[] = [];
-      const params: unknown[] = [];
-      let idx = 1;
+      // Jurisdiction-scope enforcement (W1 fix, TechArch 04-security.md
+      // §5.2): every incidents-list caller only ever sees incidents in
+      // their own jurisdiction_scope, mirroring the same filter
+      // operating-picture.ts's markers/layers routes already apply.
+      const conditions: string[] = ['i.jurisdiction_id = ANY($1)'];
+      const params: unknown[] = [req.epmpUser!.jurisdiction_scope];
+      let idx = 2;
 
       if (severity) {
         conditions.push(`i.severity = $${idx++}`);
@@ -330,7 +363,7 @@ export default async function incidentsRoutes(app: FastifyInstance) {
     '/api/v1/incidents/:id',
     { preHandler: requirePermission('incidents', 'view') },
     async (req, reply) => {
-      const detail = await fetchIncidentDetailShape(req.params.id);
+      const detail = await fetchIncidentDetailShape(req.params.id, req.epmpUser!.jurisdiction_scope);
       if (!detail) {
         return reply.code(404).send(INCIDENT_NOT_FOUND);
       }
@@ -355,8 +388,8 @@ export default async function incidentsRoutes(app: FastifyInstance) {
       const { id } = req.params;
       const { name, type, description } = req.body ?? ({} as never);
 
-      const existingRows = await query<IncidentRow>(`SELECT * FROM incidents WHERE id = $1`, [id]);
-      if (!existingRows[0]) {
+      const existing = await fetchIncidentForMutation(id, req.epmpUser!.jurisdiction_scope);
+      if (!existing) {
         return reply.code(404).send(INCIDENT_NOT_FOUND);
       }
 
@@ -380,7 +413,7 @@ export default async function incidentsRoutes(app: FastifyInstance) {
       params.push(id);
       await query(`UPDATE incidents SET ${updates.join(', ')} WHERE id = $${idx}`, params);
 
-      const detail = await fetchIncidentDetailShape(id);
+      const detail = await fetchIncidentDetailShape(id, req.epmpUser!.jurisdiction_scope);
       return reply.code(200).send(detail);
     },
   );
@@ -394,8 +427,8 @@ export default async function incidentsRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const { id } = req.params;
 
-      const incidentRows = await query<{ id: string }>(`SELECT id FROM incidents WHERE id = $1`, [id]);
-      if (!incidentRows[0]) {
+      const incident = await fetchIncidentForMutation(id, req.epmpUser!.jurisdiction_scope);
+      if (!incident) {
         return reply.code(404).send(INCIDENT_NOT_FOUND);
       }
 
