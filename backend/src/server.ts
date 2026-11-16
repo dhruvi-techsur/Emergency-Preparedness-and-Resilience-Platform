@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import authOrgRoutes from './modules/auth-org/routes.js';
+import incidentOpsRoutes from './modules/incident-ops/routes.js';
 import integrationGatewayRoutes from './modules/integration-gateway/routes.js';
 import webhookSubscriptionRoutes from './modules/integration-gateway/webhook-subscriptions.js';
 import openApiRoutes from './openapi/spec.js';
@@ -29,6 +30,7 @@ export function buildApp() {
   app.register(openApiRoutes);
 
   app.register(authOrgRoutes);
+  app.register(incidentOpsRoutes);
   app.register(integrationGatewayRoutes);
   app.register(webhookSubscriptionRoutes);
   app.register(platformHealthRoutes);
