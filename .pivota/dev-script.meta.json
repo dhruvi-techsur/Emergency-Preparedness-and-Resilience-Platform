@@ -1,0 +1,42 @@
+{
+  "generator_version": "init-dev-server@1",
+  "catalog_entry": "compose",
+  "generated_at": "2026-11-16T10:56:16Z",
+  "inspection_inputs_hash": "08a43ee03ff43893effe1aee4364c5fa528b106e817891399ab95c726e0caf15",
+  "inspection_inputs": {
+    "matched_globs": [
+      "docker-compose.yml",
+      "package.json"
+    ],
+    "manifest_signatures": [
+      "backend/package.json:dependencies:fastify@^5.0.0",
+      "backend/package.json:dev-script:tsx watch src/server.ts",
+      "backend/package.json:script:build=tsc -p tsconfig.json",
+      "backend/package.json:script:dev=tsx watch src/server.ts",
+      "backend/package.json:script:migrate=node-pg-migrate up -j js",
+      "backend/package.json:script:seed=tsx scripts/seed.ts",
+      "backend/package.json:script:start=node dist/server.js",
+      "backend/package.json:script:test=vitest run",
+      "frontend/app/package.json:dependencies:react@^18.3.0",
+      "frontend/app/package.json:dev-script:vite --host 0.0.0.0",
+      "frontend/app/package.json:devDependencies:vite@^5.4.0",
+      "frontend/app/package.json:script:build=vite build",
+      "frontend/app/package.json:script:dev=vite --host 0.0.0.0",
+      "frontend/app/package.json:script:preview=vite preview --host 0.0.0.0",
+      "frontend/app/package.json:script:test:e2e=playwright test",
+      "frontend/design-system/package.json:dev-script:vite build --watch",
+      "frontend/design-system/package.json:devDependencies:react@^18.3.0",
+      "frontend/design-system/package.json:devDependencies:vite@^5.4.0",
+      "frontend/design-system/package.json:script:build=vite build",
+      "frontend/design-system/package.json:script:dev=vite build --watch",
+      "frontend/design-system/package.json:script:test=vitest run",
+      "package.json:dev-script:echo '\\n=== EPMP dev mode ===\\nSign-in UI (open this):  http://localhost:5173\\nBackend API only:        http://localhost:8080  (no UI here until a production build exists)\\n======================\\n' && docker compose up -d db nats opa keycloak && npm run build -w frontend/design-system && concurrently -n design-system,backend,frontend -c magenta,blue,green \"npm run dev -w frontend/design-system\" \"npm run dev -w backend\" \"npm run dev -w frontend\"",
+      "package.json:script:build=npm run build -w backend",
+      "package.json:script:dev=echo '\\n=== EPMP dev mode ===\\nSign-in UI (open this):  http://localhost:5173\\nBackend API only:        http://localhost:8080  (no UI here until a production build exists)\\n======================\\n' && docker compose up -d db nats opa keycloak && npm run build -w frontend/design-system && concurrently -n design-system,backend,frontend -c magenta,blue,green \"npm run dev -w frontend/design-system\" \"npm run dev -w backend\" \"npm run dev -w frontend\"",
+      "package.json:script:migrate=npm run migrate -w backend",
+      "package.json:script:seed=npm run seed -w backend",
+      "package.json:script:test=npm run test -w backend"
+    ],
+    "existing_scripts": []
+  }
+}
