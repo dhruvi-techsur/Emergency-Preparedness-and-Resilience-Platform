@@ -3,14 +3,14 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-03-PLAN.md
-last_updated: "2026-11-16T03:16:00.000Z"
-last_activity: 2026-11-16 — Plan 01-03 complete (auth-org session/SSO/RBAC/audit core); Plans 01-04/01-06 also complete in parallel (design-system layout/navigation + overlay/data components)
+stopped_at: Completed 01-05-PLAN.md
+last_updated: "2026-11-16T03:21:24.146Z"
+last_activity: "2026-11-16 — Plan 01-05 complete (design-system form-control layer: TextField, Select, Checkbox, Switch, Combobox, DatePicker)"
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 13
-  completed_plans: 5
+  completed_plans: 6
   percent: 38
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 1 of 6 (Platform Foundation & Deployable Shell)
-Plan: 7 of 13 in current phase (01-05/01-07+ executing in parallel per wave)
+Plan: 7 of 13 in current phase (01-07+ executing next per wave)
 Status: In progress
-Last activity: 2026-11-16 — Plan 01-03 complete (auth-org session/SSO/RBAC/audit core: requirePermission, AuditService, SSO callback, F0 session/theme/nav endpoints); Plans 01-04/01-06 also complete in parallel
+Last activity: 2026-11-16 — Plan 01-05 complete (design-system form-control layer: TextField, Select, Checkbox, Switch, Combobox, DatePicker)
 
 Progress: [███░░░░░░░] 38%
 
@@ -36,9 +36,9 @@ Progress: [███░░░░░░░] 38%
 
 **Velocity:**
 
-- Total plans completed: 5
+- Total plans completed: 6
 - Average duration: 24 min
-- Total execution time: 2.0 hours
+- Total execution time: 2.4 hours
 
 **By Phase:**
 
@@ -49,10 +49,11 @@ Progress: [███░░░░░░░] 38%
 | Phase 01 P03 | 30 min | 3 tasks | 9 files |
 | Phase 01 P04 | 5 min | - tasks | 11 files |
 | Phase 01 P06 | 25 min | 3 tasks | 11 files |
+| Phase 01 P05 | 25 min | 3 tasks | 14 files |
 
 **Recent Trend:**
 
-- Last 5 plans: 25 min, 35 min, 5 min, 25 min, 30 min
+- Last 5 plans: 35 min, 5 min, 25 min, 30 min, 25 min
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -77,6 +78,7 @@ Recent decisions affecting current work:
 - [Phase 01-06]: Table owns its own loading/empty/error presentation via props (delegating to Skeleton/EmptyState/Alert) rather than leaving every consumer screen to reimplement F0's "every list/table/panel has loading/empty/error" rule
 - [Phase 01-03]: Rewrote backend/opa/policy.rego to read data.role_permissions[role_id][feature] instead of input.role_permissions — opa-client.ts syncs permissions into OPA's data document via PUT, so the original 01-01 policy (expecting the full table as input) would fail-closed on every check
 - [Phase 01-03]: GET /api/v1/me/nav-config derives NavGroup[] directly from role_permissions (admin feature → full Admin nav group), leaving role_landing_config unpopulated per 01-01's documented Phase 6 scope boundary
+- [Phase 01-05]: DatePicker's calendar-grid date arithmetic uses UTC Date objects internally keyed on YYYY-MM-DD strings to avoid local-timezone day-shift bugs, while the public value/onChange contract remains plain ISO strings with no timezone conversion applied
 
 ### Pending Todos
 
@@ -88,6 +90,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-16T03:16:00.000Z
-Stopped at: Completed 01-03-PLAN.md (01-04/01-06 also complete)
+Last session: 2026-11-16T03:21:24.145Z
+Stopped at: Completed 01-05-PLAN.md
 Resume file: None
