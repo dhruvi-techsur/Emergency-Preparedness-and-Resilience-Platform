@@ -36,3 +36,9 @@ export type { CardProps } from './layout/Card';
 // DATA
 export { Avatar } from './data/Avatar';
 export type { AvatarProps, AvatarSize } from './data/Avatar';
+
+// NAVIGATION
+export { Breadcrumbs } from './navigation/Breadcrumbs';
+export type { BreadcrumbsProps, BreadcrumbItem } from './navigation/Breadcrumbs';
+export { PageHeader } from './navigation/PageHeader';
+export type { PageHeaderProps } from './navigation/PageHeader';

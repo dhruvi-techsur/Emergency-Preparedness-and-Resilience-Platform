@@ -1,0 +1,52 @@
+/*
+ * Breadcrumbs (NAVIGATION) — token-only styling.
+ */
+
+.ep-breadcrumbs {
+  font-family: var(--font-sans);
+}
+
+.ep-breadcrumbs__list {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ep-breadcrumbs__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.ep-breadcrumbs__link {
+  color: var(--ink-muted);
+  text-decoration: none;
+  font-size: 13px;
+  line-height: 16px;
+}
+
+.ep-breadcrumbs__link:hover {
+  color: var(--brand-text);
+  text-decoration: underline;
+}
+
+.ep-breadcrumbs__link:focus-visible {
+  outline: var(--border-2) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.ep-breadcrumbs__current {
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 16px;
+}
+
+.ep-breadcrumbs__sep {
+  color: var(--ink-muted);
+  flex: none;
+}
