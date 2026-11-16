@@ -1,0 +1,93 @@
+/*
+ * Table (DATA) — token-only styling.
+ */
+
+.ep-table-wrap {
+  width: 100%;
+}
+
+.ep-table__error {
+  margin-bottom: var(--space-4);
+}
+
+.ep-table__as-of {
+  margin-top: var(--space-2);
+  color: var(--ink-muted);
+}
+
+.ep-table__retry {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+
+.ep-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.ep-table__caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.ep-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-subtle);
+  color: var(--ink-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: var(--space-3) var(--space-3);
+  border-bottom: var(--border-1) solid var(--border);
+  z-index: var(--z-sticky);
+}
+
+.ep-table tbody td {
+  padding: var(--space-3);
+  border-bottom: var(--border-1) solid var(--border);
+  color: var(--ink);
+}
+
+.ep-table--compact thead th,
+.ep-table--compact tbody td {
+  padding: var(--space-2) var(--space-3);
+}
+
+.ep-table__cell--num {
+  font-variant-numeric: tabular-nums;
+}
+
+.ep-table__row--clickable {
+  cursor: pointer;
+}
+
+.ep-table__row--clickable:hover {
+  background: var(--bg-subtle);
+}
+
+.ep-table__row--selected {
+  background: var(--brand-subtle);
+}
+
+.ep-table__row--selected.ep-table__row--clickable:hover {
+  background: var(--brand-subtle);
+}
