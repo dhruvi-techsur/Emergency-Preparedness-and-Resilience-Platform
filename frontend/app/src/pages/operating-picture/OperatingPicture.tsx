@@ -1,0 +1,452 @@
+import * as React from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import {
+  PageHeader,
+  Card,
+  Timeline,
+  EmptyState,
+  Badge,
+  Button,
+  MapCanvas,
+  MapControls,
+  MapLegend,
+  MapPopup,
+  LayerPanel,
+  Provenance,
+  type BadgeTone,
+  type MapMarker as CanvasMapMarker,
+  type MapLegendItem,
+  type MapLayer,
+  type TimelineItem,
+} from '@epmp/design-system';
+import { apiGet } from '../../lib/api-client';
+import './OperatingPicture.css';
+
+type Severity = 'Critical' | 'Elevated' | 'Watch' | 'Normal';
+type ActivationLevel = 'Monitoring' | 'Partial' | 'Full';
+
+/** Shape of each entry in GET /api/v1/operating-picture/markers's `markers`
+ * array (backend/src/modules/incident-ops/operating-picture.ts). Phase 2
+ * only ever produces `type: 'incident'` rows — `shape` is always `'diamond'`
+ * for that type, so this page reads `type` (not the redundant `shape`
+ * field) to decide `MapCanvas`'s marker shape, matching the design
+ * system's own type->shape mapping. */
+interface ApiMarker {
+  id: string;
+  type: 'incident' | 'facility' | 'resource' | 'shelter';
+  shape: 'diamond' | 'square' | 'triangle' | 'circle';
+  tone: string;
+  label: string;
+  status: string;
+  location: { lat: number; lng: number };
+}
+
+interface StatusBar {
+  as_of: string;
+  base_layer_source: string;
+}
+
+interface MarkersResponse {
+  markers: ApiMarker[];
+  status_bar: StatusBar;
+}
+
+interface ApiLayer {
+  id: string;
+  label: string;
+  source: string;
+  as_of: string;
+  verified: boolean;
+  count: number;
+  checked: boolean;
+}
+
+interface LayersResponse {
+  layers: ApiLayer[];
+}
+
+/**
+ * Fields needed for the `MapPopup`'s 2-3 facts (activation level,
+ * jurisdiction, opened date) and severity `Badge`. `GET
+ * .../operating-picture/markers` intentionally returns a thin marker shape
+ * (id/type/tone/label/status/location only — see that endpoint's own
+ * `MapMarker` interface) since Phase 3+ facility/resource markers will
+ * share the same thin shape. Rather than widen that endpoint's response
+ * (which would mean every poll of the whole marker set carries data only
+ * the currently-selected popup needs), this page fetches the fuller detail
+ * for ONLY the selected incident via the existing `GET /api/v1/incidents/
+ * {id}` (02-01), the same endpoint `IncidentWorkspace.tsx` already uses.
+ */
+interface SelectedIncidentDetail {
+  id: string;
+  name: string;
+  severity: Severity;
+  jurisdiction: { id: string; name: string };
+  activation_level: ActivationLevel;
+  opened_at: string;
+}
+
+interface TimelineEntry {
+  id: string;
+  occurred_at: string;
+  title: string;
+  meta?: string;
+  tone: 'brand' | 'success' | 'warning' | 'danger';
+  actor: { id: string; name: string } | null;
+  source: string;
+}
+
+interface TimelineResponse {
+  items: TimelineEntry[];
+}
+
+/** Exact FRD tone mapping for incident severity (same mapping IncidentList/
+ * IncidentWorkspace use) — rendered via Badge, never a raw colored span. */
+const SEVERITY_TONE: Record<Severity, BadgeTone> = {
+  Critical: 'danger',
+  Elevated: 'warning',
+  Watch: 'info',
+  Normal: 'success',
+};
+
+/** Legend label per marker tone — inverse of operating-picture.ts's
+ * severityToTone() mapping, since each severity maps 1:1 onto a distinct
+ * tone in Phase 2's incident-only marker set. */
+const TONE_LEGEND_LABEL: Record<string, string> = {
+  danger: 'Critical incident',
+  warning: 'Elevated incident',
+  info: 'Watch incident',
+  success: 'Normal incident',
+};
+
+function formatTimeHHMM(iso: string): string {
+  return new Date(iso).toLocaleTimeString(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+/**
+ * Lat/lng -> MapCanvas x/y (0-100 percent) linear projection. `MapCanvas`
+ * (02-04) takes percent-based `x`/`y` by design — it documents this as the
+ * abstraction a real map engine's own screen-coordinate output would
+ * replace (see MapCanvas.tsx's file header, "Integrating a real map
+ * engine"). No MapLibre/Leaflet/ArcGIS JS license or tile-server credential
+ * exists in this sandbox, so Phase 2 ships this linear approximation
+ * instead: a simple min/max bounding-box projection, not a true map
+ * projection (no Mercator correction, no antimeridian handling). `bbox` is
+ * `[minLng, minLat, maxLng, maxLat]` — the same order the backend's own
+ * `fetchGisFeatures(layerId, bbox)` call uses.
+ */
+function projectToPercent(
+  lat: number,
+  lng: number,
+  bbox: [number, number, number, number],
+): { x: number; y: number } {
+  const [minLng, minLat, maxLng, maxLat] = bbox;
+  const lngSpan = maxLng - minLng;
+  const latSpan = maxLat - minLat;
+  const x = lngSpan === 0 ? 50 : ((lng - minLng) / lngSpan) * 100;
+  // North is up: y=0 at maxLat, y=100 at minLat.
+  const y = latSpan === 0 ? 50 : ((maxLat - lat) / latSpan) * 100;
+  return { x, y };
+}
+
+/** Wide CONUS-ish default bbox, used only when there are zero markers to
+ * derive a bbox from (an empty operating picture still needs a defined
+ * viewport to render the (empty) overlay against). */
+const DEFAULT_BBOX: [number, number, number, number] = [-125, 24, -66, 50];
+
+function computeBbox(markers: ApiMarker[]): [number, number, number, number] {
+  if (markers.length === 0) {
+    return DEFAULT_BBOX;
+  }
+  let minLat = Infinity;
+  let maxLat = -Infinity;
+  let minLng = Infinity;
+  let maxLng = -Infinity;
+  for (const marker of markers) {
+    minLat = Math.min(minLat, marker.location.lat);
+    maxLat = Math.max(maxLat, marker.location.lat);
+    minLng = Math.min(minLng, marker.location.lng);
+    maxLng = Math.max(maxLng, marker.location.lng);
+  }
+  // Small padding margin so a marker at the exact edge of the bbox isn't
+  // rendered flush against MapCanvas's border.
+  const latPad = Math.max((maxLat - minLat) * 0.15, 0.5);
+  const lngPad = Math.max((maxLng - minLng) * 0.15, 0.5);
+  return [minLng - lngPad, minLat - latPad, maxLng + lngPad, maxLat + latPad];
+}
+
+/**
+ * F2 S2.1 — Operating Picture. Routed `/operating-picture`.
+ *
+ * Accepts an optional `?incident={id}` query param (per 02-06's
+ * `IncidentWorkspace`'s "View on operating picture" deep-link) to
+ * pre-select that marker's popup on load.
+ *
+ * Polls both endpoints every 30s rather than subscribing to a live event
+ * feed — a documented Phase 2 simplification: F10's event bus exists
+ * (Phase 1) but no `incident.activation_changed`-driven map-refresh
+ * consumer is built in this phase. A later phase wiring that event into a
+ * live refresh should replace this polling (see this plan's own
+ * threat-model note T-02-14).
+ */
+export function OperatingPicture(): JSX.Element {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const [selectedId, setSelectedId] = React.useState<string | undefined>(
+    () => searchParams.get('incident') ?? undefined,
+  );
+  const [layersOpen, setLayersOpen] = React.useState(false);
+  const [layerVisibility, setLayerVisibility] = React.useState<Record<string, boolean>>({});
+  // Caller-contract focus-return (MapPopup.tsx's documented contract, same
+  // pattern Modal used in Phase 1): store the marker element that was
+  // focused when the popup opened, restore focus to it on close.
+  const lastFocusedMarkerRef = React.useRef<HTMLElement | null>(null);
+
+  const markersQuery = useQuery({
+    queryKey: ['operating-picture-markers'],
+    queryFn: () => {
+      // Test-only failure-injection pass-through: never surfaced in any
+      // user-facing control. Threads 02-03's backend `force_gis_failure`
+      // query param through to the markers request so this plan's own
+      // Playwright test (and any future manual QA) can exercise the
+      // degraded path via a normal page load — no server restart, no
+      // mocking.
+      const pageParams = new URLSearchParams(window.location.search);
+      const forceFailure = pageParams.get('force_gis_failure');
+      const url =
+        forceFailure === 'true'
+          ? '/api/v1/operating-picture/markers?force_gis_failure=true'
+          : '/api/v1/operating-picture/markers';
+      return apiGet<MarkersResponse>(url);
+    },
+    refetchInterval: 30_000,
+  });
+
+  const layersQuery = useQuery({
+    queryKey: ['operating-picture-layers'],
+    queryFn: () => apiGet<LayersResponse>('/api/v1/operating-picture/layers'),
+    refetchInterval: 30_000,
+  });
+
+  const selectedIncidentQuery = useQuery({
+    queryKey: ['incident', selectedId],
+    queryFn: () => apiGet<SelectedIncidentDetail>(`/api/v1/incidents/${selectedId}`),
+    enabled: Boolean(selectedId),
+  });
+
+  const selectedTimelineQuery = useQuery({
+    queryKey: ['incident-timeline', selectedId],
+    queryFn: () => apiGet<TimelineResponse>(`/api/v1/incidents/${selectedId}/timeline`),
+    enabled: Boolean(selectedId),
+  });
+
+  // Phase 2 has exactly one real layer ("incidents") — default every
+  // layer's visibility to its own `checked` value from the backend the
+  // first time it's seen, without clobbering a visibility the user has
+  // since toggled.
+  React.useEffect(() => {
+    if (!layersQuery.data) return;
+    setLayerVisibility((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const layer of layersQuery.data.layers) {
+        if (!(layer.id in next)) {
+          next[layer.id] = layer.checked;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [layersQuery.data]);
+
+  const apiMarkers = markersQuery.data?.markers ?? [];
+  // Toggling the "incidents" layer off empties the rendered marker set —
+  // Phase 2's only real layer, per this plan's documented functional
+  // behavior for LayerPanel's onToggle.
+  const incidentsLayerVisible = layerVisibility['incidents'] ?? true;
+  const visibleMarkers = incidentsLayerVisible ? apiMarkers : [];
+
+  const bbox = React.useMemo(() => computeBbox(visibleMarkers), [visibleMarkers]);
+
+  const canvasMarkers: CanvasMapMarker[] = React.useMemo(
+    () =>
+      visibleMarkers.map((marker) => {
+        const { x, y } = projectToPercent(marker.location.lat, marker.location.lng, bbox);
+        return {
+          id: marker.id,
+          x,
+          y,
+          type: marker.type,
+          tone: marker.tone,
+          label: marker.label,
+          status: marker.status,
+        };
+      }),
+    [visibleMarkers, bbox],
+  );
+
+  const legendItems: MapLegendItem[] = React.useMemo(() => {
+    const seenTones = Array.from(new Set(canvasMarkers.map((m) => m.tone)));
+    return seenTones.map((tone) => ({
+      kind: 'marker',
+      type: 'incident',
+      tone,
+      label: TONE_LEGEND_LABEL[tone] ?? 'Incident',
+    }));
+  }, [canvasMarkers]);
+
+  const layersForPanel: MapLayer[] = (layersQuery.data?.layers ?? []).map((layer) => ({
+    id: layer.id,
+    label: layer.label,
+    source: layer.source,
+    asOf: layer.as_of ? formatTimeHHMM(layer.as_of) : undefined,
+    verified: layer.verified,
+    count: layer.count,
+    checked: layerVisibility[layer.id] ?? layer.checked,
+  }));
+
+  // The SAME backend status_bar.base_layer_source string drives BOTH the
+  // visible status text AND MapCanvas's `offline` prop (derived, never
+  // independently tracked) — they can never disagree per this plan's
+  // must_haves truth.
+  const baseLayerSource = markersQuery.data?.status_bar.base_layer_source;
+  const isOffline = baseLayerSource === 'Schematic base map, offline';
+
+  // Status bar must never be blank/stale-looking, even before the first
+  // fetch resolves.
+  const statusBarText = markersQuery.isLoading
+    ? 'As of -- ET \u00b7 Base layer: Loading\u2026'
+    : markersQuery.data
+      ? `As of ${formatTimeHHMM(markersQuery.data.status_bar.as_of)} ET \u00b7 Base layer: ${markersQuery.data.status_bar.base_layer_source}`
+      : 'As of -- ET \u00b7 Base layer: Unavailable';
+
+  const handleSelect = (id: string) => {
+    lastFocusedMarkerRef.current = document.activeElement as HTMLElement | null;
+    setSelectedId(id);
+  };
+
+  const handleClosePopup = () => {
+    setSelectedId(undefined);
+    lastFocusedMarkerRef.current?.focus();
+  };
+
+  const handleLayerToggle = (id: string, checked: boolean) => {
+    setLayerVisibility((prev) => ({ ...prev, [id]: checked }));
+  };
+
+  const timelineItems: TimelineItem[] = (selectedTimelineQuery.data?.items ?? []).map((entry) => ({
+    time: formatTimeHHMM(entry.occurred_at),
+    title: entry.title,
+    meta: `${entry.actor?.name ?? 'System'} via ${entry.source}`,
+    tone: entry.tone,
+  }));
+
+  const selectedIncident = selectedIncidentQuery.data;
+
+  const popupNode =
+    selectedId && selectedIncident ? (
+      <MapPopup
+        title={selectedIncident.name}
+        badge={<Badge tone={SEVERITY_TONE[selectedIncident.severity]}>{selectedIncident.severity}</Badge>}
+        provenance={
+          baseLayerSource ? (
+            <Provenance
+              source={baseLayerSource}
+              time={markersQuery.data ? formatTimeHHMM(markersQuery.data.status_bar.as_of) : undefined}
+              verified={!isOffline}
+            />
+          ) : undefined
+        }
+        actions={[
+          <Button key="open" variant="primary" onClick={() => navigate(`/incidents/${selectedId}`)}>
+            Open incident
+          </Button>,
+        ]}
+        onClose={handleClosePopup}
+      >
+        <p>Activation: {selectedIncident.activation_level}</p>
+        <p>Jurisdiction: {selectedIncident.jurisdiction.name}</p>
+        <p>Opened: {formatDate(selectedIncident.opened_at)}</p>
+      </MapPopup>
+    ) : null;
+
+  return (
+    <div className="ep-operating-picture">
+      <PageHeader title="Operating picture" />
+
+      <div className="ep-operating-picture__layout">
+        <MapCanvas
+          height={600}
+          markers={canvasMarkers}
+          selectedId={selectedId}
+          onSelect={handleSelect}
+          topRight={
+            <div className="ep-operating-picture__top-right">
+              <MapControls
+                // Phase 2 has no real zoom/pan engine underneath to drive
+                // (see projectToPercent's doc comment) — these are
+                // structural placeholders satisfying MapControls' contract,
+                // not functional zoom.
+                onZoomIn={() => {}}
+                onZoomOut={() => {}}
+                onLayers={() => setLayersOpen((open) => !open)}
+                layersOpen={layersOpen}
+              />
+              {layersOpen ? (
+                <LayerPanel
+                  layers={layersForPanel}
+                  onToggle={handleLayerToggle}
+                  onClose={() => setLayersOpen(false)}
+                />
+              ) : null}
+            </div>
+          }
+          bottomLeft={legendItems.length > 0 ? <MapLegend items={legendItems} /> : undefined}
+          popup={popupNode}
+          status={statusBarText}
+          offline={isOffline}
+          label="Operating picture map"
+        />
+
+        <div className="ep-operating-picture__side">
+          {selectedId ? (
+            <>
+              <Card title="Timeline">
+                {selectedTimelineQuery.isLoading ? (
+                  <EmptyState title="Loading timeline\u2026" />
+                ) : timelineItems.length > 0 ? (
+                  <Timeline items={timelineItems} />
+                ) : (
+                  <EmptyState title="No activity yet" />
+                )}
+              </Card>
+              <Card title="Tasks">
+                <EmptyState title="Tasks ship in a later phase">
+                  Task tracking (F4) is built in Phase 3.
+                </EmptyState>
+              </Card>
+            </>
+          ) : (
+            <EmptyState title="Select an incident">
+              Click a marker to see its timeline here.
+            </EmptyState>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
