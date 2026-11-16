@@ -10,6 +10,8 @@ import healthzRoutes from './modules/platform/healthz.js';
 import staticRoutes from './static.js';
 import { connectNats } from './modules/integration-gateway/nats-client.js';
 import { startWebhookDeliveryWorker } from './modules/integration-gateway/webhook-delivery-worker.js';
+import { syncRolePermissionsToOpa, type RolePermissionRow } from './modules/auth-org/opa-client.js';
+import { query } from './db/client.js';
 
 export function buildApp() {
   const app = Fastify({
@@ -50,6 +52,26 @@ export const app = buildApp();
 
 async function start() {
   const port = Number(process.env.PORT ?? 8080);
+
+  // OPA's data document (data.role_permissions) starts EMPTY on every OPA
+  // container boot — opa-client.ts's checkPermission() fails closed against
+  // that empty document, so EVERY requirePermission() preHandler (including
+  // GET /api/v1/me, the very first call RouteGuard makes after a successful
+  // SSO login) denies with 403 ROLE_UNRESOLVED until something pushes the
+  // table in. syncRolePermissionsToOpa was previously only ever called from
+  // the admin-roles PATCH route (after an edit) and from tests — never at
+  // startup — so a fresh boot left every signed-in user permanently stuck on
+  // the RoleUnresolved screen with no edit having happened yet to trigger the
+  // first sync. Mirrors the NATS pattern below: DATABASE_URL/OPA_URL may be
+  // unset (DEPLOY-01's "boots with only PORT set" contract), so a failure
+  // here must never crash the server — just leave OPA's data empty exactly
+  // as before this fix, with a loud warning instead of a silent gap.
+  try {
+    const allPerms = await query<RolePermissionRow>(`SELECT role_id, feature, actions FROM role_permissions`);
+    await syncRolePermissionsToOpa(allPerms);
+  } catch (err) {
+    app.log.warn(err, 'OPA role_permissions sync failed at startup — authorization checks will fail closed until the next admin role edit');
+  }
 
   // A NATS outage at boot must NOT crash the server — DEPLOY-01's "app
   // starts without external services" principle extended to the event bus.

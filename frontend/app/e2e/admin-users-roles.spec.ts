@@ -39,37 +39,63 @@ test.describe.serial('Admin console — Users, Roles & Permissions, Audit Log', 
   test('2. Changing a user role via detail Select persists across reload', async ({ page }) => {
     await signInThroughKeycloak(page);
 
-    // Look up the seeded admin's id directly via the API (same pattern as
-    // test 3's role lookup below) rather than relying on table pagination
-    // to surface "EPMP Admin" — the default page_size=25 list view does not
-    // guarantee that row is present once 25+ fixture users exist from
-    // repeated plan/test runs.
-    const adminUserId = await page.evaluate(async () => {
+    // Exercise this on a THROWAWAY second user, never on the signed-in
+    // admin's own row (fixed from an earlier version of this test that
+    // edited 'EPMP Admin' directly): GET /api/v1/admin/users requires
+    // requirePermission('admin', 'view'), and secops_admin is the only
+    // role with 'admin' permissions (backend/scripts/seed.ts). Changing
+    // the signed-in user's OWN role away from secops_admin revokes their
+    // own admin access immediately — rbac.ts re-checks permissions fresh
+    // on every request (01-03's documented "no caching window" behavior)
+    // — so the very next reload's GET /api/v1/admin/users/* 403s and the
+    // Role <select> never renders. Every test after this one in the
+    // .serial suite then failed the same way, and the broken state
+    // persisted in the dev DB across repeated runs until someone
+    // restored admin@epmp.local's role_id by hand. Same "create a second
+    // user" pattern test 3 already uses for Suspend, for the identical
+    // reason.
+    const roleListResponse = await page.evaluate(async () => {
+      const token = window.sessionStorage.getItem('epmp_session_token');
+      const res = await fetch('/api/v1/admin/roles', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.json() as Promise<Array<{ id: string; name: string }>>;
+    });
+    const secopsAdminRole = roleListResponse.find((r) => r.name === 'secops_admin');
+    const otherRole = roleListResponse.find((r) => r.name !== 'secops_admin');
+    expect(secopsAdminRole).toBeTruthy();
+    expect(otherRole).toBeTruthy();
+
+    await page.goto('/admin/users');
+    await page.getByRole('button', { name: 'Add user' }).click();
+    const addModal = page.getByRole('dialog', { name: 'Add user' });
+    await expect(addModal).toBeVisible({ timeout: 5_000 });
+
+    const uniqueEmail = `role-test-${Date.now()}@epmp.local`;
+    await addModal.getByLabel('Email').fill(uniqueEmail);
+    await addModal.getByLabel('Name').fill('Role Test User');
+    await addModal.getByLabel('Role ID').fill(secopsAdminRole!.id);
+    await addModal.getByRole('button', { name: 'Add user' }).click();
+    await expect(addModal).not.toBeVisible({ timeout: 10_000 });
+
+    const newUserId = await page.evaluate(async (email) => {
       const token = window.sessionStorage.getItem('epmp_session_token');
       const res = await fetch('/api/v1/admin/users?page_size=1000', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const body = (await res.json()) as { items: Array<{ id: string; name: string }> };
-      return body.items.find((u) => u.name === 'EPMP Admin')?.id;
-    });
-    expect(adminUserId).toBeTruthy();
+      const body = (await res.json()) as { items: Array<{ id: string; email: string }> };
+      return body.items.find((u) => u.email === email)?.id;
+    }, uniqueEmail);
+    expect(newUserId).toBeTruthy();
 
-    await page.goto(`/admin/users/${adminUserId}`);
+    await page.goto(`/admin/users/${newUserId}`);
     await expect(page).toHaveURL(/\/admin\/users\/.+/);
     const roleSelect = page.getByLabel('Role');
     await expect(roleSelect).toBeVisible({ timeout: 10_000 });
 
-    // The seeded admin is already secops_admin — pick whatever OTHER
-    // option exists (if any) and record it, otherwise fall back to
-    // re-selecting the same value (still exercises the PATCH round-trip,
-    // just without a visible value change). Prefer an actual change when
-    // more than one role option is available (true once 01-01's 5 seeded
-    // persona roles are all present).
-    const optionValues = await roleSelect.locator('option').evaluateAll((opts) =>
-      (opts as HTMLOptionElement[]).map((o) => o.value),
-    );
     const currentValue = await roleSelect.inputValue();
-    const otherValue = optionValues.find((v) => v !== currentValue) ?? currentValue;
+    expect(currentValue).toBe(secopsAdminRole!.id);
+    const otherValue = otherRole!.id;
 
     await roleSelect.selectOption(otherValue);
     // Give the PATCH a moment to land before reloading.
@@ -79,14 +105,6 @@ test.describe.serial('Admin console — Users, Roles & Permissions, Audit Log', 
     const roleSelectAfterReload = page.getByLabel('Role');
     await expect(roleSelectAfterReload).toBeVisible({ timeout: 10_000 });
     await expect(roleSelectAfterReload).toHaveValue(otherValue);
-
-    // Restore the original value so later tests/re-runs of this suite
-    // start from the same seeded state (idempotent re-run, same pattern
-    // 01-07's admin.test.ts documents for its own suite).
-    if (otherValue !== currentValue) {
-      await roleSelectAfterReload.selectOption(currentValue);
-      await page.waitForTimeout(500);
-    }
   });
 
   test('3. Suspend requires Modal confirmation with outcome-named buttons, updates Badge without reload', async ({
