@@ -34,6 +34,7 @@ import { FederationGrants } from './pages/admin/FederationGrants';
 import { RecordAuthority } from './pages/admin/RecordAuthority';
 import { IncidentList } from './pages/incidents/IncidentList';
 import { CreateIncident } from './pages/incidents/CreateIncident';
+import { IncidentWorkspace } from './pages/incidents/IncidentWorkspace';
 
 const queryClient = new QueryClient();
 
@@ -67,6 +68,7 @@ root.render(
               <Route path="admin/record-authority" element={<RecordAuthority />} />
               <Route path="incidents" element={<IncidentList />} />
               <Route path="incidents/new" element={<CreateIncident />} />
+              <Route path="incidents/:id" element={<IncidentWorkspace />} />
             </Route>
           </Routes>
         </RouteGuard>
