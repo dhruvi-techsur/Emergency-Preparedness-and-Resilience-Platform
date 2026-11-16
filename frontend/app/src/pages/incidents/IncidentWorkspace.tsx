@@ -17,6 +17,7 @@ import {
 import { apiGet, ApiRequestError } from '../../lib/api-client';
 import { CommandRoleModal } from './CommandRoleModal';
 import { ActivationModal } from './ActivationModal';
+import { ClosureModal } from './ClosureModal';
 import './IncidentWorkspace.css';
 
 type Severity = 'Critical' | 'Elevated' | 'Watch' | 'Normal';
@@ -125,6 +126,7 @@ export function IncidentWorkspace(): JSX.Element {
   const [activeTab, setActiveTab] = React.useState('timeline');
   const [roleModalRole, setRoleModalRole] = React.useState<CommandRoleTitle | null>(null);
   const [activationModalOpen, setActivationModalOpen] = React.useState(false);
+  const [closureModalOpen, setClosureModalOpen] = React.useState(false);
 
   const incidentQuery = useQuery({
     queryKey: ['incident', id],
@@ -194,6 +196,15 @@ export function IncidentWorkspace(): JSX.Element {
           <Button key="new-task" variant="primary" onClick={() => {}}>
             New task
           </Button>,
+          // F1 Process step 7 — closure is only offered while the incident
+          // is still Open; a Closed incident has no further action here.
+          ...(incident.status === 'Open'
+            ? [
+                <Button key="close" variant="secondary" onClick={() => setClosureModalOpen(true)}>
+                  Close incident
+                </Button>,
+              ]
+            : []),
         ]}
       />
 
@@ -322,6 +333,14 @@ export function IncidentWorkspace(): JSX.Element {
         open={activationModalOpen}
         onClose={() => setActivationModalOpen(false)}
         onChanged={refetchAll}
+      />
+
+      <ClosureModal
+        incidentId={incident.id}
+        incidentName={incident.name}
+        open={closureModalOpen}
+        onClose={() => setClosureModalOpen(false)}
+        onClosed={refetchAll}
       />
     </div>
   );

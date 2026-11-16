@@ -168,4 +168,26 @@ test.describe.serial('Incident Workspace', () => {
     // Sanity: still on the same incident's workspace URL.
     await expect(page).toHaveURL(new RegExp(`/incidents/${incidentId}$`));
   });
+
+  test('5. Closing an incident via the Modal removes the action and records a Timeline entry (W2 fix)', async ({
+    page,
+  }) => {
+    await signInAsIncidentCommander(page);
+    await createIncidentViaUi(page, 'E2E Workspace Close');
+
+    await page.getByRole('button', { name: 'Close incident' }).click();
+
+    const closureModal = page.getByRole('alertdialog');
+    await expect(closureModal).toBeVisible();
+    await expect(closureModal).toContainText(/Close .*\?/);
+
+    await closureModal.getByRole('button', { name: 'Close incident' }).click();
+    await expect(closureModal).not.toBeVisible();
+
+    // "Close incident" is no longer offered once the incident is Closed.
+    await expect(page.getByRole('button', { name: 'Close incident' })).toHaveCount(0);
+
+    await page.getByRole('tab', { name: 'Timeline' }).click();
+    await expect(page.getByText('Incident closed')).toBeVisible({ timeout: 10_000 });
+  });
 });
