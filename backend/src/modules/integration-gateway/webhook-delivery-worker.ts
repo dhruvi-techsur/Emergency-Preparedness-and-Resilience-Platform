@@ -49,10 +49,28 @@ export async function startWebhookDeliveryWorker(): Promise<void> {
   const nc = getNatsConnection();
   if (!nc) return;
 
-  await query(
-    `INSERT INTO background_jobs (job_type, status, last_run_at) VALUES ($1, 'running', now())`,
-    ['webhook_delivery'],
+  // Find-or-update rather than blind INSERT: background_jobs has no UNIQUE
+  // constraint on job_type, and this function runs on every server boot
+  // (server.ts calls it once per start()). A bare INSERT would accumulate a
+  // duplicate 'webhook_delivery' row per restart, which both inflates
+  // platform-health's alerts array with repeats of the same job and makes
+  // bumpJobFailure's `WHERE job_type = 'webhook_delivery'` UPDATE touch every
+  // duplicate row at once. Matches the find-or-insert idempotency pattern
+  // established by scripts/seed.ts for tables without a natural UNIQUE key.
+  const existing = await query<{ id: string }>(
+    `SELECT id FROM background_jobs WHERE job_type = 'webhook_delivery' LIMIT 1`,
   );
+  if (existing[0]) {
+    await query(
+      `UPDATE background_jobs SET status = 'running', last_run_at = now() WHERE id = $1`,
+      [existing[0].id],
+    );
+  } else {
+    await query(
+      `INSERT INTO background_jobs (job_type, status, last_run_at) VALUES ($1, 'running', now())`,
+      ['webhook_delivery'],
+    );
+  }
 
   const js = nc.jetstream();
   const consumer = await js.consumers.get('EPMP_EVENTS', WEBHOOK_DELIVERY_DURABLE);
