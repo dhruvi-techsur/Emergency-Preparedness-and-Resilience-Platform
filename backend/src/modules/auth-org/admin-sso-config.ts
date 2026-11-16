@@ -110,6 +110,13 @@ export default async function adminSsoConfigRoutes(app: FastifyInstance) {
     },
   );
 
+  // Default attribute mapping applied only when NO sso_config row exists yet
+  // (first-ever PATCH on a fresh deployment, acting as the create path) and
+  // the client didn't supply one. Mirrors SsoConfigForm.tsx's own initial
+  // form state defaults, so a bare "create" PATCH from that screen persists
+  // without the client having to invent placeholder values.
+  const DEFAULT_ATTRIBUTE_MAPPING = { email_attr: 'email', name_attr: 'name', group_attr: 'groups' };
+
   app.patch<{
     Body: Partial<{
       protocol: 'SAML2' | 'OIDC';
@@ -125,21 +132,29 @@ export default async function adminSsoConfigRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const body = req.body ?? {};
       const current = await fetchCurrentConfig();
-      if (!current) {
-        return reply.code(404).send({ error_code: 'SSO_CONFIG_NOT_FOUND', message: 'No SSO configuration exists yet.' });
-      }
 
+      // No row exists yet on this deployment: this PATCH acts as the
+      // create path (see 01-REVIEW.md B1 — a real deployment never has a
+      // POST-seeded sso_config row, so PATCH must be able to create the
+      // first one, not just update an existing one).
       const merged = {
-        protocol: body.protocol ?? current.protocol,
-        idp_metadata_url: body.idp_metadata_url ?? current.idp_metadata_url ?? undefined,
-        idp_metadata_xml: body.idp_metadata_xml ?? current.idp_metadata_xml ?? undefined,
-        attribute_mapping: body.attribute_mapping ?? current.attribute_mapping,
-        group_to_role_mapping: body.group_to_role_mapping ?? current.group_to_role_mapping,
+        protocol: body.protocol ?? current?.protocol ?? 'OIDC',
+        idp_metadata_url: body.idp_metadata_url ?? current?.idp_metadata_url ?? undefined,
+        idp_metadata_xml: body.idp_metadata_xml ?? current?.idp_metadata_xml ?? undefined,
+        attribute_mapping: body.attribute_mapping ?? current?.attribute_mapping ?? DEFAULT_ATTRIBUTE_MAPPING,
+        group_to_role_mapping: body.group_to_role_mapping ?? current?.group_to_role_mapping ?? [],
       };
 
+      if (!merged.idp_metadata_url && !merged.idp_metadata_xml) {
+        return reply.code(400).send({
+          error_code: 'SSO_CONFIG_INVALID',
+          message: 'Either idp_metadata_url or idp_metadata_xml is required.',
+        });
+      }
+
       const wantsActive = body.active === true;
-      let tested_at: string | null = current.tested_at;
-      let active = body.active ?? current.active;
+      let tested_at: string | null = current?.tested_at ?? null;
+      let active = body.active ?? current?.active ?? false;
 
       if (wantsActive) {
         // Server-side gate: NEVER trust a client-asserted "I tested it"
@@ -158,35 +173,56 @@ export default async function adminSsoConfigRoutes(app: FastifyInstance) {
         active = true;
       }
 
-      const before = {
-        protocol: current.protocol,
-        idp_metadata_url: current.idp_metadata_url,
-        idp_metadata_xml: current.idp_metadata_xml,
-        attribute_mapping: current.attribute_mapping,
-        group_to_role_mapping: current.group_to_role_mapping,
-        active: current.active,
-        tested_at: current.tested_at,
-      };
+      const before = current
+        ? {
+            protocol: current.protocol,
+            idp_metadata_url: current.idp_metadata_url,
+            idp_metadata_xml: current.idp_metadata_xml,
+            attribute_mapping: current.attribute_mapping,
+            group_to_role_mapping: current.group_to_role_mapping,
+            active: current.active,
+            tested_at: current.tested_at,
+          }
+        : null;
 
-      const updatedRows = await query<SsoConfigRow>(
-        `UPDATE sso_config
-         SET protocol = $1, idp_metadata_url = $2, idp_metadata_xml = $3,
-             attribute_mapping = $4, group_to_role_mapping = $5,
-             tested_at = $6, active = $7, updated_at = now()
-         WHERE id = $8
-         RETURNING id, protocol, idp_metadata_url, idp_metadata_xml, attribute_mapping, group_to_role_mapping, tested_at, active`,
-        [
-          merged.protocol,
-          merged.idp_metadata_url ?? null,
-          merged.idp_metadata_xml ?? null,
-          JSON.stringify(merged.attribute_mapping),
-          JSON.stringify(merged.group_to_role_mapping),
-          tested_at,
-          active,
-          current.id,
-        ],
-      );
-      const after = updatedRows[0];
+      const after = current
+        ? (
+            await query<SsoConfigRow>(
+              `UPDATE sso_config
+               SET protocol = $1, idp_metadata_url = $2, idp_metadata_xml = $3,
+                   attribute_mapping = $4, group_to_role_mapping = $5,
+                   tested_at = $6, active = $7, updated_at = now()
+               WHERE id = $8
+               RETURNING id, protocol, idp_metadata_url, idp_metadata_xml, attribute_mapping, group_to_role_mapping, tested_at, active`,
+              [
+                merged.protocol,
+                merged.idp_metadata_url ?? null,
+                merged.idp_metadata_xml ?? null,
+                JSON.stringify(merged.attribute_mapping),
+                JSON.stringify(merged.group_to_role_mapping),
+                tested_at,
+                active,
+                current.id,
+              ],
+            )
+          )[0]
+        : (
+            await query<SsoConfigRow>(
+              `INSERT INTO sso_config
+                 (protocol, idp_metadata_url, idp_metadata_xml, attribute_mapping, group_to_role_mapping, tested_at, active)
+               VALUES ($1, $2, $3, $4, $5, $6, $7)
+               RETURNING id, protocol, idp_metadata_url, idp_metadata_xml, attribute_mapping, group_to_role_mapping, tested_at, active`,
+              [
+                merged.protocol,
+                merged.idp_metadata_url ?? null,
+                merged.idp_metadata_xml ?? null,
+                JSON.stringify(merged.attribute_mapping),
+                JSON.stringify(merged.group_to_role_mapping),
+                tested_at,
+                active,
+              ],
+            )
+          )[0];
 
       await AuditService.record(req.epmpUser!.id, 'sso_config_change', 'sso_config', after.id, { before, after });
 
