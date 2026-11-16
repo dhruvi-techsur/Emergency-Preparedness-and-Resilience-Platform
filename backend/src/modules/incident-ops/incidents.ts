@@ -133,7 +133,28 @@ export const INCIDENT_NOT_FOUND = {
   message: 'This incident no longer exists or you don\u2019t have access.',
 } as const;
 
+interface JurisdictionRow {
+  id: string;
+  name: string;
+}
+
 export default async function incidentsRoutes(app: FastifyInstance) {
+  // GET /api/v1/jurisdictions — no dedicated jurisdictions-list endpoint
+  // exists anywhere in Phase 1's or 02-01/02-02's API surface (01-11's
+  // UserDetail.tsx worked around the same gap by deriving jurisdiction ids
+  // from already-fetched user rows). Every incident-creation flow needs a
+  // real jurisdiction picker, and no other plan owns this route, so it's
+  // added here, gated by the same 'incidents'/'view' permission every
+  // other read route in this module uses.
+  app.get(
+    '/api/v1/jurisdictions',
+    { preHandler: requirePermission('incidents', 'view') },
+    async (_req, reply) => {
+      const rows = await query<JurisdictionRow>(`SELECT id, name FROM jurisdictions ORDER BY name`);
+      return reply.code(200).send({ items: rows });
+    },
+  );
+
   app.get<{
     Querystring: {
       severity?: Severity;
