@@ -35,7 +35,7 @@ capabilities that reach across (rather than own) the rest of the platform.
 
 ### Phase 1: Platform Foundation & Deployable Shell
 **Goal**: Every persona can sign in once via agency SSO into a single, themeable application shell with role-based access and a full audit trail, and the repository runs as a real, deployable, Postgres-backed service from the first commit.
-**Status**: In progress
+**Status**: Awaiting verify
 **Depends on**: Nothing (first phase)
 **Requirements**: F0, F8, F10, F16-SSO, DEPLOY-01
 **Success Criteria** (what must be TRUE):
@@ -128,7 +128,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Platform Foundation & Deployable Shell | 0/TBD | In progress | - |
+| 1. Platform Foundation & Deployable Shell | 0/TBD | Awaiting verify | - |
 | 2. Incident Command & Operating Picture | 0/TBD | Not started | - |
 | 3. Plans, Tasks & Resource Requests | 0/TBD | Not started | - |
 | 4. Notifications & Reporting/Learning | 0/TBD | Not started | - |
