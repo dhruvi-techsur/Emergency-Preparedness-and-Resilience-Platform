@@ -22,6 +22,15 @@ import '@epmp/design-system/dist/bundle.css';
 import { RouteGuard } from './auth/RouteGuard';
 import { SignInCallback } from './pages/SignInCallback';
 import { AppShell } from './app-shell/AppShell';
+import { UsersList } from './pages/admin/UsersList';
+import { UserDetail } from './pages/admin/UserDetail';
+import { RolesPermissions } from './pages/admin/RolesPermissions';
+import { AuditLogView } from './pages/admin/AuditLogView';
+import { SsoConfigForm } from './pages/admin/SsoConfigForm';
+import { PlatformMonitoring } from './pages/admin/PlatformMonitoring';
+import { IntegrationHealth } from './pages/admin/IntegrationHealth';
+import { ApiClients } from './pages/admin/ApiClients';
+import { FederationGrants } from './pages/admin/FederationGrants';
 
 const queryClient = new QueryClient();
 
@@ -34,7 +43,25 @@ root.render(
         <RouteGuard>
           <Routes>
             <Route path="/auth/callback" element={<SignInCallback />} />
-            <Route path="/*" element={<AppShell />} />
+            {/* AppShell is a layout route (Outlet renders the matched
+                child below) — 01-11's and 01-12's Admin-nav-group screens
+                are the nested routes this shell composes. The "/*"
+                parent still matches every path (so RouteGuard's
+                isCallbackRoute check and any not-yet-built path keep
+                rendering the shell with an empty Outlet), while
+                react-router ranks the more specific child match first
+                when the current path is one of these eight. */}
+            <Route path="/*" element={<AppShell />}>
+              <Route path="admin/users" element={<UsersList />} />
+              <Route path="admin/users/:id" element={<UserDetail />} />
+              <Route path="admin/roles" element={<RolesPermissions />} />
+              <Route path="admin/audit-log" element={<AuditLogView />} />
+              <Route path="admin/sso-config" element={<SsoConfigForm />} />
+              <Route path="admin/platform-monitoring" element={<PlatformMonitoring />} />
+              <Route path="admin/integration-health" element={<IntegrationHealth />} />
+              <Route path="admin/api-clients" element={<ApiClients />} />
+              <Route path="admin/federation-grants" element={<FederationGrants />} />
+            </Route>
           </Routes>
         </RouteGuard>
       </BrowserRouter>

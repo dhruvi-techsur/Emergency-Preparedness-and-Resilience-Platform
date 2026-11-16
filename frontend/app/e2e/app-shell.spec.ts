@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { signInThroughKeycloak } from './helpers/sign-in';
 
 /**
  * Full-stack e2e coverage of 01-10's objective: a real user signs in via
@@ -14,35 +15,11 @@ import { test, expect } from '@playwright/test';
  * backend/scripts/seed.ts) JIT-provisions to the `secops_admin` role, which
  * in turn is the only role with `admin` feature permissions
  * (GET /api/v1/me/nav-config's hasAdmin check).
+ *
+ * signInThroughKeycloak itself now lives in e2e/helpers/sign-in.ts (factored
+ * out in 01-11 so admin-users-roles.spec.ts doesn't duplicate it) — this
+ * file imports it rather than defining its own copy.
  */
-
-const KEYCLOAK_USERNAME = 'admin@epmp.local';
-const KEYCLOAK_PASSWORD = 'devpass123';
-
-async function signInThroughKeycloak(page: import('@playwright/test').Page) {
-  await page.goto('/');
-
-  // RouteGuard sees no session token, redirects the whole browser to
-  // Keycloak's authorization endpoint (oidc-config.ts's signIn()).
-  await page.waitForURL(/\/realms\/epmp\/protocol\/openid-connect\/auth/, {
-    timeout: 15_000,
-  });
-  expect(page.url()).toContain('/realms/epmp/protocol/openid-connect/auth');
-
-  // Keycloak's default login theme form field ids.
-  await page.fill('#username', KEYCLOAK_USERNAME);
-  await page.fill('#password', KEYCLOAK_PASSWORD);
-  await page.click('#kc-login');
-
-  // Keycloak redirects back to /auth/callback, which (after the id_token
-  // exchange with the backend) navigates to '/' — assert we land on a URL
-  // that is NOT /auth/callback, proving the callback actually completed
-  // and forwarded onward rather than hanging on the exchange.
-  await page.waitForURL((url) => !url.pathname.startsWith('/auth/callback'), {
-    timeout: 15_000,
-  });
-  expect(page.url()).not.toContain('/auth/callback');
-}
 
 test.describe('App shell — sign-in, role-scoped nav, theme', () => {
   test('1. Sign-in flow lands in a role-scoped shell, not a generic landing page', async ({
