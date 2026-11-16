@@ -1,5 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import incidentsRoutes from './incidents.js';
+import commandRolesRoutes from './command-roles.js';
+import activationRoutes from './activation.js';
+import closureRoutes from './closure.js';
 
 /**
  * Mounts the incident-ops module's F1 endpoints as a Fastify plugin,
@@ -8,4 +11,7 @@ import incidentsRoutes from './incidents.js';
  */
 export default async function incidentOpsRoutes(app: FastifyInstance) {
   await app.register(incidentsRoutes);
+  await app.register(commandRolesRoutes);
+  await app.register(activationRoutes);
+  await app.register(closureRoutes);
 }
