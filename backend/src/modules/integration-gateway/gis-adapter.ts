@@ -1,3 +1,5 @@
+import type { FastifyInstance } from 'fastify';
+import { requirePermission } from '../auth-org/rbac.js';
 import { query } from '../../db/client.js';
 
 interface GeoFeatureResponse {
@@ -90,4 +92,35 @@ export async function checkGisHealth(): Promise<void> {
     // Health probe failure is itself the signal — already recorded by
     // fetchGisFeatures's own recordFeedStatus call; nothing further to do.
   }
+}
+
+interface GisFeedStatusRow {
+  id: string;
+  layer_id: string;
+  vendor: string;
+  last_fetch_at: string | null;
+  last_fetch_status: 'ok' | 'error' | 'timeout';
+  can_publish: boolean;
+  created_at: string;
+}
+
+/**
+ * Thin passthrough read of gis_feed_status per TechArch 03d's `GET
+ * /api/v1/integrations/gis/health` — readable by the admin Integration
+ * Health view (F8 S8.6), surfacing last_fetch_status for every layer this
+ * adapter has ever attempted.
+ */
+export async function gisHealthRoutes(app: FastifyInstance) {
+  app.get(
+    '/api/v1/integrations/gis/health',
+    { preHandler: requirePermission('admin', 'view') },
+    async (_req, reply) => {
+      const rows = await query<GisFeedStatusRow>(
+        `SELECT id, layer_id, vendor, last_fetch_at, last_fetch_status, can_publish, created_at
+         FROM gis_feed_status
+         ORDER BY layer_id, vendor`,
+      );
+      return reply.code(200).send({ items: rows });
+    },
+  );
 }
