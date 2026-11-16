@@ -1,57 +1,52 @@
 ---
 phase: 1
-status: clean
-blockers: 0
-warnings: 0
-files_reviewed: 1
+status: issues_found
+blockers: 1
+warnings: 1
+files_reviewed: 6
 files_reviewed_list:
-  - frontend/app/src/pages/admin/RecordAuthority.tsx
-reviewed_at: 2026-11-16T06:10:00Z
-iteration: 3
+  - README.md
+  - package.json
+  - frontend/app/package.json
+  - frontend/app/e2e/contrast-audit.spec.ts
+  - frontend/design-system/tokens/tokens.css
+  - frontend/design-system/tokens/tokens.json
+reviewed_at: 2026-11-16T10:12:37Z
+iteration: 1
 ---
 
-# Phase 1 Code Review — Iteration 3 (re-review of fix commit 5e0813b)
+# Phase 1 Code Review (Wave 7 gap-closure: plans 01-14, 01-15)
 
-## Scope
-
-Per the re-review scoping rule, this iteration reviews only `RecordAuthority.tsx` — the single file the fixer touched in commit `5e0813b` — plus the live backend endpoint it integrates against (`record-authority.ts`, unchanged since iteration 2, re-confirmed by direct exercise below rather than re-read). Iteration 2's other verified-fixed findings (B1, W1, W2, spanning `admin-sso-config.ts`, `webhook-delivery-worker.ts`, `main.tsx`) were not touched by this commit and are not re-reviewed.
-
-## Verification of W-new-1
-
-**Finding (iteration 2):** `RecordAuthority.tsx`'s edit modal let an admin change the `record_type` field — the natural key the backend's `POST /api/v1/admin/record-authority` upserts on (`ON CONFLICT (record_type) DO UPDATE`) — producing a duplicate registry row instead of updating the original.
-
-**Fix applied (5e0813b):** Added `isEditMode` state, set `true` by `openEditModal` / `false` by `openCreateModal` (lines 47, 55, 64). The "Record type" `TextField` now receives `disabled={isEditMode}` (line 159) plus an explanatory `hint` shown only in edit mode (line 155).
-
-**Verified by reading the code:**
-- `TextField` (`frontend/design-system/src/forms/TextField.tsx:96-99`) spreads `disabled` straight onto the native `<input>` via `sharedProps`/`...rest` — a real HTML `disabled` attribute, not a cosmetic/CSS-only treatment. A disabled native input rejects all keyboard/paste/programmatic-via-user-interaction edits; its `onChange` cannot fire from user interaction, so the controlled `recordType` state cannot diverge from the value `openEditModal` set it to (`row.record_type`, line 65) for the lifetime of that modal session.
-- `handleSave` (lines 72-90) still reads `recordType` from the same state variable, so in edit mode it is structurally guaranteed to resubmit the original `record_type`, making the `POST` an in-place update under `ON CONFLICT (record_type) DO UPDATE` rather than an insert of a new key.
-- `openCreateModal` resets `isEditMode` to `false` and clears `recordType` to `''` (lines 55-60), so the field correctly re-enables for the create flow and state doesn't leak between an edit session and a subsequent create session.
-
-**Verified by direct exercise against the live backend** (not just static reading): minted a real admin session JWT via `mintSessionToken` reusing `gateway.test.ts`'s existing `gateway_test_admin_role`/test user, then drove the actual sequence the fixed UI now produces:
-1. `POST` create `review_test_record` → `OriginalSystem` / `"initial"`. `GET` confirms exactly one row.
-2. `POST` with `record_type` held byte-identical to the row being edited (what a disabled field guarantees) and only `authoritative_system`/`notes` changed → `UpdatedSystem` / `"updated via edit"`.
-3. `GET` afterward shows **exactly one** `review_test_record` row, with the updated fields — the original row was updated in place, not duplicated.
-
-This matches iteration 2's own repro of the bug (where a changed `record_type` on the same POST produced two separate rows) but with the key field now held constant, confirming the fix closes the gap. Test row cleaned up afterward (`DELETE FROM record_authority_registry WHERE record_type = 'review_test_record'`); registry back to its pre-test 36 rows minus the new test rows added by this check (1 in, 1 deleted — net zero).
-
-**Regression check:** `tsc --noEmit` (frontend) clean, `vite build` succeeds (108 modules, no errors). No other state, prop, or JSX regressions found — the diff is additive (one new state variable, two setter calls, two new props on one `TextField`) and doesn't touch `handleSave`, the `Table`'s row-click wiring, the `Modal`'s open/close lifecycle, or the create flow's reset logic.
-
-**Verdict: W-new-1 is genuinely fixed.** No new defects introduced by this commit.
+Scope: diff from `2e8c65c` (end of original 13-plan execution) through HEAD, i.e. commits `0036639`..`bbb36d9`. Non-source files (`.planning/**`, `package-lock.json`) were inspected for claim-verification only, per the reviewer's scope rules; the six files above are the actual source changes reviewed in full.
 
 ## BLOCKERs
 
-None.
+### B1: Dark-theme `--ink-disabled` fix still fails WCAG AA 4.5:1 against the background it's actually rendered on, and the new regression spec never exercises the code path that would have caught it
+- **File:** `frontend/design-system/tokens/tokens.css:122` (and `tokens.json:92`); test gap in `frontend/app/e2e/contrast-audit.spec.ts`
+- **Category:** bug (verification-logic error — wrong contrast baseline used, and the new test never opens the only DOM element that renders this token)
+- **Evidence:**
+  - `DatePicker.css`'s `.ep-datepicker__day--outside` rule (the sole consumer of `--ink-disabled`, per `grep -rn "ink-disabled"` across all non-dist source) is rendered **inside** `.ep-datepicker__popover`, which `DatePicker.css` sets to `background: var(--bg-raised)` (see `frontend/design-system/src/forms/DatePicker.css:94`), not `--bg`. In dark theme, `--bg` (`#0a1722`) and `--bg-raised` (`#12283a`) are different colors (`tokens.css:112,116`).
+  - 01-15's Task 1 `<verify>` script (embedded in `01-15-PLAN.md`) and the SUMMARY's own self-check both compute contrast as `ink-disabled` vs `bg` only. Direct sRGB-luminance computation against the real render context:
+    - `#6c8499` (new dark `--ink-disabled`) vs `--bg` (`#0a1722`) → **4.66:1** (passes, matches the plan's claim)
+    - `#6c8499` vs `--bg-raised` (`#12283a`) — the actual popover background the calendar grid paints on → **3.88:1** (fails the 4.5:1 AA floor)
+  - The old, pre-fix value (`#5d7284`) was *also* failing against `--bg-raised` (3.02:1) before this wave — so this is a pre-existing defect the plan set out to fix but didn't fully fix for dark theme; light theme's fix is unaffected since light's `--bg` and `--bg-raised` are both `#ffffff` (so the light fix, `#6c7680` → 4.62:1, is correct in all contexts).
+  - The new regression asset, `contrast-audit.spec.ts`, was written specifically to catch exactly this ("the exact component/token pairing this gap's Task 1 fixed `--ink-disabled` against," per its own docstring at lines 21-24). But the spec never calls `DatePicker`'s "Open calendar" `IconButton` (`grep -n "calendar\|Open calendar" frontend/app/e2e/*.spec.ts` shows zero matches in any spec file, including this one) — it navigates to `/admin/audit-log` and scans the page (lines 85-93), but the `.ep-datepicker__day--outside` cells only exist in the DOM while `DatePicker`'s `open` state is true (`DatePicker.tsx:432`, `{open ? (<div className="ep-datepicker__popover">...` — conditionally rendered, not just visually hidden). Axe-core cannot find a color-contrast violation on an element that was never mounted. So the dark-theme failure survives both the fix and the regression test meant to catch it.
+- **Fix direction:** Either (a) further correct dark theme's `--ink-disabled` to clear 4.5:1 against `--bg-raised` (the actual, stricter render context — e.g. lightening further than `#6c8499`), re-verifying with `--bg-raised` as the baseline, not `--bg`; and/or (b) make `contrast-audit.spec.ts` actually click the "Open calendar" button before scanning, so the popover (and the specific `.ep-datepicker__day--outside` cells) are in the DOM when axe runs — the second fix is necessary regardless of (a), since without it this regression asset cannot detect any future DatePicker-popover contrast regression either.
 
 ## WARNINGs
 
-None.
+### W1: `contrast-audit.spec.ts` never navigates to `FederationGrants.tsx`, the plan's own second named DatePicker consumer
+- **File:** `frontend/app/e2e/contrast-audit.spec.ts:85`
+- **Evidence:** 01-15-PLAN.md's objective text names two reachable DatePicker-mounting screens — `AuditLogView.tsx` and `FederationGrants.tsx` (line 56: "DatePicker is mounted and reachable today on `frontend/app/src/pages/admin/AuditLogView.tsx` and `frontend/app/src/pages/admin/FederationGrants.tsx`"). The shipped spec only scans `/admin/audit-log` (line 85); `/admin/federation-grants` is never visited. Not escalated to BLOCKER because `AuditLogView.tsx` and `FederationGrants.tsx` share the exact same `DatePicker` component and token, so B1's fix (once applied) will hold for both screens even though only one is directly scanned — but this is still a coverage gap relative to the plan's own stated scope, and combined with B1 it means the regression asset's claimed scope ("the exact component/token pairing this gap's Task 1 fixed") is narrower than documented in two independent ways (popover never opened; second consumer screen never visited).
 
 ## Cross-file seams checked
 
-- `RecordAuthority.tsx`'s edit-mode `TextField` (`disabled`) ↔ native HTML `disabled` semantics via the design system's `TextField` component (`...rest` spread): OK — confirmed a real attribute, not cosmetic.
-- `RecordAuthority.tsx`'s edit flow ↔ backend `POST /api/v1/admin/record-authority`'s `ON CONFLICT (record_type)` upsert semantics: OK — confirmed via live exercise that the fixed flow now produces exactly one row per edit, not a duplicate.
-- `isEditMode` state ↔ `openCreateModal`/`openEditModal` entry points: OK — both paths correctly set/reset it, no state leak across modal sessions.
-
-## Overall phase status
-
-This is iteration 3, the final allowed review pass. All findings from iterations 1–2 (B1, W1, W2, W-new-1) are now verified fixed with no regressions. Phase 1 is clean.
+- `package.json` `dev` script banner vs. pre-existing `docker compose up` / `npm run build -w frontend/design-system` / `concurrently` steps — OK, confirmed byte-for-byte preserved after the prepended `echo &&`, only the banner text is new.
+- `README.md`'s documented 5173/8080 split vs. `frontend/app/vite.config.ts`'s actual dev-server port and `backend/src/static.ts`'s actual dev-mode 404 behavior — not independently re-verified (both files unchanged by this wave, out of diff scope), but the README's claims are consistent with Wave 7's own stated investigation in `01-14-SUMMARY.md`.
+- `tokens.json` ↔ `tokens.css` lockstep for the two touched `--ink-disabled` values (light `#6c7680`, dark `#6c8499`) — OK, confirmed identical in both files via diff; `contrast` theme's `--ink-disabled` (`#5a6a78`) confirmed untouched in both files and already passing (5.57:1 vs `--bg`).
+- `frontend/app/package.json` new `@axe-core/playwright` devDependency ↔ `package-lock.json` — OK, lockfile diff shows exactly `@axe-core/playwright@4.14.0` + its sole new transitive `axe-core@4.14.0`, nothing else added/removed.
+- `contrast-audit.spec.ts` import of `signInThroughKeycloak` ↔ `frontend/app/e2e/helpers/sign-in.ts` export — OK, helper reused as claimed, not duplicated.
+- `contrast-audit.spec.ts` selectors (`.ep-shell`, `nav[aria-label="Primary"]`, `getByRole('button', {name: /profile menu/i})`, `getByLabel('Theme')`, `table.ep-table`) ↔ actual rendered markup in `AppShell.tsx`, `SideNav.tsx`, `ThemeSwitcher.tsx`/`Select.tsx`, `Table.tsx` — OK, every selector matches a real DOM node/class/aria-label in the current source.
+- `switchTheme()`'s `html[data-theme]` assertion ↔ `ThemeSwitcher.tsx`'s `document.documentElement.dataset.theme = next` — OK, matches.
+- c-gap `GET /api/v1/auth/sso/callback` (`SignInCallback.tsx:58` ↔ `backend/src/modules/auth-org/routes.ts:71`) — independently re-confirmed as a scanner false positive on pre-existing, previously-reviewed code: the route exists (`app.post<{...}>('/api/v1/auth/sso/callback', ...)`, Fastify generic-typed route registration the scanner's regex doesn't match), both files are absent from `git diff 0036639..HEAD --name-only` (neither touched by Wave 7), and Wave 7's own gate log (`01-GATE.md` wave 7 section, line ~1068-1069) shows a live `POST /api/v1/auth/sso/callback` request returning `401` during the real test run — proving the route is live and reachable. Not carried forward as a Wave 7 finding.
+- No file outside the two plans' declared `files_modified` manifests was touched (`git diff 2e8c65c..HEAD --stat -- backend/ frontend/app/src frontend/design-system/src` returns empty — zero application source files besides the declared tokens/package.json/spec files changed).
