@@ -138,6 +138,12 @@ interface JurisdictionRow {
   name: string;
 }
 
+interface PersonnelRow {
+  id: string;
+  name: string;
+  email: string;
+}
+
 export default async function incidentsRoutes(app: FastifyInstance) {
   // GET /api/v1/jurisdictions — no dedicated jurisdictions-list endpoint
   // exists anywhere in Phase 1's or 02-01/02-02's API surface (01-11's
@@ -151,6 +157,28 @@ export default async function incidentsRoutes(app: FastifyInstance) {
     { preHandler: requirePermission('incidents', 'view') },
     async (_req, reply) => {
       const rows = await query<JurisdictionRow>(`SELECT id, name FROM jurisdictions ORDER BY name`);
+      return reply.code(200).send({ items: rows });
+    },
+  );
+
+  // GET /api/v1/incidents/personnel — the Command Role Assignment Modal
+  // (02-06, S1.4) needs a list of assignable people, but only
+  // `incident_commander`/`eoc_director` hold `incidents:edit` and neither
+  // role is granted `admin:view` (02-01's seed deliberately scopes admin
+  // access to secops_admin only — see seed.ts's own documented decision).
+  // Reusing `GET /api/v1/admin/users` would have required widening the
+  // admin permission to a role that has no business touching user
+  // management, so this module gets its own `incidents:view`-gated
+  // personnel lookup instead, scoped to Active users only (F16's
+  // personnel-roster sync is deferred to v2 per REQUIREMENTS.md — this is
+  // manual-entry-from-the-existing-users-table, not a roster read).
+  app.get(
+    '/api/v1/incidents/personnel',
+    { preHandler: requirePermission('incidents', 'view') },
+    async (_req, reply) => {
+      const rows = await query<PersonnelRow>(
+        `SELECT id, name, email FROM users WHERE status = 'Active' ORDER BY name`,
+      );
       return reply.code(200).send({ items: rows });
     },
   );
