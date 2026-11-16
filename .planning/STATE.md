@@ -3,15 +3,15 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-13-PLAN.md
-last_updated: "2026-11-16T05:30:00.000Z"
-last_activity: 2026-11-16 — Plan 01-13 complete (root Dockerfile, pivota-deploy.yaml, /healthz, SPA static serving, SSO-bootstrap role migration — Phase 1 DEPLOY-01 fully satisfied, deploy-check PASS)
+stopped_at: Completed 01-14-PLAN.md
+last_updated: "2026-11-16T09:55:56.868Z"
+last_activity: 2026-11-16 — Plan 01-14 complete (dev-mode port banner in package.json's dev script + README Development section documenting the 5173/8080 split — partial in-repo mitigation for UAT gap ref 3, full closure still needs platform init-dev-server workflow)
 progress:
   total_phases: 6
-  completed_phases: 1
-  total_plans: 13
-  completed_plans: 13
-  percent: 100
+  completed_phases: 0
+  total_plans: 15
+  completed_plans: 14
+  percent: 0
 ---
 
 # Project State
@@ -21,24 +21,24 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 1 — Platform Foundation & Deployable Shell (complete)
+**Current focus:** Phase 1 — Platform Foundation & Deployable Shell (gap-closure plans in progress)
 
 ## Current Position
 
 Phase: 1 of 6 (Platform Foundation & Deployable Shell)
-Plan: 13 of 13 in current phase (01-13 — final deploy-packaging plan — COMPLETE)
-Status: Phase 1 complete — ready for /pivota_spec-plan-phase 2
-Last activity: 2026-11-16 — Plan 01-13 complete (root Dockerfile, pivota-deploy.yaml, /healthz, SPA static serving, SSO-bootstrap role migration — Phase 1 DEPLOY-01 fully satisfied, deploy-check PASS)
+Plan: 14 of 15 in current phase (01-14 — UAT gap ref 3 dev-mode port banner/README mitigation — COMPLETE; 01-15 WCAG contrast audit gap closure remains)
+Status: Ready to execute 01-15-PLAN.md
+Last activity: 2026-11-16 — Plan 01-14 complete (dev-mode port banner in package.json's dev script + README Development section documenting the 5173/8080 split — partial in-repo mitigation for UAT gap ref 3, full closure still needs platform init-dev-server workflow)
 
-Progress: [██████████] 100%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 13
-- Average duration: 29 min
-- Total execution time: 6.7 hours
+- Total plans completed: 14
+- Average duration: 28 min
+- Total execution time: 6.8 hours
 
 **By Phase:**
 
@@ -57,11 +57,12 @@ Progress: [██████████] 100%
 | Phase 01 P11 | 48 min | 3 tasks | 6 files |
 | Phase 01 P12 | 35 min | 3 tasks | 6 files |
 | Phase 01 P13 | 50 min | 3 tasks | 8 files |
+| Phase 01 P14 | 8 min | 1 tasks | 2 files |
 
 **Recent Trend:**
 
-- Last 5 plans: 35 min, ~30 min, 35 min, 50 min
-- Trend: Plan 13 (terminal deploy-packaging plan) ran one deviation beyond the plan's own stated assumption — the plan's literal Dockerfile snippet was expected to pass D7's Trivy CRITICAL-CVE gate on the full devDependency-laden node_modules, but it didn't; fixed with a dedicated production-only deps stage, then the platform's own deploy-check script passed clean on the next run. Phase 1 is now fully complete — 100% of planned plans executed.
+- Last 5 plans: ~30 min, 35 min, 50 min, 8 min
+- Trend: Plan 13 (terminal deploy-packaging plan) ran one deviation beyond the plan's own stated assumption — the plan's literal Dockerfile snippet was expected to pass D7's Trivy CRITICAL-CVE gate on the full devDependency-laden node_modules, but it didn't; fixed with a dedicated production-only deps stage, then the platform's own deploy-check script passed clean on the next run. Plan 14 is a small gap-closure plan (UAT gap ref 3, partial in-repo mitigation) with zero deviations. Phase 1 has 14 of 15 plans complete; 01-15 (WCAG contrast audit gap closure) remains.
 
 *Updated after each plan completion*
 
@@ -103,6 +104,7 @@ Recent decisions affecting current work:
 - [Phase 01-11]: Admin-console e2e specs resolve a target user by direct API lookup + page.goto(`/admin/users/{id}`) rather than clicking a row found by visible table text — the shared compose-stack database has accumulated 77+ fixture users across this phase's repeated plan/test runs, and the default page_size=25 list view (ORDER BY u.name) gives no guarantee a specific row sorts into the first page
 - [Phase 01-13]: Dockerfile's runtime stage installs a dedicated production-only `backend/node_modules` (standalone npm install of backend's own package.json with devDependencies key deleted) rather than copying the full workspace-wide devDependency node_modules — Trivy's D7 scan blocks on fixable CRITICAL CVEs in vitest/tinypool/esbuild's bundled Go stdlib, all devDependency-only; the plan's own snippet had assumed this wouldn't be required to pass D7
 - [Phase 01-13]: backend/migrations/1700000000001_seed-roles.js ships only the 5 structural persona roles + secops_admin's baseline role_permissions (0 users, 0 sso_config) as a production-safe migration, deliberately separate from scripts/seed.ts's dev-fixture admin user/sso_config which point at the local docker-compose Keycloak — solves the SSO group-to-role bootstrap problem without seeding sensitive fixture data into a real deployment
+- [Phase 01-14]: Did not write .pivota/start-dev.sh — that file is generated exclusively by the platform's init-dev-server workflow (runtime-environment.md Section 7a), outside this phase's repository scope; this plan's dev-mode port banner + README section is an explicitly partial in-repo mitigation for UAT gap ref 3
 
 ### Pending Todos
 
@@ -114,6 +116,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-16T05:30:00.000Z
-Stopped at: Completed 01-13-PLAN.md — Phase 1 complete
+Last session: 2026-11-16T09:55:56.866Z
+Stopped at: Completed 01-14-PLAN.md
 Resume file: None
