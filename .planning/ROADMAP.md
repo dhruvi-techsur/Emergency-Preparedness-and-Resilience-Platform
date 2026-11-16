@@ -68,7 +68,7 @@ Plans:
 
 ### Phase 2: Incident Command & Operating Picture
 **Goal**: Command staff can intake and activate an incident, assign named command roles, and see a shared, time-stamped operating picture that never fails to render — even when the live GIS feed is unavailable.
-**Status**: Ready to execute
+**Status**: In progress
 **Depends on**: Phase 1
 **Requirements**: F1, F2, F11
 **Success Criteria** (what must be TRUE):
@@ -153,7 +153,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Platform Foundation & Deployable Shell | 0/TBD | Complete | 2026-11-16 |
-| 2. Incident Command & Operating Picture | 0/7 | Ready to execute | - |
+| 2. Incident Command & Operating Picture | 0/7 | In progress | - |
 | 3. Plans, Tasks & Resource Requests | 0/9 | Ready to execute | - |
 | 4. Notifications & Reporting/Learning | 0/TBD | Not started | - |
 | 5. Mobile Field Operations | 0/TBD | Not started | - |
