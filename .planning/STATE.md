@@ -2,14 +2,15 @@
 pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: in_progress
-last_updated: "2026-11-16T12:58:30Z"
-last_activity: "2026-11-16 — Plan 02-04 complete"
+status: executing
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-11-16T13:10:09.257Z"
+last_activity: "2026-11-16 — Plan 02-02 complete (command-role assignment with row-locked reassignment, server-side activation gate (confirmed:true + Incident-Commander-count), and incident closure with SAVEPOINT-guarded forward-compatible tasks cascade — all three writing exactly one Timeline entry per state change inside withTimelineTransaction; 1 auto-fixed deviation (Rule 1 - Bug: the plan's specified plain try/catch around the tasks-cascade UPDATE didn't actually contain a Postgres transaction-abort, needed a real SAVEPOINT, found via this task's own integration test))"
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 31
-  completed_plans: 17
+  completed_plans: 18
   percent: 19
 ---
 
@@ -25,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 2 of 6 (Incident Command & Operating Picture)
-Plan: 2 of 7 complete in current phase (02-01, 02-04 — both wave 1, no interdependency — COMPLETE; 02-02/02-03/02-05/02-06/02-07 remain)
-Status: In progress — ready for 02-02 (wave 2) or any other unblocked wave-1-dependent plan
-Last activity: 2026-11-16 — Plan 02-04 complete (MapCanvas/MapControls/MapLegend/MapPopup/LayerPanel + Provenance product-pattern chip, all 6 exported onto window.EPMP; offline-mode marker survival, keyboard operability, and Provenance's structural dashed+icon+word unverified treatment all proven by test/maps.test.tsx; 1 auto-fixed deviation (test-infrastructure-only: injected Provenance.css into jsdom for the computed-border-style assertion, matching the existing tokens.css-injection pattern))
+Plan: 3 of 7 complete in current phase (02-01, 02-04 — wave 1; 02-02 — wave 2, depends_on 02-01 — all COMPLETE; 02-03/02-05/02-06/02-07 remain)
+Status: In progress — ready for 02-03 or any other unblocked wave-2-dependent plan
+Last activity: 2026-11-16 — Plan 02-02 complete (command-role assignment with row-locked reassignment, server-side activation gate (confirmed:true + Incident-Commander-count), and incident closure with SAVEPOINT-guarded forward-compatible tasks cascade — all three writing exactly one Timeline entry per state change inside withTimelineTransaction; 1 auto-fixed deviation (Rule 1 - Bug: the plan's specified plain try/catch around the tasks-cascade UPDATE didn't actually contain a Postgres transaction-abort, needed a real SAVEPOINT, found via this task's own integration test))
 
 Progress: [██░░░░░░░░] 19%
 
@@ -35,9 +36,9 @@ Progress: [██░░░░░░░░] 19%
 
 **Velocity:**
 
-- Total plans completed: 17
-- Average duration: 26 min
-- Total execution time: 8.15 hours
+- Total plans completed: 18
+- Average duration: 25 min
+- Total execution time: 8.3 hours
 
 **By Phase:**
 
@@ -60,11 +61,12 @@ Progress: [██░░░░░░░░] 19%
 | Phase 01 P15 | 20 min | 2 tasks | 5 files |
 | Phase 02 P01 | 45 min | 3 tasks | 7 files |
 | Phase 02 P04 | 18 min | 3 tasks | 14 files |
+| Phase 02 P02 | 9 min | 3 tasks | 6 files |
 
 **Recent Trend:**
 
-- Last 5 plans: 8 min, 20 min, 45 min, 18 min
-- Trend: Phase 1 is now fully complete: all 15 plans (13 original + 2 gap-closure) done. Phase 2 is underway with a parallel-wave structure (02-01 and 02-04 are both wave 1, no interdependency between the backend incident-ops foundation and the design-system MAPS component family). Plan 02-01 (incident-ops foundation) ran one trivial auto-fixed deviation — a backtick-in-SQL-comment template-literal break, fixed by re-quoting. Plan 02-04 (MAPS component family + Provenance) ran one trivial auto-fixed deviation, test-infrastructure-only — vitest/jsdom does not auto-inject a component's own CSS import, so the computed-border-style assertion for Provenance's dashed-unverified treatment needed that file's contents injected directly into the test's jsdom document, mirroring the project's existing tokens.css-injection pattern; the production component code required zero changes. Both wave-1 plans' own verify commands (full build + full test suite in each case) passed clean.
+- Last 5 plans: 20 min, 45 min, 18 min, 9 min
+- Trend: Phase 1 is now fully complete: all 15 plans (13 original + 2 gap-closure) done. Phase 2 is underway with a parallel-wave structure (02-01 and 02-04 are both wave 1, no interdependency between the backend incident-ops foundation and the design-system MAPS component family); 02-02 (wave 2, depends_on 02-01) extended the incident-ops backend with command-role assignment, activation gating, and closure. Plan 02-01 ran one trivial auto-fixed deviation — a backtick-in-SQL-comment template-literal break. Plan 02-04 ran one trivial test-infrastructure-only deviation. Plan 02-02 ran one auto-fixed Rule 1 bug: the plan's specified plain try/catch around a forward-compatible "tasks table doesn't exist yet" UPDATE didn't actually prevent Postgres's all-or-nothing transaction abort — needed a real SAVEPOINT, caught immediately by the plan's own integration test. All three Phase 2 plans' own verify commands (build + full test suite, with 02-01/02-02 also running a live-stack integration test) passed clean.
 
 *Updated after each plan completion*
 
@@ -115,6 +117,9 @@ Recent decisions affecting current work:
 - [Phase 02-04]: MapCanvas's offline prop gates ONLY the base fill/label branch; markers/areas/lines render from an entirely separate, always-executed branch in the same component — this structural separation (not a shared conditional) is what makes "the page never fails to render" hold even in degraded mode
 - [Phase 02-04]: Provenance's verified=false path renders fully different markup (dashed border + Icon + literal word) rather than a conditional class on shared markup, so a caller cannot accidentally make unverified data look verified by omitting a prop
 - [Phase 02-04]: LayerPanel's unverified rows reuse Provenance directly (not a second dashed-treatment implementation); MapLegend is built on Card padded={false} rather than reimplementing panel chrome
+- [Phase 02-02]: Command-role reassignment locks the existing active-role row with SELECT ... FOR UPDATE before deciding assign/reassign/no-op, closing the race where two concurrent reassignment requests could both create a simultaneously-active row for the same role
+- [Phase 02-02]: closure.ts reuses activation.ts's exact ACTIVATION_CONFIRMATION_REQUIRED error code for its own confirmed:true gate — documented as EPMP's general destructive-action confirmation convention, not duplicated per-endpoint
+- [Phase 02-02]: The tasks-cascade UPDATE (defensive against Phase 3's not-yet-existing tasks table) needed a Postgres SAVEPOINT, not just a JS try/catch, to avoid poisoning the rest of the transaction on Postgres's all-or-nothing error semantics — found via this plan's own integration test
 
 ### Pending Todos
 
@@ -126,6 +131,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-16T12:58:30Z
-Stopped at: Completed 02-04-PLAN.md
+Last session: 2026-11-16T13:10:09.255Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None
