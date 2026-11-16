@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "declaration": false,
+    "baseUrl": ".",
+    "paths": {
+      // @epmp/design-system's package.json declares "types": "./dist/index.d.ts",
+      // but its build (frontend/design-system/vite.config.ts) never generates
+      // one (no vite-plugin-dts, tsconfig has declaration:false/noEmit:true) —
+      // tsc would otherwise fail with "Could not find a declaration file" for
+      // every import. Pointing straight at its real .ts/.tsx source gives tsc
+      // full type info without changing that package's own build pipeline;
+      // Vite's runtime resolution (dev server + `vite build`) is unaffected —
+      // it resolves the workspace symlink via package.json's "module"/"main"
+      // fields (dist/bundle.es.js), never consults this tsconfig mapping.
+      "@epmp/design-system": ["../design-system/src/index.ts"],
+      "@epmp/design-system/*": ["../design-system/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "e2e/**/*.ts", "vite.config.ts", "playwright.config.ts"]
+}

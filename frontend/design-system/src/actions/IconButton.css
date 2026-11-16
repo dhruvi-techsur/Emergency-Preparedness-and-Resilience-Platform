@@ -1,0 +1,44 @@
+/*
+ * IconButton (ACTIONS) — square icon-only button, token-only styling.
+ */
+
+.ep-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  border: var(--border-1) solid transparent;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 0;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.ep-icon-btn:hover:not(:disabled) {
+  background: var(--bg-sunken);
+}
+
+.ep-icon-btn:focus-visible {
+  outline: var(--border-2) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.ep-icon-btn:disabled {
+  opacity: var(--opacity-disabled);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.ep-icon-btn--sm {
+  width: var(--control-sm);
+  height: var(--control-sm);
+}
+.ep-icon-btn--default {
+  width: var(--control-md);
+  height: var(--control-md);
+}
+.ep-icon-btn--lg {
+  width: var(--control-lg);
+  height: var(--control-lg);
+}

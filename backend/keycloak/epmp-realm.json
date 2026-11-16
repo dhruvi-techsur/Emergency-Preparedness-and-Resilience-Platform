@@ -1,0 +1,58 @@
+{
+  "realm": "epmp",
+  "enabled": true,
+  "clients": [
+    {
+      "clientId": "epmp-app",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["http://localhost:5173/*", "http://localhost:8080/*"],
+      "webOrigins": ["*"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocolMappers": [
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "full.path": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "groups",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "name": "epmp-admins",
+      "path": "/epmp-admins"
+    }
+  ],
+  "users": [
+    {
+      "username": "admin@epmp.local",
+      "email": "admin@epmp.local",
+      "firstName": "EPMP",
+      "lastName": "Admin",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "devpass123",
+          "temporary": false
+        }
+      ],
+      "groups": ["/epmp-admins"]
+    }
+  ]
+}

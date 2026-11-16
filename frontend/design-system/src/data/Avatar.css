@@ -1,0 +1,30 @@
+/*
+ * Avatar (DATA) — token-only styling.
+ */
+
+.ep-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border-radius: var(--radius-full);
+  background: var(--brand-subtle);
+  color: var(--brand-text);
+  font-family: var(--font-sans);
+  font-weight: 700;
+  user-select: none;
+}
+
+.ep-avatar--default {
+  width: 32px;
+  height: 32px;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.ep-avatar--lg {
+  width: 44px;
+  height: 44px;
+  font-size: 15px;
+  line-height: 20px;
+}

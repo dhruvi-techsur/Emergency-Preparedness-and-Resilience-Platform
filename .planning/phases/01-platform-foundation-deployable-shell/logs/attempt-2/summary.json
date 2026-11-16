@@ -1,0 +1,26 @@
+{
+  "duration_secs": 4152.0,
+  "token_usage": {
+    "input": 435,
+    "output": 266557,
+    "total": 61606463,
+    "cache_read": 60353729,
+    "cache_write": 985742,
+    "cost": 17.201540800000004
+  },
+  "model": "claude-sonnet-5",
+  "files_changed": [
+    ".env",
+    ".planning/debug/no-sign-in-option-reachable.md",
+    ".planning/phases/01-platform-foundation-deployable-shell/01-UAT.md",
+    ".planning/phases/01-platform-foundation-deployable-shell/01-UAT.summary.json",
+    "backend/src/server.ts",
+    "frontend/app/e2e/admin-users-roles.spec.ts",
+    "package.json"
+  ],
+  "verification_status": "failed",
+  "error_message": null,
+  "attempt_number": 2,
+  "created_at": "2026-11-16T08:02:34.961547+00:00",
+  "completed_at": "2026-11-16T09:11:47.691452491+00:00"
+}

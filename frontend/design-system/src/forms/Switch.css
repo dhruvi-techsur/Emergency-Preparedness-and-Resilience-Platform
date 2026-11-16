@@ -1,0 +1,79 @@
+/*
+ * Switch (FORMS) — token-only styling. role="switch" track+thumb, 36x20px.
+ * The native checkbox input is visually hidden but keyboard-focusable;
+ * focus ring is mirrored onto the visible track. Never suppressed.
+ */
+
+.ep-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink);
+}
+
+.ep-switch--disabled {
+  opacity: var(--opacity-disabled);
+  cursor: not-allowed;
+}
+
+.ep-switch__track-wrap {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  width: 36px;
+  height: 20px;
+}
+
+.ep-switch__input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  cursor: inherit;
+}
+
+.ep-switch__track {
+  display: inline-flex;
+  align-items: center;
+  width: 36px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  background: var(--bg-sunken);
+  border: var(--border-1) solid var(--border-strong);
+  padding: 2px;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+  box-sizing: border-box;
+}
+
+.ep-switch__thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+  background: var(--bg);
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+.ep-switch__input:checked ~ .ep-switch__track {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+.ep-switch__input:checked ~ .ep-switch__track .ep-switch__thumb {
+  transform: translateX(16px);
+  background: var(--on-brand);
+}
+
+.ep-switch__input:focus-visible ~ .ep-switch__track {
+  outline: var(--border-2) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.ep-switch__label {
+  user-select: none;
+}

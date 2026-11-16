@@ -1,0 +1,48 @@
+/*
+ * Stat (DATA) — token-only styling.
+ */
+
+.ep-stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ep-stat__label {
+  color: var(--ink-muted);
+  margin: 0;
+}
+
+.ep-stat__value {
+  font-family: var(--font-sans);
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+}
+
+.ep-stat__delta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.ep-stat__delta--good {
+  color: var(--success-text);
+}
+.ep-stat__delta--bad {
+  color: var(--danger-text);
+}
+.ep-stat__delta--flat {
+  color: var(--ink-muted);
+}
+
+.ep-stat__hint {
+  color: var(--ink-muted);
+  margin: var(--space-1) 0 0;
+}

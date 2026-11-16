@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: devpass
+      POSTGRES_DB: epmp
+    ports: ["5432:5432"]
+    volumes: ["dbdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  nats:
+    image: nats:2.10-alpine
+    # -m 8222 enables the HTTP monitoring endpoint (incl. /healthz) that the
+    # healthcheck below needs; -js alone starts no HTTP listener at all.
+    command: ["-js", "-m", "8222"]
+    ports: ["4222:4222", "8222:8222"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8222/healthz"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  opa:
+    # -debug tag (not the default static/Chainguard base) because the
+    # default image ships no shell and no wget/curl, which the healthcheck
+    # below needs. Dev-only backing service; still pinned to 0.68.0.
+    image: openpolicyagent/opa:0.68.0-debug
+    command: ["run", "--server", "--addr", "0.0.0.0:8181", "/policies/policy.rego"]
+    ports: ["8181:8181"]
+    volumes: ["./backend/opa:/policies:ro"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8181/health"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: devpass
+    ports: ["8081:8080"]
+    volumes: ["./backend/keycloak:/opt/keycloak/data/import:ro"]
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+volumes:
+  dbdata:

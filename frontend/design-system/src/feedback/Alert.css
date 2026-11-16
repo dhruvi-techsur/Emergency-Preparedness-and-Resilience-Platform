@@ -1,0 +1,74 @@
+/*
+ * Alert (FEEDBACK) — token-only styling.
+ */
+
+.ep-alert {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: var(--border-1) solid;
+}
+
+.ep-alert__icon {
+  flex: none;
+  display: flex;
+  align-items: flex-start;
+  padding-top: 1px;
+}
+
+.ep-alert__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ep-alert__title {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.ep-alert__content {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+  margin-top: var(--space-1);
+}
+
+.ep-alert__actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.ep-alert__dismiss {
+  flex: none;
+}
+
+.ep-alert--info {
+  background: var(--info-subtle);
+  border-color: var(--info-border);
+  color: var(--info-text);
+}
+.ep-alert--success {
+  background: var(--success-subtle);
+  border-color: var(--success-border);
+  color: var(--success-text);
+}
+.ep-alert--warning {
+  background: var(--warning-subtle);
+  border-color: var(--warning-border);
+  color: var(--warning-text);
+}
+.ep-alert--danger {
+  background: var(--danger-subtle);
+  border-color: var(--danger-border);
+  color: var(--danger-text);
+}
+.ep-alert--neutral {
+  background: var(--bg-subtle);
+  border-color: var(--border);
+  color: var(--ink);
+}

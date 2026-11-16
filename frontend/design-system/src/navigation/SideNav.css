@@ -1,0 +1,168 @@
+/*
+ * SideNav (NAVIGATION) — token-only styling.
+ *
+ * Breakpoint exception: CSS custom properties cannot be referenced inside an
+ * `@media` condition (a CSS-language constraint, not an escape hatch), so the
+ * bottom-bar's own layout media query below uses the literal `--bp-md` value
+ * (768px) directly — see Card.css for the same documented exception. The
+ * `collapsed` prop itself, however, is driven entirely by the consuming
+ * app's own breakpoint logic (never a `@media` query in this file), per this
+ * component's "no `window` access" contract.
+ */
+
+.ep-sidenav--rail {
+  display: flex;
+  flex-direction: column;
+  width: var(--nav-width);
+  background: var(--bg-subtle);
+  border-right: var(--border-1) solid var(--border);
+  padding: var(--space-4) 0;
+  gap: var(--space-4);
+  transition: width var(--duration-fast) var(--ease-standard);
+}
+
+.ep-sidenav--rail.ep-sidenav--collapsed {
+  width: var(--nav-width-collapsed);
+}
+
+.ep-sidenav__brand {
+  padding: 0 var(--space-4);
+}
+
+.ep-sidenav__brand-mark {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ep-sidenav__brand-square {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+}
+
+.ep-sidenav__brand-name {
+  color: var(--ink);
+  margin: 0;
+}
+
+.ep-sidenav--collapsed .ep-sidenav__brand-name {
+  display: none;
+}
+
+.ep-sidenav__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ep-sidenav__group-label {
+  padding: 0 var(--space-4);
+  color: var(--ink-muted);
+}
+
+.ep-sidenav__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ep-sidenav__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  color: var(--ink);
+  text-decoration: none;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+  border-radius: var(--radius-md);
+  margin: 0 var(--space-2);
+}
+
+.ep-sidenav__item:hover {
+  background: var(--bg-sunken);
+}
+
+.ep-sidenav__item:focus-visible {
+  outline: var(--border-2) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Current item: filled brand-subtle background on the whole row — never a
+   colored side border (anti-pattern this spec explicitly calls out). */
+.ep-sidenav__item--current {
+  background: var(--brand-subtle);
+  color: var(--brand-text);
+  font-weight: 700;
+}
+
+.ep-sidenav--collapsed .ep-sidenav__item {
+  justify-content: center;
+  padding: var(--space-2);
+}
+
+.ep-sidenav__visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Bottom-bar variant (field mobile, below --bp-md — literal 768px value,
+   see file header comment) */
+.ep-sidenav--bottom-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--bg-raised);
+  border-top: var(--border-1) solid var(--border);
+  z-index: var(--z-sticky);
+}
+
+.ep-sidenav__bottom-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+}
+
+.ep-sidenav__bottom-item-wrap {
+  flex: 1 1 0;
+}
+
+.ep-sidenav__bottom-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) 0;
+  color: var(--ink-muted);
+  text-decoration: none;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  line-height: 14px;
+}
+
+.ep-sidenav__bottom-item--current {
+  color: var(--brand-text);
+  font-weight: 700;
+}
+
+.ep-sidenav__bottom-label {
+  font-size: 11px;
+  line-height: 14px;
+}

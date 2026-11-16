@@ -1,0 +1,43 @@
+/*
+ * Toast (FEEDBACK) — token-only styling.
+ */
+
+.ep-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--bg-inverse);
+  color: var(--ink-inverse);
+  box-shadow: var(--shadow-md);
+  max-width: 420px;
+}
+
+.ep-toast__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ep-toast__title {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 700;
+  margin: 0 0 var(--space-1) 0;
+}
+
+.ep-toast__content {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink-inverse-muted);
+}
+
+.ep-toast__action {
+  flex: none;
+}
+
+.ep-toast__dismiss {
+  flex: none;
+}

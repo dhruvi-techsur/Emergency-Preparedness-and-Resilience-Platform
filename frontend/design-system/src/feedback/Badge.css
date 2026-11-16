@@ -1,0 +1,62 @@
+/*
+ * Badge (FEEDBACK) — token-only styling.
+ */
+
+.ep-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 700;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+.ep-badge--neutral {
+  background: var(--bg-sunken);
+  color: var(--ink-muted);
+}
+
+.ep-badge--brand {
+  background: var(--brand-subtle);
+  color: var(--brand-text);
+}
+
+.ep-badge--info {
+  background: var(--info-subtle);
+  color: var(--info-text);
+}
+.ep-badge--info.ep-badge--solid {
+  background: var(--info-solid);
+  color: var(--on-info);
+}
+
+.ep-badge--success {
+  background: var(--success-subtle);
+  color: var(--success-text);
+}
+.ep-badge--success.ep-badge--solid {
+  background: var(--success-solid);
+  color: var(--on-success);
+}
+
+.ep-badge--warning {
+  background: var(--warning-subtle);
+  color: var(--warning-text);
+}
+.ep-badge--warning.ep-badge--solid {
+  background: var(--warning-solid);
+  color: var(--on-warning);
+}
+
+.ep-badge--danger {
+  background: var(--danger-subtle);
+  color: var(--danger-text);
+}
+.ep-badge--danger.ep-badge--solid {
+  background: var(--danger-solid);
+  color: var(--on-danger);
+}

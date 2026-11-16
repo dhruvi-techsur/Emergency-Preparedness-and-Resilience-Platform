@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EPMP</title>
+  </head>
+  <!--
+    data-theme="light" is the default BEFORE the real preference loads (flash
+    of wrong theme guard — F0 §S0.2). main.tsx updates this attribute
+    synchronously, before mounting the router, as soon as the real
+    theme_preference is known (RouteGuard's GET /api/v1/me resolution).
+
+    NOTE on CSS loading: this is a monorepo-bundled Vite app, not the
+    standalone <script>-tag "load window.EPMP on a plain HTML page" pattern
+    documented in EPMP-llm-build-guide.md. Both tokens.css and the
+    component bundle.css are imported from main.tsx as ES modules
+    (`import '@epmp/design-system/tokens/tokens.css'` /
+    `import '@epmp/design-system/dist/bundle.css'`) so Vite's dev server and
+    production build process them like any other asset, rather than via raw
+    <link> tags here. The component APIs/props EPMP exposes are identical
+    either way — only the loading mechanism differs because this is a
+    bundled app, not a plain-HTML page.
+  -->
+  <body data-theme="light">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

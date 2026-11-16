@@ -1,0 +1,472 @@
+/*
+ * EPMP Design System — tokens.css
+ *
+ * Single source of CSS custom properties for every token named in
+ * EPMP-Design-System.pdf.md (Chapters 05, 07, 08, 09). Values mirror
+ * tokens/tokens.json exactly — this file is the CSS projection of that JSON,
+ * not an independent source of truth.
+ *
+ * Color tokens are scoped per theme ([data-theme="light"|"dark"|"contrast"]).
+ * All other tokens (spacing, radius, size, motion, breakpoints, layout,
+ * z-index, opacity, shadow) are theme-invariant and declared once on :root.
+ */
+
+/* ============================================================
+   THEME: light (default)
+   ============================================================ */
+:root,
+[data-theme="light"] {
+  /* Surfaces */
+  --bg: #ffffff;
+  --bg-subtle: #f6f8fa;
+  --bg-sunken: #edf2f5;
+  --bg-raised: #ffffff;
+  --bg-inverse: #0f2b43;
+  --bg-overlay: #0f2b4380;
+
+  /* Text */
+  --ink: #0f2b43;
+  --ink-muted: #4d5d6b;
+  --ink-disabled: #6c7680;
+  --ink-inverse: #ffffff;
+  --ink-inverse-muted: #b9c7d3;
+
+  /* Borders and focus */
+  --border: #dde5eb;
+  --border-strong: #7d8d9a;
+  --focus-ring: #1a5fb4;
+
+  /* Brand */
+  --brand: #0a7c84;
+  --brand-hover: #086a71;
+  --brand-active: #06565c;
+  --brand-subtle: #e4f1f2;
+  --brand-text: #086a71;
+  --on-brand: #ffffff;
+
+  /* Accent */
+  --accent: #e8b563;
+  --accent-subtle: #fbf1dc;
+  --on-accent: #0f2b43;
+
+  /* Status: info */
+  --info-solid: #1b5ea8;
+  --info-subtle: #e8f1fb;
+  --info-text: #174f8c;
+  --info-border: #9cc0e8;
+  --on-info: #ffffff;
+
+  /* Status: success */
+  --success-solid: #00695c;
+  --success-subtle: #e3f3ef;
+  --success-text: #005a4f;
+  --success-border: #8fcfc2;
+  --on-success: #ffffff;
+
+  /* Status: warning */
+  --warning-solid: #e8b563;
+  --warning-subtle: #fdf3dc;
+  --warning-text: #7a4b00;
+  --warning-border: #ecc77a;
+  --on-warning: #0f2b43;
+
+  /* Status: danger */
+  --danger-solid: #b3261e;
+  --danger-subtle: #fdeceb;
+  --danger-text: #9c1f18;
+  --danger-border: #eba9a5;
+  --on-danger: #ffffff;
+
+  /* Data viz: categorical */
+  --viz-1: #0072b2;
+  --viz-2: #c4510a;
+  --viz-3: #00856a;
+  --viz-4: #a8487e;
+  --viz-5: #b07800;
+  --viz-6: #5b6b78;
+
+  /* Data viz: sequential */
+  --seq-1: #e4f1f2;
+  --seq-2: #b3d8db;
+  --seq-3: #6fb5bb;
+  --seq-4: #4aa5ad;
+  --seq-5: #0a6a72;
+  --on-seq-1: #0f2b43;
+  --on-seq-2: #0f2b43;
+  --on-seq-3: #0f2b43;
+  --on-seq-4: #0f2b43;
+  --on-seq-5: #ffffff;
+
+  /* Map base */
+  --map-land: #f1f4f3;
+  --map-water: #cfe3ee;
+  --map-park: #dcebdc;
+  --map-road: #ffffff;
+  --map-boundary: #7d8d9a;
+  --map-label: #3d4f5e;
+}
+
+/* ============================================================
+   THEME: dark (operations center)
+   ============================================================ */
+[data-theme="dark"] {
+  --bg: #0a1722;
+  --bg-subtle: #0f2030;
+  --bg-sunken: #07111a;
+  --bg-raised: #12283a;
+  --bg-inverse: #e8eef3;
+  --bg-overlay: #000000b3;
+
+  --ink: #e8eef3;
+  --ink-muted: #a3b3c1;
+  --ink-disabled: #7c95aa;
+  --ink-inverse: #0f2b43;
+  --ink-inverse-muted: #44566a;
+
+  --border: #22384a;
+  --border-strong: #6b8396;
+  --focus-ring: #7cc4ff;
+
+  --brand: #4cc3cb;
+  --brand-hover: #6ad0d7;
+  --brand-active: #86dce2;
+  --brand-subtle: #0f3a42;
+  --brand-text: #6ad0d7;
+  --on-brand: #06222a;
+
+  --accent: #e8b563;
+  --accent-subtle: #3a2f14;
+  --on-accent: #0f2b43;
+
+  --info-solid: #5aa3f0;
+  --info-subtle: #11304f;
+  --info-text: #8bbcf5;
+  --info-border: #2f5f96;
+  --on-info: #05213f;
+
+  --success-solid: #3fc2a8;
+  --success-subtle: #0e3a33;
+  --success-text: #6fd6c0;
+  --success-border: #1f6b5d;
+  --on-success: #04251f;
+
+  --warning-solid: #e8b563;
+  --warning-subtle: #3a2f14;
+  --warning-text: #f0c775;
+  --warning-border: #7a5c1d;
+  --on-warning: #0f2b43;
+
+  --danger-solid: #f0746b;
+  --danger-subtle: #43130f;
+  --danger-text: #f59a93;
+  --danger-border: #8a3029;
+  --on-danger: #3a0a07;
+
+  --viz-1: #4aa3df;
+  --viz-2: #f08a4b;
+  --viz-3: #3ec9a1;
+  --viz-4: #d98ab5;
+  --viz-5: #e0b04a;
+  --viz-6: #9fb0be;
+
+  --seq-1: #0f3a42;
+  --seq-2: #17535c;
+  --seq-3: #226b73;
+  --seq-4: #4cb0b8;
+  --seq-5: #8fdbe0;
+  --on-seq-1: #e8eef3;
+  --on-seq-2: #e8eef3;
+  --on-seq-3: #e8eef3;
+  --on-seq-4: #06222a;
+  --on-seq-5: #06222a;
+
+  --map-land: #11222f;
+  --map-water: #0e3347;
+  --map-park: #12332a;
+  --map-road: #1c3547;
+  --map-boundary: #6b8396;
+  --map-label: #c4d2dd;
+}
+
+/* ============================================================
+   THEME: contrast (Section 508 high contrast)
+   ============================================================ */
+[data-theme="contrast"] {
+  --bg: #ffffff;
+  --bg-subtle: #f2f4f6;
+  --bg-sunken: #e6eaee;
+  --bg-raised: #ffffff;
+  --bg-inverse: #00111f;
+  --bg-overlay: #00111fcc;
+
+  --ink: #00111f;
+  --ink-muted: #2a3947;
+  --ink-disabled: #5a6a78;
+  --ink-inverse: #ffffff;
+  --ink-inverse-muted: #c9d6e0;
+
+  --border: #5a6a78;
+  --border-strong: #2a3947;
+  --focus-ring: #0b3f80;
+
+  --brand: #00505a;
+  --brand-hover: #003a42;
+  --brand-active: #002a30;
+  --brand-subtle: #e0f0f2;
+  --brand-text: #00454e;
+  --on-brand: #ffffff;
+
+  --accent: #f2b84b;
+  --accent-subtle: #fff1cc;
+  --on-accent: #00111f;
+
+  --info-solid: #0b3f80;
+  --info-subtle: #e6eefa;
+  --info-text: #0a3a75;
+  --info-border: #1b5ea8;
+  --on-info: #ffffff;
+
+  --success-solid: #004d43;
+  --success-subtle: #dff1ed;
+  --success-text: #004037;
+  --success-border: #00695c;
+  --on-success: #ffffff;
+
+  --warning-solid: #f2b84b;
+  --warning-subtle: #fff1cc;
+  --warning-text: #5c3800;
+  --warning-border: #a06a00;
+  --on-warning: #00111f;
+
+  --danger-solid: #8c1710;
+  --danger-subtle: #fdeceb;
+  --danger-text: #7a120d;
+  --danger-border: #b3261e;
+  --on-danger: #ffffff;
+
+  --viz-1: #005a8e;
+  --viz-2: #9a3f06;
+  --viz-3: #006650;
+  --viz-4: #862f60;
+  --viz-5: #7f5700;
+  --viz-6: #3d4b57;
+
+  --seq-1: #e0f0f2;
+  --seq-2: #bfe0e3;
+  --seq-3: #8cc3c8;
+  --seq-4: #005a63;
+  --seq-5: #00353c;
+  --on-seq-1: #00111f;
+  --on-seq-2: #00111f;
+  --on-seq-3: #00111f;
+  --on-seq-4: #ffffff;
+  --on-seq-5: #ffffff;
+
+  --map-land: #f2f4f6;
+  --map-water: #cfe0ec;
+  --map-park: #d8e8d8;
+  --map-road: #ffffff;
+  --map-boundary: #2a3947;
+  --map-label: #00111f;
+}
+
+/* ============================================================
+   THEME-INVARIANT TOKENS (declared once — same across light/dark/contrast)
+   ============================================================ */
+:root {
+  /* Spacing (4px base scale) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* Sizes */
+  --control-sm: 28px;
+  --control-md: 36px;
+  --control-lg: 44px;
+  --icon-sm: 16px;
+  --icon-md: 20px;
+  --icon-lg: 24px;
+  --nav-width: 240px;
+  --nav-width-collapsed: 64px;
+  --content-max: 1200px;
+  --reading-max: 720px;
+
+  /* Borders */
+  --border-1: 1px;
+  --border-2: 2px;
+
+  /* Shadows (overlays only) */
+  --shadow-sm: 0 1px 2px #0f2b4314;
+  --shadow-md: 0 4px 12px #0f2b4318;
+  --shadow-lg: 0 12px 32px #0f2b4326;
+
+  /* Z-index */
+  --z-base: 0;
+  --z-sticky: 100;
+  --z-dropdown: 200;
+  --z-overlay: 300;
+  --z-modal: 400;
+  --z-toast: 500;
+
+  /* Opacity */
+  --opacity-disabled: 0.5;
+  --opacity-hover: 0.08;
+  --opacity-hazard: 0.28;
+
+  /* Motion */
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  /* Breakpoints (reference values — used in JS/media queries, not directly as CSS props in most browsers) */
+  --bp-sm: 640px;
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+  --bp-xl: 1280px;
+
+  /* Font families */
+  --font-sans: 'Lato', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+/* ============================================================
+   BASE RESET (minimal — the design system does not impose a full reset)
+   ============================================================ */
+.ep,
+.ep * {
+  box-sizing: border-box;
+}
+
+.ep {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+/* ============================================================
+   TYPE CLASSES — one class per Chapter 07 type style
+   ============================================================ */
+.display {
+  font-family: var(--font-sans);
+  font-size: 40px;
+  line-height: 48px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.h1 {
+  font-family: var(--font-sans);
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.h2 {
+  font-family: var(--font-sans);
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.h3 {
+  font-family: var(--font-sans);
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+}
+
+.h4 {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 700;
+}
+
+.body-lg {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+}
+
+.body {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+}
+
+.body-strong {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 700;
+}
+
+.label {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 700;
+}
+
+.caption {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 400;
+}
+
+.overline {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.code {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 400;
+}
+
+.data {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   MOTION — reduced-motion honored globally
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

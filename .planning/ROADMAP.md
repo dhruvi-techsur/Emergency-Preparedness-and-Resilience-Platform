@@ -35,7 +35,8 @@ capabilities that reach across (rather than own) the rest of the platform.
 
 ### Phase 1: Platform Foundation & Deployable Shell
 **Goal**: Every persona can sign in once via agency SSO into a single, themeable application shell with role-based access and a full audit trail, and the repository runs as a real, deployable, Postgres-backed service from the first commit.
-**Status**: Passed
+**Status**: Complete (2026-11-16)
+**Last Updated**: 2026-11-16T12:09:09Z
 **Depends on**: Nothing (first phase)
 **Requirements**: F0, F8, F10, F16-SSO, DEPLOY-01
 **Success Criteria** (what must be TRUE):
@@ -46,7 +47,7 @@ capabilities that reach across (rather than own) the rest of the platform.
   5. `docker build .` succeeds at the repository root, and the image runs as a numeric non-root `USER`.
   6. Started with only `PORT` set, the app answers `GET /healthz` with 200, without authentication, within 30 seconds, and `GET /` shows its main page (or redirects to it).
   7. `pivota-deploy.yaml` at the root reads `port: 8080`, `healthPath: /healthz`, `size: small`, `database: postgres`, the app migrates its schema at start, and the dev-server preview still starts as before.
-**Plans:** 13 plans
+**Plans:** 15 plans
 
 Plans:
 - [ ] 01-01-PLAN.md — Dev infrastructure: docker-compose (Postgres+PostGIS, NATS, OPA, Keycloak), exact auth-org schema migration, idempotent seed, OPA policy, Keycloak realm import
@@ -62,6 +63,8 @@ Plans:
 - [ ] 01-11-PLAN.md — Frontend admin console: Users list/detail, Roles & Permissions, Audit Log view, Playwright e2e
 - [ ] 01-12-PLAN.md — Frontend admin console: SSO Config form, Platform Monitoring, Integration Health, API Clients, Federation Grants, Playwright e2e
 - [ ] 01-13-PLAN.md — Deployability: /healthz, static serving, baseline role migration, Dockerfile, pivota-deploy.yaml, .env.example, deploy-check verification
+- [ ] 01-14-PLAN.md — Gap closure (UAT ref 3): dev-mode port banner + README documentation of the 5173 (sign-in UI) vs 8080 (backend-only) split
+- [ ] 01-15-PLAN.md — Gap closure (UAT ref 4): automated WCAG contrast audit (axe-core, all 3 themes) + fix real light/dark ink-disabled contrast defect
 
 ### Phase 2: Incident Command & Operating Picture
 **Goal**: Command staff can intake and activate an incident, assign named command roles, and see a shared, time-stamped operating picture that never fails to render — even when the live GIS feed is unavailable.
