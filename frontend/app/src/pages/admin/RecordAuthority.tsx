@@ -44,6 +44,7 @@ export function RecordAuthority(): JSX.Element {
   });
 
   const [modalOpen, setModalOpen] = React.useState(false);
+  const [isEditMode, setIsEditMode] = React.useState(false);
   const [recordType, setRecordType] = React.useState('');
   const [authoritativeSystem, setAuthoritativeSystem] = React.useState('');
   const [notes, setNotes] = React.useState('');
@@ -51,6 +52,7 @@ export function RecordAuthority(): JSX.Element {
   const [saveError, setSaveError] = React.useState<string | null>(null);
 
   function openCreateModal() {
+    setIsEditMode(false);
     setRecordType('');
     setAuthoritativeSystem('');
     setNotes('');
@@ -59,6 +61,7 @@ export function RecordAuthority(): JSX.Element {
   }
 
   function openEditModal(row: RecordAuthorityRow) {
+    setIsEditMode(true);
     setRecordType(row.record_type);
     setAuthoritativeSystem(row.authoritative_system);
     setNotes(row.notes ?? '');
@@ -149,9 +152,11 @@ export function RecordAuthority(): JSX.Element {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
           <TextField
             label="Record type"
+            hint={isEditMode ? 'Record type is locked once registered — it cannot be changed from here.' : undefined}
             value={recordType}
             onChange={(e) => setRecordType(e.target.value)}
             required
+            disabled={isEditMode}
           />
           <TextField
             label="Authoritative system"
