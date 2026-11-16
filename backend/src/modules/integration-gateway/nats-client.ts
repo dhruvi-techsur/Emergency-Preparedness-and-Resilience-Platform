@@ -1,10 +1,17 @@
-import { connect, type NatsConnection, JSONCodec } from 'nats';
+import { connect, type NatsConnection, JSONCodec, AckPolicy } from 'nats';
 
 let nc: NatsConnection | undefined;
 export const codec = JSONCodec();
 
+/** Durable consumer name shared between stream setup and the delivery worker. */
+export const WEBHOOK_DELIVERY_DURABLE = 'webhook-delivery';
+
 /**
- * Connects to NATS JetStream and ensures the EPMP_EVENTS stream exists.
+ * Connects to NATS JetStream, ensures the EPMP_EVENTS stream exists, and
+ * ensures the durable `webhook-delivery` pull consumer exists on it (so the
+ * delivery worker can attach via the modern `consumers.get()` + `.consume()`
+ * API rather than the legacy `pullSubscribe`, which requires pre-creating
+ * the consumer through the exact same JetStreamManager call anyway).
  *
  * Per DEPLOY-01's "app starts without external services" principle, extended
  * here: a NATS outage at boot must NOT crash the server. Callers (server.ts)
@@ -19,6 +26,14 @@ export async function connectNats(): Promise<void> {
   await jsm.streams.add({ name: 'EPMP_EVENTS', subjects: ['epmp.events.>'] }).catch(() => {
     // Stream already exists — add() is not idempotent across restarts, this is expected.
   });
+  await jsm.consumers
+    .add('EPMP_EVENTS', {
+      durable_name: WEBHOOK_DELIVERY_DURABLE,
+      ack_policy: AckPolicy.Explicit,
+    })
+    .catch(() => {
+      // Consumer already exists — same idempotency note as the stream above.
+    });
 }
 
 /**

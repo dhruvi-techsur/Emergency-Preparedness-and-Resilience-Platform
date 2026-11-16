@@ -41,7 +41,38 @@ export default async function adminUsersRoutes(app: FastifyInstance) {
     Querystring: { role?: string; jurisdiction?: string; status?: string; page?: string; page_size?: string };
   }>(
     '/api/v1/admin/users',
-    { preHandler: requirePermission('admin', 'view') },
+    {
+      preHandler: requirePermission('admin', 'view'),
+      schema: {
+        tags: ['admin'],
+        summary: 'Lists users with role/jurisdiction/status filters, paginated',
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              items: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    name: { type: 'string' },
+                    email: { type: 'string' },
+                    role: { type: 'string' },
+                    jurisdiction_scope: { type: 'array', items: { type: 'string' } },
+                    status: { type: 'string', enum: ['Active', 'Suspended'] },
+                    last_login_at: { type: 'string', nullable: true },
+                  },
+                },
+              },
+              total: { type: 'integer' },
+              page: { type: 'integer' },
+              page_size: { type: 'integer' },
+            },
+          },
+        },
+      },
+    },
     async (req, reply) => {
       const { role, jurisdiction, status } = req.query;
       const page = Math.max(1, parseInt(req.query.page ?? '1', 10) || 1);

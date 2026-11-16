@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { query } from '../../db/client.js';
-import { getNatsConnection, codec } from './nats-client.js';
+import { getNatsConnection, codec, WEBHOOK_DELIVERY_DURABLE } from './nats-client.js';
 
 interface WebhookSubscriptionRow {
   id: string;
@@ -30,11 +30,16 @@ export function computeBackoff(failureCount: number): Date {
 }
 
 /**
- * Starts a JetStream pull consumer on `epmp.events.>`, delivering each event
- * to every active webhook_subscriptions row whose event_types includes the
- * event's type. Dedup is enforced at the database layer via
+ * Starts a JetStream pull consumer on the durable `webhook-delivery`
+ * consumer of the EPMP_EVENTS stream (created in connectNats()), delivering
+ * each event to every active webhook_subscriptions row whose event_types
+ * includes the event's type. Dedup is enforced at the database layer via
  * `UNIQUE (subscription_id, idempotency_key)` + `ON CONFLICT DO NOTHING` —
  * not an application-level set, which could race under concurrent delivery.
+ *
+ * Uses the modern `consumers.get()` + `.consume()` API (continuous
+ * auto-pulling async iterable) rather than the legacy `pullSubscribe`, which
+ * requires manually re-issuing `.pull()` calls to keep messages flowing.
  *
  * Skips starting entirely if NATS isn't connected, matching the
  * graceful-degradation principle in nats-client.ts/server.ts: a NATS outage
@@ -50,10 +55,11 @@ export async function startWebhookDeliveryWorker(): Promise<void> {
   );
 
   const js = nc.jetstream();
-  const sub = await js.pullSubscribe('epmp.events.>', { config: { durable_name: 'webhook-delivery' } });
+  const consumer = await js.consumers.get('EPMP_EVENTS', WEBHOOK_DELIVERY_DURABLE);
+  const messages = await consumer.consume();
 
   (async () => {
-    for await (const msg of sub) {
+    for await (const msg of messages) {
       try {
         const decoded = codec.decode(msg.data) as DecodedEvent;
         const subs = await query<WebhookSubscriptionRow>(
