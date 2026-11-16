@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { requirePermission } from '../auth-org/rbac.js';
 import { TimelineService, withTimelineTransaction } from './timeline.js';
-import { fetchIncidentDetailShape, INCIDENT_NOT_FOUND } from './incidents.js';
+import { fetchIncidentDetailShape, fetchIncidentForMutation, INCIDENT_NOT_FOUND } from './incidents.js';
 
 interface ClosedIncidentRow {
   id: string;
@@ -34,6 +34,14 @@ export default async function closureRoutes(app: FastifyInstance) {
           error_code: 'ACTIVATION_CONFIRMATION_REQUIRED',
           message: 'Confirm the activation-level change before it takes effect.',
         });
+      }
+
+      // Jurisdiction-scope enforcement (W1 fix, TechArch 04-security.md
+      // §5.2): a caller holding incidents:edit can only close incidents
+      // in their own jurisdiction_scope.
+      const scoped = await fetchIncidentForMutation(incidentId, req.epmpUser!.jurisdiction_scope);
+      if (!scoped) {
+        return reply.code(404).send(INCIDENT_NOT_FOUND);
       }
 
       try {
@@ -101,11 +109,11 @@ export default async function closureRoutes(app: FastifyInstance) {
           return updated;
         });
 
-        const detail = await fetchIncidentDetailShape(closed.id);
+        const detail = await fetchIncidentDetailShape(closed.id, req.epmpUser!.jurisdiction_scope);
         return reply.code(200).send(detail);
       } catch (err: unknown) {
         if (err instanceof Error && (err as { code?: string }).code === 'NOT_CLOSABLE') {
-          const detail = await fetchIncidentDetailShape(incidentId);
+          const detail = await fetchIncidentDetailShape(incidentId, req.epmpUser!.jurisdiction_scope);
           if (!detail) {
             return reply.code(404).send(INCIDENT_NOT_FOUND);
           }
