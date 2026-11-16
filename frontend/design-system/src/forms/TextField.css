@@ -1,0 +1,81 @@
+/*
+ * TextField (FORMS) — token-only styling.
+ */
+
+.ep-textfield-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ep-textfield__label {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.ep-textfield__required {
+  color: var(--danger-text);
+}
+
+.ep-textfield,
+textarea.ep-textfield {
+  width: 100%;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink);
+  background: var(--bg);
+  border: var(--border-1) solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-3);
+}
+
+.ep-textfield:disabled {
+  opacity: var(--opacity-disabled);
+  cursor: not-allowed;
+}
+
+input.ep-textfield--default {
+  height: var(--control-md);
+}
+input.ep-textfield--lg {
+  height: var(--control-lg);
+}
+
+textarea.ep-textfield--default,
+textarea.ep-textfield--lg {
+  height: auto;
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-2);
+}
+
+.ep-textfield:focus-visible {
+  outline: var(--border-2) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.ep-textfield--error {
+  border-color: var(--danger-border);
+}
+
+.ep-textfield__hint {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--ink-muted);
+  margin: 0;
+}
+
+.ep-textfield__error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--danger-text);
+  margin: 0;
+}
