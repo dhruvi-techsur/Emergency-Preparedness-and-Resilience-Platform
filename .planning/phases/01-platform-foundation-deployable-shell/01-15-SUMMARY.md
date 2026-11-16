@@ -98,6 +98,38 @@ None - no external service configuration required.
 - Phase 1 plans 01-01 through 01-15 (13 original + 2 gap-closure plans) are now all complete.
 - No new blockers. The `@axe-core/playwright` Node-engine warning (Node 20 vs. the package's declared Node ≥22.12.0 requirement) is cosmetic only but worth a mental note for whoever next upgrades the sandbox's Node version or runs a stricter `npm install --engine-strict`.
 
+## Post-hoc correction (Wave 7 code-review gate, iteration 1)
+
+`.planning/phases/01-platform-foundation-deployable-shell/01-REVIEW.md` (B1,
+iteration 1) found that this plan's Task 1 fix verified dark theme's
+`--ink-disabled` against `--bg` (`#0a1722`, 4.66:1 — passing) but the token's
+only real consumer (`.ep-datepicker__day--outside`, inside
+`.ep-datepicker__popover`) actually renders against `--bg-raised`
+(`#12283a`), against which the original fix (`#6c8499`) measured only
+3.88:1 — still failing WCAG AA. The review also found the Task 2 regression
+spec never opened DatePicker's popover before scanning, so the test could
+not have caught this even with the correct render-context baseline.
+
+Both were corrected together during the wave-7 code-review fix pass:
+
+- `--ink-disabled` (dark theme) re-corrected to `#7c95aa` (4.845:1 against
+  `--bg-raised`, 5.814:1 against `--bg`), updated in `tokens.json` and
+  `tokens.css` in lockstep. Light and contrast theme values were untouched
+  (already correctly verified against their own real render contexts).
+- `contrast-audit.spec.ts` now clicks the DatePicker's "Open calendar"
+  `IconButton` and waits for `.ep-datepicker__popover` to be visible before
+  scanning `/admin/audit-log`, for every theme — so the outside-month day
+  cells that actually render `--ink-disabled` are mounted when axe-core
+  runs.
+- (W1, same review) Also added a direct scan of `/admin/federation-grants`
+  in dark theme, closing a coverage gap relative to the plan's own stated
+  scope (the plan named both `AuditLogView.tsx` and `FederationGrants.tsx`
+  as DatePicker-mounting screens; only the former was scanned).
+
+All 3 contrast-audit theme tests and all 4 app-shell regression tests pass
+against the corrected values. See `01-REVIEW.md` for full evidence and
+`git log` commits `580d0fc`, `3dc2164`, `a358c96` for the fixes.
+
 ---
 *Phase: 01-platform-foundation-deployable-shell*
 *Completed: 2026-11-16*
