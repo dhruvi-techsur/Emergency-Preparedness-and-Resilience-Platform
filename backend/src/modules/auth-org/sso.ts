@@ -2,6 +2,7 @@ import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { query } from '../../db/client.js';
 import { mintSessionToken } from './session.js';
 import { AuditService } from './audit.js';
+import { publishEvent } from '../integration-gateway/nats-client.js';
 
 /** Thrown on any assertion/validation failure — converted to 401 SSO_AUTH_FAILED by the route handler. */
 export class SsoAuthError extends Error {}
@@ -114,6 +115,16 @@ export async function handleSsoCallback(idToken: string): Promise<SsoCallbackRes
   }
 
   await AuditService.record(user.id, 'login');
+
+  // A NATS outage must never block a successful login — publish failures are
+  // logged, not thrown. handleSsoCallback has no `req` in scope (it's called
+  // from routes.ts's handler with just the raw id_token), so this uses
+  // console.warn rather than a Fastify request logger.
+  publishEvent('user.login', {
+    user_id: user.id,
+    email: user.email,
+    occurred_at: new Date().toISOString(),
+  }).catch((err) => console.warn('event publish failed — login still succeeds', err));
 
   const roleRows = await query<RoleRow>(`SELECT id, name, persona_id FROM roles WHERE id = $1`, [user.role_id]);
   const role = roleRows[0];

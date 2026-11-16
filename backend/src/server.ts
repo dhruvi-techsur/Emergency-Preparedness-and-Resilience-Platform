@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import authOrgRoutes from './modules/auth-org/routes.js';
 import webhookSubscriptionRoutes from './modules/integration-gateway/webhook-subscriptions.js';
 import { connectNats } from './modules/integration-gateway/nats-client.js';
+import { startWebhookDeliveryWorker } from './modules/integration-gateway/webhook-delivery-worker.js';
 
 export function buildApp() {
   const app = Fastify({
@@ -34,6 +35,7 @@ async function start() {
   // worker need a live connection, and both degrade gracefully when absent.
   try {
     await connectNats();
+    await startWebhookDeliveryWorker();
   } catch (err) {
     app.log.warn(err, 'NATS connection failed at startup — event bus disabled, server continues');
   }
