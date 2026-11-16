@@ -1,0 +1,14 @@
+{
+  "schema": "pivota_spec.uat_summary",
+  "version": 1,
+  "phase": "01",
+  "status": "diagnosed",
+  "counts": {
+    "total": 4,
+    "passed": 2,
+    "issues": 2,
+    "pending": 0,
+    "skipped": 0
+  },
+  "generated_at": "2026-11-16T09:10:47.335Z"
+}
