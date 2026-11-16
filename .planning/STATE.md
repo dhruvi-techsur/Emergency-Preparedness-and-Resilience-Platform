@@ -3,14 +3,14 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-11-16T13:10:09.257Z"
-last_activity: "2026-11-16 — Plan 02-02 complete (command-role assignment with row-locked reassignment, server-side activation gate (confirmed:true + Incident-Commander-count), and incident closure with SAVEPOINT-guarded forward-compatible tasks cascade — all three writing exactly one Timeline entry per state change inside withTimelineTransaction; 1 auto-fixed deviation (Rule 1 - Bug: the plan's specified plain try/catch around the tasks-cascade UPDATE didn't actually contain a Postgres transaction-abort, needed a real SAVEPOINT, found via this task's own integration test))"
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-11-16T13:20:02.844Z"
+last_activity: 2026-11-16 — Plan 02-03 complete (F11 GIS adapter stub enforcing mandatory source/as_of provenance, feeding F2's operating-picture markers/layers endpoints where the 'Schematic base map, offline' fallback is the structural default code path — not a bolted-on catch block — so the page is incapable of 500ing even under total GIS outage; proven directly by an integration test that forces the adapter to throw and asserts 200 + the exact fallback label; 0 deviations beyond a trivial @types/geojson devDependency install needed to compile the plan's own specified GeoJSON.Feature[] type)
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 31
-  completed_plans: 18
+  completed_plans: 19
   percent: 19
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 2 of 6 (Incident Command & Operating Picture)
-Plan: 3 of 7 complete in current phase (02-01, 02-04 — wave 1; 02-02 — wave 2, depends_on 02-01 — all COMPLETE; 02-03/02-05/02-06/02-07 remain)
-Status: In progress — ready for 02-03 or any other unblocked wave-2-dependent plan
-Last activity: 2026-11-16 — Plan 02-02 complete (command-role assignment with row-locked reassignment, server-side activation gate (confirmed:true + Incident-Commander-count), and incident closure with SAVEPOINT-guarded forward-compatible tasks cascade — all three writing exactly one Timeline entry per state change inside withTimelineTransaction; 1 auto-fixed deviation (Rule 1 - Bug: the plan's specified plain try/catch around the tasks-cascade UPDATE didn't actually contain a Postgres transaction-abort, needed a real SAVEPOINT, found via this task's own integration test))
+Plan: 4 of 7 complete in current phase (02-01, 02-04 — wave 1; 02-02 — wave 2, depends_on 02-01; 02-03 — wave 3, depends_on 02-01+02-02 — all COMPLETE; 02-05/02-06/02-07 remain)
+Status: In progress — ready for 02-05/02-06/02-07 (frontend plans; 02-07 consumes 02-03's operating-picture endpoints directly)
+Last activity: 2026-11-16 — Plan 02-03 complete (F11 GIS adapter stub enforcing mandatory source/as_of provenance, feeding F2's operating-picture markers/layers endpoints where the 'Schematic base map, offline' fallback is the structural default code path — not a bolted-on catch block — so the page is incapable of 500ing even under total GIS outage; proven directly by an integration test that forces the adapter to throw and asserts 200 + the exact fallback label; 0 deviations beyond a trivial @types/geojson devDependency install needed to compile the plan's own specified GeoJSON.Feature[] type)
 
 Progress: [██░░░░░░░░] 19%
 
@@ -36,9 +36,9 @@ Progress: [██░░░░░░░░] 19%
 
 **Velocity:**
 
-- Total plans completed: 18
-- Average duration: 25 min
-- Total execution time: 8.3 hours
+- Total plans completed: 19
+- Average duration: 24 min
+- Total execution time: 8.5 hours
 
 **By Phase:**
 
@@ -62,11 +62,12 @@ Progress: [██░░░░░░░░] 19%
 | Phase 02 P01 | 45 min | 3 tasks | 7 files |
 | Phase 02 P04 | 18 min | 3 tasks | 14 files |
 | Phase 02 P02 | 9 min | 3 tasks | 6 files |
+| Phase 02 P03 | 12 min | 3 tasks | 7 files |
 
 **Recent Trend:**
 
-- Last 5 plans: 20 min, 45 min, 18 min, 9 min
-- Trend: Phase 1 is now fully complete: all 15 plans (13 original + 2 gap-closure) done. Phase 2 is underway with a parallel-wave structure (02-01 and 02-04 are both wave 1, no interdependency between the backend incident-ops foundation and the design-system MAPS component family); 02-02 (wave 2, depends_on 02-01) extended the incident-ops backend with command-role assignment, activation gating, and closure. Plan 02-01 ran one trivial auto-fixed deviation — a backtick-in-SQL-comment template-literal break. Plan 02-04 ran one trivial test-infrastructure-only deviation. Plan 02-02 ran one auto-fixed Rule 1 bug: the plan's specified plain try/catch around a forward-compatible "tasks table doesn't exist yet" UPDATE didn't actually prevent Postgres's all-or-nothing transaction abort — needed a real SAVEPOINT, caught immediately by the plan's own integration test. All three Phase 2 plans' own verify commands (build + full test suite, with 02-01/02-02 also running a live-stack integration test) passed clean.
+- Last 5 plans: 45 min, 18 min, 9 min, 12 min
+- Trend: Phase 1 is now fully complete: all 15 plans (13 original + 2 gap-closure) done. Phase 2 is underway with a parallel-wave structure (02-01 and 02-04 are both wave 1, no interdependency between the backend incident-ops foundation and the design-system MAPS component family); 02-02 (wave 2, depends_on 02-01) extended the incident-ops backend with command-role assignment, activation gating, and closure; 02-03 (wave 3, depends_on 02-01+02-02 solely to serialize edits to the shared routes.ts file) added the F11 GIS adapter stub and F2's operating-picture markers/layers endpoints. Plan 02-01 ran one trivial auto-fixed deviation — a backtick-in-SQL-comment template-literal break. Plan 02-04 ran one trivial test-infrastructure-only deviation. Plan 02-02 ran one auto-fixed Rule 1 bug: the plan's specified plain try/catch around a forward-compatible "tasks table doesn't exist yet" UPDATE didn't actually prevent Postgres's all-or-nothing transaction abort — needed a real SAVEPOINT, caught immediately by the plan's own integration test. Plan 02-03 ran clean with zero deviations beyond a trivial @types/geojson devDependency install. All four Phase 2 backend plans' own verify commands (build + full test suite, with 02-01/02-02/02-03 also running a live-stack integration test) passed clean.
 
 *Updated after each plan completion*
 
@@ -120,6 +121,9 @@ Recent decisions affecting current work:
 - [Phase 02-02]: Command-role reassignment locks the existing active-role row with SELECT ... FOR UPDATE before deciding assign/reassign/no-op, closing the race where two concurrent reassignment requests could both create a simultaneously-active row for the same role
 - [Phase 02-02]: closure.ts reuses activation.ts's exact ACTIVATION_CONFIRMATION_REQUIRED error code for its own confirmed:true gate — documented as EPMP's general destructive-action confirmation convention, not duplicated per-endpoint
 - [Phase 02-02]: The tasks-cascade UPDATE (defensive against Phase 3's not-yet-existing tasks table) needed a Postgres SAVEPOINT, not just a JS try/catch, to avoid poisoning the rest of the transaction on Postgres's all-or-nothing error semantics — found via this plan's own integration test
+- [Phase 02-03]: GIS adapter stub recognizes exactly one layer_id ('agency-base-boundary'); any other value deterministically simulates a vendor timeout (GIS_FEED_TIMEOUT) — gives tests a reliable way to exercise the real adapter-throws path without random failure injection
+- [Phase 02-03]: baseLayerSource/baseLayerAsOf are initialized to the schematic-degraded values BEFORE the GIS fetch is attempted, overwritten only on a fully provenanced success — makes the fallback structurally the default code path, not a catch-block afterthought, and is what the plan's own integration test proves directly by forcing the adapter to throw
+- [Phase 02-03]: status_bar.as_of reduces to the single base layer's as_of for Phase 2 (no other provenanced layer exists yet) — documented inline as a TODO for F12/F17 to extend to the FRD's true stalest-across-all-visible-layers rule
 
 ### Pending Todos
 
@@ -131,6 +135,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-16T13:10:09.255Z
-Stopped at: Completed 02-02-PLAN.md
+Last session: 2026-11-16T13:18:26.100Z
+Stopped at: Completed 02-03-PLAN.md
 Resume file: None
