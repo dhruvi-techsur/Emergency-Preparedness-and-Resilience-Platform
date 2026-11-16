@@ -3,14 +3,14 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-11-16T12:54:17Z"
-last_activity: "2026-11-16 — Plan 02-01 complete"
+last_updated: "2026-11-16T12:58:30Z"
+last_activity: "2026-11-16 — Plan 02-04 complete"
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 31
-  completed_plans: 16
-  percent: 17
+  completed_plans: 17
+  percent: 19
 ---
 
 # Project State
@@ -25,19 +25,19 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 2 of 6 (Incident Command & Operating Picture)
-Plan: 1 of 7 in current phase (02-01 — incident-ops schema + TimelineService + incident CRUD — COMPLETE)
-Status: In progress — ready for 02-02
-Last activity: 2026-11-16 — Plan 02-01 complete (incidents/incident_command_roles/incident_timeline schema migration with documented nullable `location` addition; TimelineService.append()/withTimelineTransaction() single-writer transactional pattern; POST/GET/PATCH incident CRUD + timeline-read; duplicate-name 409 warning with confirmed_duplicate override; append-only trigger verified live end-to-end; 1 auto-fixed deviation (backtick-in-SQL-comment template-literal break))
+Plan: 2 of 7 complete in current phase (02-01, 02-04 — both wave 1, no interdependency — COMPLETE; 02-02/02-03/02-05/02-06/02-07 remain)
+Status: In progress — ready for 02-02 (wave 2) or any other unblocked wave-1-dependent plan
+Last activity: 2026-11-16 — Plan 02-04 complete (MapCanvas/MapControls/MapLegend/MapPopup/LayerPanel + Provenance product-pattern chip, all 6 exported onto window.EPMP; offline-mode marker survival, keyboard operability, and Provenance's structural dashed+icon+word unverified treatment all proven by test/maps.test.tsx; 1 auto-fixed deviation (test-infrastructure-only: injected Provenance.css into jsdom for the computed-border-style assertion, matching the existing tokens.css-injection pattern))
 
-Progress: [██░░░░░░░░] 17%
+Progress: [██░░░░░░░░] 19%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 16
-- Average duration: 27 min
-- Total execution time: 7.85 hours
+- Total plans completed: 17
+- Average duration: 26 min
+- Total execution time: 8.15 hours
 
 **By Phase:**
 
@@ -59,11 +59,12 @@ Progress: [██░░░░░░░░] 17%
 | Phase 01 P14 | 8 min | 1 tasks | 2 files |
 | Phase 01 P15 | 20 min | 2 tasks | 5 files |
 | Phase 02 P01 | 45 min | 3 tasks | 7 files |
+| Phase 02 P04 | 18 min | 3 tasks | 14 files |
 
 **Recent Trend:**
 
-- Last 5 plans: 50 min, 8 min, 20 min, 45 min
-- Trend: Plan 13 (terminal deploy-packaging plan) ran one deviation beyond the plan's own stated assumption — the plan's literal Dockerfile snippet was expected to pass D7's Trivy CRITICAL-CVE gate on the full devDependency-laden node_modules, but it didn't; fixed with a dedicated production-only deps stage, then the platform's own deploy-check script passed clean on the next run. Plan 14 is a small gap-closure plan (UAT gap ref 3, partial in-repo mitigation) with zero deviations. Plan 15 (WCAG contrast audit gap closure) also ran with zero deviations — the plan's own pre-verification already correctly identified the exact token fix and the plan's literal verify commands passed as written. Phase 1 is now fully complete: all 15 plans (13 original + 2 gap-closure) done. Plan 02-01 (first Phase 2 plan, incident-ops foundation) ran one trivial auto-fixed deviation — the plan's own literal migration-file DDL comments contained backtick characters that broke the enclosing JS template literal; fixed by re-quoting the comment text, then all three tasks' own verify commands (including the live immutability-trigger check and the full 26-test backend suite) passed clean.
+- Last 5 plans: 8 min, 20 min, 45 min, 18 min
+- Trend: Phase 1 is now fully complete: all 15 plans (13 original + 2 gap-closure) done. Phase 2 is underway with a parallel-wave structure (02-01 and 02-04 are both wave 1, no interdependency between the backend incident-ops foundation and the design-system MAPS component family). Plan 02-01 (incident-ops foundation) ran one trivial auto-fixed deviation — a backtick-in-SQL-comment template-literal break, fixed by re-quoting. Plan 02-04 (MAPS component family + Provenance) ran one trivial auto-fixed deviation, test-infrastructure-only — vitest/jsdom does not auto-inject a component's own CSS import, so the computed-border-style assertion for Provenance's dashed-unverified treatment needed that file's contents injected directly into the test's jsdom document, mirroring the project's existing tokens.css-injection pattern; the production component code required zero changes. Both wave-1 plans' own verify commands (full build + full test suite in each case) passed clean.
 
 *Updated after each plan completion*
 
@@ -111,6 +112,9 @@ Recent decisions affecting current work:
 - [Phase 02-01]: incident_timeline immutability enforced via BEFORE UPDATE/DELETE trigger (not TechArch's REVOKE-based app_runtime role), identical to Phase 1's audit_log pattern, since DEPLOY-01 gives the app exactly one DB role that must also run migrations
 - [Phase 02-01]: POST /api/v1/incidents duplicate-name warning (409 INCIDENT_POSSIBLE_DUPLICATE) resolved via a confirmed_duplicate:true request-body flag on resubmission — TechArch's literal request body doesn't show this field, but the FRD's "warn, not block" rule needs some confirm-and-proceed mechanism
 - [Phase 02-01]: Generic PATCH /api/v1/incidents/{id} restricted to name/type/description with no Timeline entry — severity/activation_level/status changes get their own dedicated endpoints (later 02-* plans) with their own validation, since only those count as "state-changing actions" per FRD's Timeline-write rule
+- [Phase 02-04]: MapCanvas's offline prop gates ONLY the base fill/label branch; markers/areas/lines render from an entirely separate, always-executed branch in the same component — this structural separation (not a shared conditional) is what makes "the page never fails to render" hold even in degraded mode
+- [Phase 02-04]: Provenance's verified=false path renders fully different markup (dashed border + Icon + literal word) rather than a conditional class on shared markup, so a caller cannot accidentally make unverified data look verified by omitting a prop
+- [Phase 02-04]: LayerPanel's unverified rows reuse Provenance directly (not a second dashed-treatment implementation); MapLegend is built on Card padded={false} rather than reimplementing panel chrome
 
 ### Pending Todos
 
@@ -122,6 +126,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-16T12:54:17Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-11-16T12:58:30Z
+Stopped at: Completed 02-04-PLAN.md
 Resume file: None
