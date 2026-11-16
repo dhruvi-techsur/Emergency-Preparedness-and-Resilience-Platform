@@ -2,14 +2,14 @@
 pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-last_updated: "2026-11-16T12:09:23.432Z"
-last_activity: "2026-11-16 — Phase 1 complete"
+status: in_progress
+last_updated: "2026-11-16T12:54:17Z"
+last_activity: "2026-11-16 — Plan 02-01 complete"
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 31
-  completed_plans: 15
+  completed_plans: 16
   percent: 17
 ---
 
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 1 — Platform Foundation & Deployable Shell (complete, including gap-closure plans)
+**Current focus:** Phase 2 — Incident Command & Operating Picture (in progress)
 
 ## Current Position
 
-Phase: 1 of 6 (Platform Foundation & Deployable Shell)
-Plan: 15 of 15 in current phase (01-15 — WCAG contrast audit gap closure — COMPLETE; all Phase 1 plans done)
-Status: Phase 1 complete — ready for /pivota_spec-plan-phase 2
-Last activity: 2026-11-16 — Plan 01-15 complete (WCAG contrast audit gap closure — ink-disabled token fix in light/dark themes + permanent @axe-core/playwright regression spec; UAT gap ref 4 closed; Phase 1 now fully complete, all 15 plans — 13 original + 2 gap-closure — done)
+Phase: 2 of 6 (Incident Command & Operating Picture)
+Plan: 1 of 7 in current phase (02-01 — incident-ops schema + TimelineService + incident CRUD — COMPLETE)
+Status: In progress — ready for 02-02
+Last activity: 2026-11-16 — Plan 02-01 complete (incidents/incident_command_roles/incident_timeline schema migration with documented nullable `location` addition; TimelineService.append()/withTimelineTransaction() single-writer transactional pattern; POST/GET/PATCH incident CRUD + timeline-read; duplicate-name 409 warning with confirmed_duplicate override; append-only trigger verified live end-to-end; 1 auto-fixed deviation (backtick-in-SQL-comment template-literal break))
 
 Progress: [██░░░░░░░░] 17%
 
@@ -35,9 +35,9 @@ Progress: [██░░░░░░░░] 17%
 
 **Velocity:**
 
-- Total plans completed: 15
+- Total plans completed: 16
 - Average duration: 27 min
-- Total execution time: 7.1 hours
+- Total execution time: 7.85 hours
 
 **By Phase:**
 
@@ -58,11 +58,12 @@ Progress: [██░░░░░░░░] 17%
 | Phase 01 P13 | 50 min | 3 tasks | 8 files |
 | Phase 01 P14 | 8 min | 1 tasks | 2 files |
 | Phase 01 P15 | 20 min | 2 tasks | 5 files |
+| Phase 02 P01 | 45 min | 3 tasks | 7 files |
 
 **Recent Trend:**
 
-- Last 5 plans: 35 min, 50 min, 8 min, 20 min
-- Trend: Plan 13 (terminal deploy-packaging plan) ran one deviation beyond the plan's own stated assumption — the plan's literal Dockerfile snippet was expected to pass D7's Trivy CRITICAL-CVE gate on the full devDependency-laden node_modules, but it didn't; fixed with a dedicated production-only deps stage, then the platform's own deploy-check script passed clean on the next run. Plan 14 is a small gap-closure plan (UAT gap ref 3, partial in-repo mitigation) with zero deviations. Plan 15 (WCAG contrast audit gap closure) also ran with zero deviations — the plan's own pre-verification already correctly identified the exact token fix and the plan's literal verify commands passed as written. Phase 1 is now fully complete: all 15 plans (13 original + 2 gap-closure) done.
+- Last 5 plans: 50 min, 8 min, 20 min, 45 min
+- Trend: Plan 13 (terminal deploy-packaging plan) ran one deviation beyond the plan's own stated assumption — the plan's literal Dockerfile snippet was expected to pass D7's Trivy CRITICAL-CVE gate on the full devDependency-laden node_modules, but it didn't; fixed with a dedicated production-only deps stage, then the platform's own deploy-check script passed clean on the next run. Plan 14 is a small gap-closure plan (UAT gap ref 3, partial in-repo mitigation) with zero deviations. Plan 15 (WCAG contrast audit gap closure) also ran with zero deviations — the plan's own pre-verification already correctly identified the exact token fix and the plan's literal verify commands passed as written. Phase 1 is now fully complete: all 15 plans (13 original + 2 gap-closure) done. Plan 02-01 (first Phase 2 plan, incident-ops foundation) ran one trivial auto-fixed deviation — the plan's own literal migration-file DDL comments contained backtick characters that broke the enclosing JS template literal; fixed by re-quoting the comment text, then all three tasks' own verify commands (including the live immutability-trigger check and the full 26-test backend suite) passed clean.
 
 *Updated after each plan completion*
 
@@ -106,6 +107,10 @@ Recent decisions affecting current work:
 - [Phase 01-13]: backend/migrations/1700000000001_seed-roles.js ships only the 5 structural persona roles + secops_admin's baseline role_permissions (0 users, 0 sso_config) as a production-safe migration, deliberately separate from scripts/seed.ts's dev-fixture admin user/sso_config which point at the local docker-compose Keycloak — solves the SSO group-to-role bootstrap problem without seeding sensitive fixture data into a real deployment
 - [Phase 01-14]: Did not write .pivota/start-dev.sh — that file is generated exclusively by the platform's init-dev-server workflow (runtime-environment.md Section 7a), outside this phase's repository scope; this plan's dev-mode port banner + README section is an explicitly partial in-repo mitigation for UAT gap ref 3
 - [Phase 01-15]: Dark theme's replacement --ink-disabled (#6c8499) derived by proportionally lightening the original #5d7284 hue 1.16x rather than an arbitrary hex, to stay in the same blue-grey hue family while clearing 4.5:1
+- [Phase 02-01]: incidents table gets a documented nullable `location GEOGRAPHY(POINT,4326)` column beyond TechArch 02b's literal DDL — F2/FRD's diamond-marker rendering and MapMarker interface need it, but S1.2's create-form has no location field, so incidents without one are simply omitted from operating-picture markers until set
+- [Phase 02-01]: incident_timeline immutability enforced via BEFORE UPDATE/DELETE trigger (not TechArch's REVOKE-based app_runtime role), identical to Phase 1's audit_log pattern, since DEPLOY-01 gives the app exactly one DB role that must also run migrations
+- [Phase 02-01]: POST /api/v1/incidents duplicate-name warning (409 INCIDENT_POSSIBLE_DUPLICATE) resolved via a confirmed_duplicate:true request-body flag on resubmission — TechArch's literal request body doesn't show this field, but the FRD's "warn, not block" rule needs some confirm-and-proceed mechanism
+- [Phase 02-01]: Generic PATCH /api/v1/incidents/{id} restricted to name/type/description with no Timeline entry — severity/activation_level/status changes get their own dedicated endpoints (later 02-* plans) with their own validation, since only those count as "state-changing actions" per FRD's Timeline-write rule
 
 ### Pending Todos
 
@@ -117,6 +122,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-16T09:58:54.164Z
-Stopped at: Completed 01-15-PLAN.md — Phase 1 fully complete (all 15 plans)
+Last session: 2026-11-16T12:54:17Z
+Stopped at: Completed 02-01-PLAN.md
 Resume file: None
