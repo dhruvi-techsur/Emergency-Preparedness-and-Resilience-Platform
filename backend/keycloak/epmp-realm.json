@@ -21,7 +21,7 @@
           "protocolMapper": "oidc-group-membership-mapper",
           "consentRequired": false,
           "config": {
-            "full.path": "false",
+            "full.path": "true",
             "id.token.claim": "true",
             "access.token.claim": "true",
             "claim.name": "groups",
@@ -41,6 +41,8 @@
     {
       "username": "admin@epmp.local",
       "email": "admin@epmp.local",
+      "firstName": "EPMP",
+      "lastName": "Admin",
       "enabled": true,
       "emailVerified": true,
       "credentials": [

@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useLocation } from 'react-router-dom';
 import { Skeleton } from '@epmp/design-system';
 import { signIn } from './oidc-config';
 import { getSessionToken, clearSessionToken } from './session-storage';
@@ -37,7 +38,16 @@ type GuardState =
 const CALLBACK_PATH = '/auth/callback';
 
 export function RouteGuard({ children }: { children: React.ReactNode }): JSX.Element {
-  const isCallbackRoute = window.location.pathname === CALLBACK_PATH;
+  // Reads route changes via react-router's own location subscription
+  // (BrowserRouter wraps RouteGuard in main.tsx), NOT window.location
+  // directly — a raw window.location.pathname read is captured once per
+  // render and never changes when SignInCallback calls navigate('/'),
+  // which is client-side (history.pushState, no full page reload). That
+  // bug left RouteGuard permanently believing it was still on
+  // /auth/callback after a successful sign-in, bypassing session
+  // resolution forever and rendering a blank page.
+  const location = useLocation();
+  const isCallbackRoute = location.pathname === CALLBACK_PATH;
   const [state, setState] = React.useState<GuardState>({ status: 'pending' });
   // Declared unconditionally (Rules of Hooks) even though it's only ever
   // read/used once state.status === 'resolved' — initialized from the
@@ -47,9 +57,22 @@ export function RouteGuard({ children }: { children: React.ReactNode }): JSX.Ele
     EpmpUser['theme_preference']
   >('light');
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     if (state.status === 'resolved') {
       setThemePreferenceState(state.user.theme_preference);
+      // Apply the persisted preference to the document root the instant
+      // it's known — this is the actual "flash of wrong theme" guard for
+      // the steady-state (reload) case: main.tsx can only ever set the
+      // pre-JS 'light' default synchronously, since the real preference
+      // isn't known until this async GET /api/v1/me resolves. A
+      // useLayoutEffect (not useEffect) still fires before the browser
+      // paints the current commit, so this is applied as early as
+      // possible given that constraint — before AppShell's first visible
+      // frame — rather than being a pure no-op that leaves the pre-JS
+      // default in place forever on every reload (the bug this fixes:
+      // ThemeSwitcher applies data-theme on CHANGE, but nothing ever
+      // applied the already-resolved preference on initial/reload load).
+      document.documentElement.dataset.theme = state.user.theme_preference;
     }
     // Only re-sync when a freshly resolved user arrives, not on every
     // local theme_preference change (which ThemeSwitcher drives directly
@@ -97,7 +120,12 @@ export function RouteGuard({ children }: { children: React.ReactNode }): JSX.Ele
     return () => {
       cancelled = true;
     };
-  }, []);
+    // Re-run when isCallbackRoute flips false→true→false (navigating off
+    // /auth/callback after SignInCallback's own exchange completes) so the
+    // very next render after that navigation resolves the session, instead
+    // of staying in whatever state this effect last produced before the
+    // callback route's bypass took over.
+  }, [isCallbackRoute]);
 
   React.useEffect(() => {
     if (state.status === 'unauthenticated') {

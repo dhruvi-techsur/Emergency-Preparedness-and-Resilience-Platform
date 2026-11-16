@@ -21,10 +21,32 @@ import { Skeleton } from '@epmp/design-system';
 export function SignInCallback(): JSX.Element {
   const navigate = useNavigate();
   const [error, setError] = React.useState<string | null>(null);
+  // React.StrictMode (main.tsx) deliberately double-invokes effects in dev
+  // (mount→cleanup→mount) to surface missing cleanup bugs. That's safe for
+  // an idempotent effect, but signinRedirectCallback() is NOT idempotent:
+  // the authorization `code` in the callback URL is single-use per the
+  // OAuth spec, so the second invocation's exchange attempt gets Keycloak's
+  // "Code not valid" rejection. A ref (not state) persists across both
+  // invocations on the same component instance without triggering a
+  // re-render, so it's the right guard for "run this exactly once even
+  // under StrictMode's synthetic double-invoke".
+  const hasStartedRef = React.useRef(false);
 
   React.useEffect(() => {
-    let cancelled = false;
+    if (hasStartedRef.current) return;
+    hasStartedRef.current = true;
 
+    // No `cancelled`/cleanup-guard flag here, deliberately: StrictMode's
+    // synthetic unmount between the double-invoke would set it `true`
+    // before this async work resolves — on the ONE invocation that
+    // actually runs (hasStartedRef above already prevents the second
+    // invocation's redundant/code-reuse network call) — silently
+    // swallowing a legitimately successful sign-in by skipping navigate().
+    // That was a real, observed bug (not a hypothetical worst-case):
+    // POST /api/v1/auth/sso/callback returned 200 and session_token was
+    // stored, but the user was left stuck on a blank /auth/callback page.
+    // navigate() and setError() are both safe to call after a real (not
+    // synthetic) unmount in React 18 — no warning, no-op if truly gone.
     async function completeSignIn() {
       try {
         const oidcUser = await userManager.signinRedirectCallback();
@@ -46,21 +68,13 @@ export function SignInCallback(): JSX.Element {
 
         const { session_token } = (await res.json()) as { session_token: string };
         setSessionToken(session_token);
-
-        if (!cancelled) {
-          navigate('/', { replace: true });
-        }
+        navigate('/', { replace: true });
       } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Sign-in failed.');
-        }
+        setError(err instanceof Error ? err.message : 'Sign-in failed.');
       }
     }
 
     void completeSignIn();
-    return () => {
-      cancelled = true;
-    };
   }, [navigate]);
 
   if (error) {
