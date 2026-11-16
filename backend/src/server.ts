@@ -1,6 +1,8 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import authOrgRoutes from './modules/auth-org/routes.js';
+import webhookSubscriptionRoutes from './modules/integration-gateway/webhook-subscriptions.js';
+import { connectNats } from './modules/integration-gateway/nats-client.js';
 
 export function buildApp() {
   const app = Fastify({
@@ -12,6 +14,7 @@ export function buildApp() {
   app.register(cors, { origin: true });
 
   app.register(authOrgRoutes);
+  app.register(webhookSubscriptionRoutes);
 
   // HEALTHZ_INSERTION_POINT
 
@@ -23,6 +26,18 @@ export const app = buildApp();
 
 async function start() {
   const port = Number(process.env.PORT ?? 8080);
+
+  // A NATS outage at boot must NOT crash the server — DEPLOY-01's "app
+  // starts without external services" principle extended to the event bus.
+  // Routes that don't need NATS (DB-backed webhook-subscription
+  // registration) keep working regardless; only publishEvent()/the delivery
+  // worker need a live connection, and both degrade gracefully when absent.
+  try {
+    await connectNats();
+  } catch (err) {
+    app.log.warn(err, 'NATS connection failed at startup — event bus disabled, server continues');
+  }
+
   try {
     // Bind 0.0.0.0, never localhost — per runtime-environment.md §2, the
     // preview proxy connects over 127.0.0.1 and localhost can resolve to ::1.
