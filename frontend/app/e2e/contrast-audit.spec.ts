@@ -23,6 +23,15 @@ import { signInThroughKeycloak } from './helpers/sign-in';
  * against, consumed by DatePicker.css's `.ep-datepicker__day--outside`
  * rule and mounted on AuditLogView.tsx/FederationGrants.tsx).
  *
+ * The `.ep-datepicker__day--outside` cells (the only DOM elements that
+ * render `--ink-disabled`) only exist while DatePicker's popover is open
+ * (`DatePicker.tsx` conditionally renders `.ep-datepicker__popover` only
+ * when its internal `open` state is true). So before scanning
+ * /admin/audit-log, each test clicks the "Open calendar" IconButton (the
+ * DatePicker's accessible trigger — see `DatePicker.tsx`) to mount the
+ * popover and its calendar grid, otherwise axe-core never sees the
+ * elements this token actually renders on.
+ *
  * Runs against the live compose stack (db, nats, opa, keycloak) + backend
  * dev server + this app's own Vite dev server — the same full-stack
  * dependency as every other *.spec.ts file in this directory. workers: 1
@@ -85,6 +94,15 @@ test.describe('WCAG contrast audit', () => {
       await page.goto('/admin/audit-log');
       await expect(page.locator('table.ep-table')).toBeVisible({ timeout: 10_000 });
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+
+      // Open the first DatePicker's calendar popover so the outside-month
+      // day cells (the .ep-datepicker__day--outside rule that consumes
+      // --ink-disabled) are actually mounted in the DOM when axe scans —
+      // the popover is conditionally rendered only while open (see
+      // DatePicker.tsx), so without this click the scan below would never
+      // see the token's real render context.
+      await page.getByRole('button', { name: 'Open calendar' }).first().click();
+      await expect(page.locator('.ep-datepicker__popover')).toBeVisible({ timeout: 5_000 });
 
       const auditLogViolations = await scanForColorContrastViolations(page);
       expect(
