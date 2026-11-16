@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 01-08-PLAN.md
-last_updated: "2026-11-16T03:33:35.000Z"
+last_updated: "2026-11-16T03:35:59.489Z"
 last_activity: "2026-11-16 — Plan 01-08 complete (F10 registry/governance endpoints: API clients one-time-secret issuance, record-authority registry, federation grants with synchronous OPA resync)"
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 13
-  completed_plans: 7
+  completed_plans: 8
   percent: 46
 ---
 
@@ -36,9 +36,9 @@ Progress: [████░░░░░░] 46%
 
 **Velocity:**
 
-- Total plans completed: 7
+- Total plans completed: 8
 - Average duration: 24 min
-- Total execution time: 2.8 hours
+- Total execution time: 3.2 hours
 
 **By Phase:**
 
@@ -51,10 +51,11 @@ Progress: [████░░░░░░] 46%
 | Phase 01 P06 | 25 min | 3 tasks | 11 files |
 | Phase 01 P05 | 25 min | 3 tasks | 14 files |
 | Phase 01 P08 | 22 min | 3 tasks | 7 files |
+| Phase 01 P07 | 28 min | 3 tasks | 6 files |
 
 **Recent Trend:**
 
-- Last 5 plans: 5 min, 25 min, 30 min, 25 min, 22 min
+- Last 5 plans: 25 min, 30 min, 25 min, 22 min, 28 min
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -82,6 +83,9 @@ Recent decisions affecting current work:
 - [Phase 01-05]: DatePicker's calendar-grid date arithmetic uses UTC Date objects internally keyed on YYYY-MM-DD strings to avoid local-timezone day-shift bugs, while the public value/onChange contract remains plain ISO strings with no timezone conversion applied
 - [Phase 01-08]: client_secret hashed with Node's built-in crypto.scrypt (promisified, per-secret random salt) rather than adding bcrypt as a new dependency — plan's own spec offered scrypt as an equal alternative
 - [Phase 01-08]: AuditService.record()'s recordId parameter must always be the row's own UUID primary key, never a natural-key string (e.g. record_type) — a mismatch there 500s with "invalid input syntax for type uuid" on every call, caught and fixed in record-authority.ts
+- [Phase 01-07]: No DELETE route built for /api/v1/admin/roles — Phase 1's fixed 5-persona-role model means the FRD's 409 ROLE_IN_USE conflict is satisfied structurally (the deletion path itself doesn't exist), matching S8.3's permission-editing-only scope
+- [Phase 01-07]: Role-permission edits call syncRolePermissionsToOpa() with the FULL current role_permissions table (not just changed rows) synchronously before responding, guaranteeing zero caching window for a client polling immediately after a PATCH
+- [Phase 01-07]: SSO config PATCH activation always re-verifies IdP metadata reachability server-side at write time — never trusts a client-asserted tested_at/success flag from a prior /test call
 
 ### Pending Todos
 
