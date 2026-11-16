@@ -146,8 +146,16 @@ describe('admin console backend (F8)', () => {
     expect(createRes.body.email).toBe(email);
     createdUserId = createRes.body.id;
 
+    // page_size=1000: this suite is re-run against an already-seeded,
+    // persistent-volume database (idempotent-repeatability requirement),
+    // so prior runs' fixture users accumulate over time. The default
+    // page_size=25 would truncate the list before reaching a
+    // just-created row that doesn't sort first — request a page large
+    // enough to make this assertion about "is it in the list at all"
+    // deterministic regardless of how many previous runs have left rows.
     const listRes = await request(app.server)
       .get('/api/v1/admin/users')
+      .query({ page_size: '1000' })
       .set('Authorization', `Bearer ${adminToken}`);
 
     expect(listRes.status).toBe(200);
