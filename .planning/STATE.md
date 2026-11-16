@@ -3,15 +3,15 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-09-PLAN.md
-last_updated: "2026-11-16T03:45:00.000Z"
-last_activity: "2026-11-16 — Plan 01-09 complete (NATS JetStream event bus + idempotent webhook delivery worker + OpenAPI 3.1 document + platform/integration-health endpoints)"
+stopped_at: Completed 01-10-PLAN.md
+last_updated: "2026-11-16T04:17:27.907Z"
+last_activity: 2026-11-16 — Plan 01-10 complete (React/Vite app shell with real Keycloak OIDC SSO, role-scoped SideNav, theme switcher, Playwright e2e coverage)
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 13
-  completed_plans: 9
-  percent: 46
+  completed_plans: 10
+  percent: 54
 ---
 
 # Project State
@@ -26,19 +26,19 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 1 of 6 (Platform Foundation & Deployable Shell)
-Plan: 9 of 13 in current phase (01-10+ executing next per wave)
+Plan: 10 of 13 in current phase (01-11+ executing next per wave)
 Status: In progress
-Last activity: 2026-11-16 — Plan 01-09 complete (NATS JetStream event bus + idempotent webhook delivery worker + OpenAPI 3.1 document + platform/integration-health endpoints)
+Last activity: 2026-11-16 — Plan 01-10 complete (React/Vite app shell with real Keycloak OIDC SSO, role-scoped SideNav, theme switcher, Playwright e2e coverage)
 
-Progress: [████░░░░░░] 46%
+Progress: [█████░░░░░] 54%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 9
-- Average duration: 25 min
-- Total execution time: 4.4 hours
+- Total plans completed: 10
+- Average duration: 27 min
+- Total execution time: 5.0 hours
 
 **By Phase:**
 
@@ -53,11 +53,12 @@ Progress: [████░░░░░░] 46%
 | Phase 01 P08 | 22 min | 3 tasks | 7 files |
 | Phase 01 P07 | 28 min | 3 tasks | 6 files |
 | Phase 01 P09 | 70 min | 3 tasks | 11 files |
+| Phase 01 P10 | 35 min | 3 tasks | 17 files |
 
 **Recent Trend:**
 
-- Last 5 plans: 30 min, 25 min, 22 min, 28 min, 70 min
-- Trend: Plan 09 longer than average (event-bus/OpenAPI debugging against real nats.js API + fastify-plugin encapsulation fix)
+- Last 5 plans: 22 min, 28 min, 70 min, 35 min
+- Trend: Plan 10 landed close to average despite 5 cross-cutting deviations (2 Keycloak realm config fixes + 3 React/StrictMode timing bugs), all found and fixed via the plan's own live-stack Playwright verify command
 
 *Updated after each plan completion*
 
@@ -90,6 +91,10 @@ Recent decisions affecting current work:
 - [Phase 01-09]: JetStream delivery worker uses nats.js's modern consumers.get(stream,durable)+.consume() async-iterable API instead of the plan's pseudocode pullSubscribe snippet, which never re-issues pull requests and would stall after the first batch
 - [Phase 01-09]: @fastify/swagger's registration plugin must itself be wrapped with fastify-plugin (fp()) — without it its onRoute hook can't see sibling route plugins registered on the Fastify root, and GET /api/v1/openapi.json returns an empty paths object regardless of schema completeness
 - [Phase 01-09]: background_jobs rows are find-or-updated by job_type (no UNIQUE constraint exists on that column) rather than INSERTed on every server boot, since startWebhookDeliveryWorker() runs once per start() and a bare INSERT silently accumulates duplicate rows across restarts
+- [Phase 01-10]: frontend/app/tsconfig.json path-maps @epmp/design-system straight to its src/index.ts (not its declared-but-never-generated dist/index.d.ts) — a pre-existing 01-02 build gap worked around without touching that package's own Vite build pipeline
+- [Phase 01-10]: Keycloak realm fix — groups protocol mapper's full.path must be true (not false) for sso.ts's group_to_role_mapping ('/epmp-admins', with leading slash) to ever match; also added seeded user firstName/lastName to avoid Keycloak's VERIFY_PROFILE required-action blocking every login. Both carried forward in backend/keycloak/epmp-realm.json for any future plan touching it.
+- [Phase 01-10]: RouteGuard applies the resolved theme_preference to the DOM via useLayoutEffect on session resolution (not just on ThemeSwitcher's onChange) — this is what actually satisfies "no flash of wrong theme" on reload, since main.tsx's pre-render default can only ever be the static 'light' fallback
+- [Phase 01-10]: SignInCallback's OIDC-callback effect has no cleanup-based cancellation guard — React.StrictMode's synthetic double-invoke was observed to silently drop a legitimately successful sign-in's navigate() via a stale cancelled=true; a useRef (not a cleanup flag) is the correct one-time guard for the non-idempotent OAuth code exchange
 
 ### Pending Todos
 
@@ -101,6 +106,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-16T03:45:00.000Z
-Stopped at: Completed 01-09-PLAN.md
+Last session: 2026-11-16T04:17:27.906Z
+Stopped at: Completed 01-10-PLAN.md
 Resume file: None
