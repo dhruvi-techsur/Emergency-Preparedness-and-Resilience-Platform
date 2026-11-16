@@ -3,15 +3,15 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-06-PLAN.md
-last_updated: "2026-11-16T03:12:30.000Z"
-last_activity: 2026-11-16 — Plan 01-06 complete (EPMP design system: Table, Timeline, Stat, Tabs, Modal); Plan 01-04 also complete in parallel (Card, PageHeader, Breadcrumbs, SideNav, Avatar)
+stopped_at: Completed 01-03-PLAN.md
+last_updated: "2026-11-16T03:16:00.000Z"
+last_activity: 2026-11-16 — Plan 01-03 complete (auth-org session/SSO/RBAC/audit core); Plans 01-04/01-06 also complete in parallel (design-system layout/navigation + overlay/data components)
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 13
-  completed_plans: 4
-  percent: 31
+  completed_plans: 5
+  percent: 38
 ---
 
 # Project State
@@ -26,19 +26,19 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 1 of 6 (Platform Foundation & Deployable Shell)
-Plan: 6 of 13 in current phase (01-03/01-05/01-07+ executing in parallel per wave)
+Plan: 7 of 13 in current phase (01-05/01-07+ executing in parallel per wave)
 Status: In progress
-Last activity: 2026-11-16 — Plan 01-04 complete (layout/navigation component layer: Card, PageHeader, Breadcrumbs, SideNav, Avatar); Plan 01-06 also complete (Table, Timeline, Stat, Tabs, Modal)
+Last activity: 2026-11-16 — Plan 01-03 complete (auth-org session/SSO/RBAC/audit core: requirePermission, AuditService, SSO callback, F0 session/theme/nav endpoints); Plans 01-04/01-06 also complete in parallel
 
-Progress: [███░░░░░░░] 31%
+Progress: [███░░░░░░░] 38%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 4
-- Average duration: 22 min
-- Total execution time: 1.5 hours
+- Total plans completed: 5
+- Average duration: 24 min
+- Total execution time: 2.0 hours
 
 **By Phase:**
 
@@ -46,12 +46,13 @@ Progress: [███░░░░░░░] 31%
 |-------|-------|-------|----------|
 | Phase 01 P01 | 25 min | 3 tasks | 11 files |
 | Phase 01 P02 | 35 min | 3 tasks | 24 files |
+| Phase 01 P03 | 30 min | 3 tasks | 9 files |
 | Phase 01 P04 | 5 min | - tasks | 11 files |
 | Phase 01 P06 | 25 min | 3 tasks | 11 files |
 
 **Recent Trend:**
 
-- Last 5 plans: 25 min, 35 min, 5 min, 25 min
+- Last 5 plans: 25 min, 35 min, 5 min, 25 min, 30 min
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -74,6 +75,8 @@ Recent decisions affecting current work:
 - [Phase 01-04]: SideNav's bottom-bar variant slices `mobileBottomBarItems` to the first 4 unconditionally, enforcing the role_landing_config max-4 DB constraint from 01-01 structurally at the component level, not just by caller convention
 - [Phase 01-06]: Modal's focus-trap/focus-return implemented with one internal useEffect (no external focus-trap library) — store document.activeElement on open, cycle Tab/Shift+Tab through a querySelectorAll focusable-elements set, Escape calls onClose, restore focus to the stored trigger on cleanup
 - [Phase 01-06]: Table owns its own loading/empty/error presentation via props (delegating to Skeleton/EmptyState/Alert) rather than leaving every consumer screen to reimplement F0's "every list/table/panel has loading/empty/error" rule
+- [Phase 01-03]: Rewrote backend/opa/policy.rego to read data.role_permissions[role_id][feature] instead of input.role_permissions — opa-client.ts syncs permissions into OPA's data document via PUT, so the original 01-01 policy (expecting the full table as input) would fail-closed on every check
+- [Phase 01-03]: GET /api/v1/me/nav-config derives NavGroup[] directly from role_permissions (admin feature → full Admin nav group), leaving role_landing_config unpopulated per 01-01's documented Phase 6 scope boundary
 
 ### Pending Todos
 
@@ -85,6 +88,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-16T03:12:52.000Z
-Stopped at: Completed 01-04-PLAN.md (01-06 also complete)
+Last session: 2026-11-16T03:16:00.000Z
+Stopped at: Completed 01-03-PLAN.md (01-04/01-06 also complete)
 Resume file: None
