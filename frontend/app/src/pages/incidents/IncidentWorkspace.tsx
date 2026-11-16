@@ -14,7 +14,7 @@ import {
   type TabItem,
   type TimelineItem,
 } from '@epmp/design-system';
-import { apiGet } from '../../lib/api-client';
+import { apiGet, ApiRequestError } from '../../lib/api-client';
 import { CommandRoleModal } from './CommandRoleModal';
 import { ActivationModal } from './ActivationModal';
 import './IncidentWorkspace.css';
@@ -142,6 +142,27 @@ export function IncidentWorkspace(): JSX.Element {
     void queryClient.invalidateQueries({ queryKey: ['incident', id] });
     void queryClient.invalidateQueries({ queryKey: ['incident-timeline', id] });
   };
+
+  if (incidentQuery.isError) {
+    const message =
+      incidentQuery.error instanceof ApiRequestError
+        ? incidentQuery.error.body.message
+        : 'Could not load this incident.';
+    return (
+      <div className="ep-incident-workspace">
+        <EmptyState
+          title="Incident not found"
+          action={
+            <Button variant="primary" onClick={() => navigate('/incidents')}>
+              Back to incidents
+            </Button>
+          }
+        >
+          {message}
+        </EmptyState>
+      </div>
+    );
+  }
 
   if (incidentQuery.isLoading || !incidentQuery.data) {
     return <div className="ep-incident-workspace" aria-busy="true" />;
