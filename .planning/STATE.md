@@ -3,15 +3,15 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 03-03-PLAN.md
-last_updated: "2026-11-17T13:50:19.325Z"
-last_activity: "2026-11-17 — Plan 03-03 complete (new `plans` Fastify module built from scratch: plans/plan_versions/plan_sections/plan_task_templates/document_links schema per TechArch 02c exact DDL, closing 03-01's deferred tasks.plan_section_id FK. Draft->Review->Approved workflow with immutable append-only version history — content_snapshot written at submit-review time, never UPDATEd afterward; no-self-approval enforced at two layers (app check returning 403 SELF_APPROVAL_BLOCKED before any write, backstopped by chk_no_self_approval DB CHECK constraint). link-tasks deliberately status-unrestricted (section metadata, not plan content) — proven directly by linking a template to an Approved plan and asserting 204 not 409. materialize-tasks calls 03-01's TaskService.createFromTemplate cross-module inside one transaction, with role-to-user owner resolution and incident.opened_at-relative due-date resolution; the materialized task is independently readable via 03-01's own GET /api/v1/tasks. 1 auto-fixed deviation (Rule 3 — migration renumbered 1700000000005->1700000000007 to avoid an out-of-order conflict with 03-02's already-applied 1700000000006 in this sandbox's database; DDL content unchanged). All 3 new integration tests passed first run. Full backend suite (11 files, 55 tests) green with zero regressions against 03-07's parallel-landed seed changes; tsc --noEmit and npm run build both clean)"
+stopped_at: Completed 03-05-PLAN.md
+last_updated: "2026-11-17T14:50:00.000Z"
+last_activity: "2026-11-17 — Plan 03-05 complete (five Plans & Playbooks screens — Plan Repository, Plan Detail/Reading View, Plan Editor, Link Tasks modal, Approval Workflow modal — composed entirely from window.EPMP, making 03-03's Draft->Review->Approved plans API observable to a real browser user for the first time. Plan Repository's status Badge uses the exact FRD tone mapping (Draft=neutral, Review=warning, Approved=success); Plan Detail's content area is hard-constrained to --reading-max (720px), verified via getBoundingClientRect in the Playwright spec; version history is strictly read-only. Plan Editor's Submit for review surfaces the exact 422 PLAN_EMPTY Alert without navigating away; a debounced ~3s save-on-blur implements the mockup's autosave indicator. ReviewPlanModal renders 403 SELF_APPROVAL_BLOCKED as an inline Alert that keeps the modal open. A new role_permissions-driven 'Prepare' SideNav group was added to nav-config. 2 auto-fixed deviations: Rule 3 (two new seeded Keycloak identities — planner@epmp.local/planning_logistics_chief and eocdirector@epmp.local/eoc_director — were required since no prior phase seeded distinct author/reviewer accounts for this feature's segregation-of-duties rule to be testable at all) and Rule 1 (Playwright Badge-locator strict-mode fix, scoping to .ep-page-header__status). All 4 new Playwright assertions passed first re-run after the locator fix. Full backend suite (11 files, 55 tests) green with zero regressions; tsc --noEmit and both npm run build (backend + frontend/app) clean)"
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 32
-  completed_plans: 28
-  percent: 33
+  completed_plans: 30
+  percent: 34
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 3 of 6 (Plans, Tasks & Resource Requests) — IN PROGRESS
-Plan: 5 of 9 complete in current phase (03-01, 03-02, 03-03, 03-04, 03-07 — waves 1/2/3 — COMPLETE; 03-05, 03-06, 03-08, 03-09 remaining)
-Status: 03-03 complete (plans module: Draft->Review->Approved workflow, no-self-approval, link-tasks, task materialization) — ready for 03-05/03-06 frontend plans
-Last activity: 2026-11-17 — Plan 03-03 complete (new `plans` Fastify module built from scratch: plans/plan_versions/plan_sections/plan_task_templates/document_links schema per TechArch 02c exact DDL, closing 03-01's deferred tasks.plan_section_id FK. Draft->Review->Approved workflow with immutable append-only version history — content_snapshot written at submit-review time, never UPDATEd afterward; no-self-approval enforced at two layers (app check returning 403 SELF_APPROVAL_BLOCKED before any write, backstopped by chk_no_self_approval DB CHECK constraint). link-tasks deliberately status-unrestricted (section metadata, not plan content) — proven directly by linking a template to an Approved plan and asserting 204 not 409. materialize-tasks calls 03-01's TaskService.createFromTemplate cross-module inside one transaction, with role-to-user owner resolution and incident.opened_at-relative due-date resolution; the materialized task is independently readable via 03-01's own GET /api/v1/tasks. 1 auto-fixed deviation (Rule 3 — migration renumbered 1700000000005->1700000000007 to avoid an out-of-order conflict with 03-02's already-applied 1700000000006 in this sandbox's database; DDL content unchanged). All 3 new integration tests passed first run. Full backend suite (11 files, 55 tests) green with zero regressions against 03-07's parallel-landed seed changes; tsc --noEmit and npm run build both clean)
+Plan: 6 of 9 complete in current phase (03-01, 03-02, 03-03, 03-04, 03-07, 03-05 — waves 1/2/3/4 — COMPLETE; 03-06, 03-08, 03-09 remaining)
+Status: 03-05 complete (Plans & Playbooks UI: Plan Repository, Plan Detail, Plan Editor, Link Tasks modal, Approval Workflow modal) — ready for 03-06 (Tasks/Resource-Requests UI)
+Last activity: 2026-11-17 — Plan 03-05 complete (five Plans & Playbooks screens composed entirely from window.EPMP, making 03-03's plans API observable to a real browser user for the first time — see frontmatter last_activity for full detail; two new seeded Keycloak identities added as a Rule 3 blocking deviation so the cross-reviewer no-self-approval flow could be tested end-to-end with real distinct accounts)
 
-Progress: [███░░░░░░░] 33%
+Progress: [███░░░░░░░] 34%
 
 ## Performance Metrics
 
@@ -79,6 +79,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 03 P04 | 20 min | 2 tasks | 3 files |
 | Phase 03 P07 | 25 min | 2 tasks | 2 files |
 | Phase 03 P03 | 6 min | 3 tasks | 6 files |
+| Phase 03 P05 | 48 min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -156,6 +157,9 @@ Recent decisions affecting current work:
 - [Phase 03-07]: resource_requests 'approve' action-level granted ONLY to planning_logistics_chief (not incident_commander/eoc_director) — command staff can create a request but logistics alone approves it, per the FRD's explicit role split
 - [Phase 03-07]: plans 'review' action-level granted to eoc_director specifically, SEPARATE from planning_logistics_chief's create/edit grant — makes the no-self-approval workflow satisfiable with real seeded accounts
 - [Phase 03-03]: materialize-tasks split into its own file (materialize.ts) rather than appended to plans.ts, once plans.ts crossed ~400 lines — Plan's own stated discretion for file organization once the single-file size grows past the plan's 2-3-task budget comfort
+- [Phase 03-05]: LinkTasksModal's "Default owner role" Select offers the 5 real persona role names (what materialize.ts actually resolves against roles.name), not the 6 similarly-named ICS "command role" titles assigned per-incident via CommandRoleModal — a distinct, unrelated concept despite the name overlap
+- [Phase 03-05]: Two new seeded Keycloak identities (planner@epmp.local -> planning_logistics_chief, eocdirector@epmp.local -> eoc_director) added to epmp-realm.json + seed.ts's group_to_role_mapping, following 02-05's exact commander@epmp.local pattern — required since no prior phase seeded distinct author/reviewer accounts for the plans feature's segregation-of-duties rule
+- [Phase 03-05]: ReviewPlanModal shows CURRENT plan sections only (not a full diff against the last Approved content_snapshot) and "View this version" renders a summary-only modal (no full historical text) — both documented as budget-scoped simplifications of the FRD's literal language, not regressions
 
 ### Pending Todos
 
@@ -167,6 +171,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-17T13:50:19.324Z
-Stopped at: Completed 03-03-PLAN.md
+Last session: 2026-11-17T14:50:00.000Z
+Stopped at: Completed 03-05-PLAN.md
 Resume file: None
