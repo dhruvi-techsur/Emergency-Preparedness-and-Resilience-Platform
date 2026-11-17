@@ -18,6 +18,21 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
       },
+      '/realms': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+        xfwd: true,
+      },
+      '/resources': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+        xfwd: true,
+      },
+      '/js': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+        xfwd: true,
+      },
     },
   },
   build: {

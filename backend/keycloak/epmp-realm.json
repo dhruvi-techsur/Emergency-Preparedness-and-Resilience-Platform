@@ -9,7 +9,7 @@
       "protocol": "openid-connect",
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": false,
-      "redirectUris": ["http://localhost:5173/*", "http://localhost:8080/*"],
+      "redirectUris": ["/auth/callback", "/auth/callback/*"],
       "webOrigins": ["*"],
       "attributes": {
         "pkce.code.challenge.method": "S256"

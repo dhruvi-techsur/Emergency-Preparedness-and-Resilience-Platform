@@ -17,7 +17,7 @@ import { UserManager, WebStorageStateStore, type User } from 'oidc-client-ts';
  * shares the same reduced XSS-persistence window as the app's own session
  * token (see SignInCallback.tsx).
  */
-const KEYCLOAK_AUTHORITY = 'http://localhost:8081/realms/epmp';
+const KEYCLOAK_AUTHORITY = `${window.location.origin}/realms/epmp`;
 const KEYCLOAK_CLIENT_ID = 'epmp-app';
 
 export const userManager = new UserManager({
