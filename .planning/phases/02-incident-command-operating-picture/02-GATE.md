@@ -1272,3 +1272,26 @@ computing gzip size...
 [2m   Duration [22m 1.64s[2m (transform 149ms, setup 124ms, collect 569ms, tests 691ms, environment 959ms, prepare 142ms)[22m
 ```
 
+
+## Gap Redrive (--gaps-only execution, 02-08)
+
+**Gap:** "A user can log in through the Preview panel the same way a real tester reaches the app" (UAT refs 1-5, blocker, confidence: proven)
+
+**Re-driven with the SAME reproduction the gap recorded** (port-7777 preview-proxy path, forged `X-Forwarded-Proto`/`X-Forwarded-Host: pivota-preview-probe.example.com`):
+
+1. Discovery document: `GET /realms/epmp/.well-known/openid-configuration` through `:7777` → now returns real Keycloak JSON with `issuer: https://pivota-preview-probe.example.com/realms/epmp` (was: 200 with the SPA's own `index.html`). **PASS**
+2. Served `oidc-config.ts` module: no hardcoded `localhost:8081`; confirmed `window.location.origin`-derived. **PASS**
+3. Full OIDC authorization request (PKCE) with the simulated preview origin's `redirect_uri` → 200, no `Invalid parameter: redirect_uri` rejection. **PASS**
+4. Login-page form action resolves to the simulated preview origin (`https://pivota-preview-probe.example.com/realms/epmp/login-actions/authenticate?...`). **PASS**
+5. Full username/password login round-trip (`commander@epmp.local`) → 302, `Location: https://pivota-preview-probe.example.com/auth/callback?...code=...` (was: unreachable — no real login option existed from outside the sandbox). **PASS**
+6. Regression: existing direct-sandbox Playwright SSO suite (`app-shell.spec.ts`, 4/4) — already proven in this wave's `browser_suite_gate` run (30/30 total, 0 unexpected). **PASS, no regression.**
+
+**Result:** `closed (re-driven)` — same failing check now passes against the post-fix code. This closes UAT refs 1, 2, 3, 4, 5 (all five traced to this single root cause per `02-UAT.md`'s one-cause/one-gap rule).
+
+| Gap | Result |
+|-----|--------|
+| UAT ref 2 (root cause, blocker) | closed (re-driven) |
+| UAT ref 1 (same cause) | closed (re-driven) |
+| UAT ref 3 (same cause) | closed (re-driven) |
+| UAT ref 4 (same cause) | closed (re-driven) |
+| UAT ref 5 (same cause) | closed (re-driven) |
