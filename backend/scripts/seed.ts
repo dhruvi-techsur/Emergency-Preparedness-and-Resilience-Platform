@@ -145,12 +145,156 @@ async function main() {
     record('role_permissions', result);
   }
 
+  // tasks feature (Phase 3, F4): command-staff/logistics roles get full
+  // create/edit per F4's Process step ("typically PER-02 or PER-03");
+  // field_responder is view-only since task CREATION/reassignment is a
+  // command/logistics action per F6's documented mobile scope (read/
+  // update-your-own-status only, not full task administration).
+  // secops_admin deliberately gets NO explicit 'tasks' row here — same
+  // reasoning as the 'incidents' omission documented above: it already has
+  // blanket admin/platform access scoped to the admin console, not
+  // incident-command operations, and this is intentional, not an oversight.
+  const tasksFullAccessRoles = ['incident_commander', 'eoc_director', 'planning_logistics_chief'] as const;
+
+  for (const roleName of tasksFullAccessRoles) {
+    const result = await findOrInsert(
+      'role_permissions',
+      ['role_id', 'feature'],
+      [roleIds[roleName], 'tasks'],
+      ['role_id', 'feature', 'actions'],
+      [roleIds[roleName], 'tasks', ['view', 'create', 'edit']],
+    );
+    record('role_permissions', result);
+  }
+
+  const tasksViewOnlyPerm = await findOrInsert(
+    'role_permissions',
+    ['role_id', 'feature'],
+    [roleIds['field_responder'], 'tasks'],
+    ['role_id', 'feature', 'actions'],
+    [roleIds['field_responder'], 'tasks', ['view']],
+  );
+  record('role_permissions', tasksViewOnlyPerm);
+
+  // resource_requests feature (Phase 3, F4): planning_logistics_chief is the
+  // FRD's explicitly-named "typically PER-03, logistics function" approver
+  // AND the natural creator/tracker of requests, so it gets the full
+  // view/create/edit/approve set (the `edit` action gates
+  // POST .../fulfill — see resource-requests.ts's requirePermission('resource_requests','edit')
+  // on that route). incident_commander/eoc_director can CREATE a request
+  // ("I need 2 generators") but do NOT get the separate `approve`
+  // action-level — per the FRD's role split, approval is logistics' call,
+  // not command staff's, even though command staff can originate a
+  // request. field_responder is view-only.
+  //
+  // The `approve` action-string here matches 03-04's actual choice exactly
+  // (confirmed via resource-requests.ts: requirePermission('resource_requests','approve')
+  // gates both POST .../approve and POST .../decline — declining is itself
+  // an approval-adjacent decision per 03-04's own inline documentation).
+  const resourceRequestsCommandCreateRoles = ['incident_commander', 'eoc_director'] as const;
+
+  for (const roleName of resourceRequestsCommandCreateRoles) {
+    const result = await findOrInsert(
+      'role_permissions',
+      ['role_id', 'feature'],
+      [roleIds[roleName], 'resource_requests'],
+      ['role_id', 'feature', 'actions'],
+      [roleIds[roleName], 'resource_requests', ['view', 'create']],
+    );
+    record('role_permissions', result);
+  }
+
+  const logisticsResourceRequestsPerm = await findOrInsert(
+    'role_permissions',
+    ['role_id', 'feature'],
+    [roleIds['planning_logistics_chief'], 'resource_requests'],
+    ['role_id', 'feature', 'actions'],
+    [
+      roleIds['planning_logistics_chief'],
+      'resource_requests',
+      ['view', 'create', 'edit', 'approve'],
+    ],
+  );
+  record('role_permissions', logisticsResourceRequestsPerm);
+
+  const resourceRequestsViewOnlyPerm = await findOrInsert(
+    'role_permissions',
+    ['role_id', 'feature'],
+    [roleIds['field_responder'], 'resource_requests'],
+    ['role_id', 'feature', 'actions'],
+    [roleIds['field_responder'], 'resource_requests', ['view']],
+  );
+  record('role_permissions', resourceRequestsViewOnlyPerm);
+
+  // plans feature (Phase 3, F3): planning_logistics_chief is the FRD's
+  // explicit named author role ("A planning user (PER-03)") — gets
+  // view/create/edit. The separate `review` action-level (gating
+  // POST .../review per 03-03's plans.ts) is granted to eoc_director
+  // SPECIFICALLY, not to planning_logistics_chief — per the FRD's
+  // "typically PER-01 or PER-03 with review permission," PER-01 and PER-03
+  // must be DIFFERENT people for the no-self-approval rule to ever be
+  // satisfiable in practice with the seeded role set. Granting `review` to
+  // eoc_director (PER-01), separate from planning_logistics_chief's (PER-03)
+  // authoring grant, is what makes the no-self-approval workflow usable
+  // end-to-end with real seeded accounts — this is deliberate, not an
+  // oversight: getting it wrong would make 03-05/03-08's cross-reviewer
+  // Playwright tests impossible to satisfy against the seeded role set,
+  // since a role holding BOTH create/edit and review on the same feature
+  // could never prove segregation-of-duties with a single seeded identity
+  // per role.
+  const planningChiefPlansPerm = await findOrInsert(
+    'role_permissions',
+    ['role_id', 'feature'],
+    [roleIds['planning_logistics_chief'], 'plans'],
+    ['role_id', 'feature', 'actions'],
+    [roleIds['planning_logistics_chief'], 'plans', ['view', 'create', 'edit']],
+  );
+  record('role_permissions', planningChiefPlansPerm);
+
+  const eocDirectorPlansReviewPerm = await findOrInsert(
+    'role_permissions',
+    ['role_id', 'feature'],
+    [roleIds['eoc_director'], 'plans'],
+    ['role_id', 'feature', 'actions'],
+    [roleIds['eoc_director'], 'plans', ['view', 'review']],
+  );
+  record('role_permissions', eocDirectorPlansReviewPerm);
+
+  // Read-only situational-awareness access per F3's Process step 5: an
+  // incident commander should be able to SEE the plans referenced by their
+  // incident without being able to author/approve them. field_responder
+  // gets the same view-only access for the same reason.
+  const plansViewOnlyRoles = ['incident_commander', 'field_responder'] as const;
+
+  for (const roleName of plansViewOnlyRoles) {
+    const result = await findOrInsert(
+      'role_permissions',
+      ['role_id', 'feature'],
+      [roleIds[roleName], 'plans'],
+      ['role_id', 'feature', 'actions'],
+      [roleIds[roleName], 'plans', ['view']],
+    );
+    record('role_permissions', result);
+  }
+
+  // secops_admin deliberately gets NO explicit 'plans' grant either, for the
+  // identical reason documented above for 'incidents'/'tasks': blanket
+  // admin/platform access from the grants earlier in this file is scoped to
+  // the admin console, not plan authoring/review — intentional, not an
+  // oversight.
+
   // No explicit call to syncRolePermissionsToOpa here: unlike this plan's
   // earlier concern, OPA's data document is re-synced fresh from
   // role_permissions at every server.ts startup (see server.ts's `start()`),
   // so `npm run migrate && npm run seed` followed by a normal app boot is
   // sufficient — the newly-seeded rows reach OPA on the next server start
-  // with no separate sync step needed from this script.
+  // with no separate sync step needed from this script. Confirmed by
+  // reading server.ts's start() function directly (same verification 02-01
+  // performed for the identical question about 'incidents'): it calls
+  // syncRolePermissionsToOpa(allPerms) unconditionally at boot, reading the
+  // FULL current role_permissions table fresh from Postgres — so these new
+  // 'plans'/'tasks'/'resource_requests' rows reach OPA automatically on the
+  // next server start with zero changes needed to server.ts or opa-client.ts.
 
   // 1 admin user (natural key: email, which IS unique in the schema)
   const adminUser = await findOrInsert(
