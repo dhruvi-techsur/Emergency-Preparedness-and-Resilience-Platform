@@ -3,15 +3,15 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 03-06-PLAN.md
-last_updated: "2026-11-17T14:54:28.000Z"
-last_activity: "2026-11-17 — Plan 03-06 complete (six Task/Resource-Request screens — Task List, Create/Edit Task, Task Detail, Resource Request List, Create/Edit Resource Request, Resource Request Detail — composed entirely from window.EPMP, making 03-01's task API, 03-02's Overdue sweep, and 03-04's resource-request API observable to a real browser user for the first time. Task List/Resource Request List both accept an optional incidentId prop for 03-07's embedded Incident Workspace tab use. Exact FRD status Badge tone mappings on both lists (tasks: Open=info/In progress=brand/Awaiting approval=warning/Done=success/Overdue=danger; resource requests: Draft=neutral/Awaiting approval=warning/Approved=info/Fulfilled=success/Declined=danger). A ~30s refetchInterval is the Phase-3 mechanism making 03-02's time-based Overdue flip AND 03-04's resource-request status changes both visible without a page reload — proven end-to-end by this plan's own Playwright spec watching a backdated task flip to Overdue purely via the real scheduler + polling, zero manual action. A new role_permissions-driven 'Coordinate' SideNav group was added to nav-config. 6 auto-fixed deviations: 3 Rule 3 backend additions (GET /api/v1/tasks/{id}, GET /api/v1/resource-requests/{id} — same precedent as 03-03/03-05's GET /api/v1/plans/{id} — plus PATCH /api/v1/tasks/{id}/owner for the bulk-reassign action), 1 Rule 3 test-fixture jurisdiction-scope grant for planner@epmp.local (same root cause 02-07 already fixed for commander@epmp.local), and 2 Rule 1 Playwright-test-only bugs (DatePicker two-input time-fill, ambiguous native-select-vs-Combobox option locator). All 7 Playwright assertions passed. Full backend suite (11 files, 55 tests) green with zero regressions; tsc --noEmit and all three builds (backend, design-system, frontend/app) clean; zero regressions across 4 other e2e specs sharing the touched shared files)"
+stopped_at: Completed 03-08-PLAN.md
+last_updated: "2026-11-17T15:43:29.329Z"
+last_activity: "2026-11-17 — Plan 03-08 complete (Incident Workspace's Tasks/Resources tabs now embed the REAL TaskList/ResourceRequestList from 03-06, replacing 02-06's Phase-2 placeholders; a single comprehensive Playwright spec proves the complete F3->F4 cross-module handoff end-to-end in one browser session: plan authoring -> cross-reviewer approval -> task-template linking on the Approved plan's Detail view -> real incident creation -> materialization -> the resulting task visible in that SAME incident's real embedded TaskList -> a resource request created in-workspace appearing live with no page reload. 2 auto-fixed deviations: 1 Rule 2 missing-critical fix (PlanDetail.tsx had no Link Tasks entry point at all) and 1 Rule 1 bug fix (CreateResourceRequest.tsx's incident-scoped navigation). All 7 Playwright assertions passed, stable across 2 runs; full e2e suite (9 files, 32 tests) + full backend suite (11 files, 55 tests) green; all builds clean)"
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 32
   completed_plans: 31
-  percent: 36
+  percent: 33
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 3 of 6 (Plans, Tasks & Resource Requests) — IN PROGRESS
-Plan: 7 of 9 complete in current phase (03-01, 03-02, 03-03, 03-04, 03-07, 03-05, 03-06 — waves 1/2/3/4/5 — COMPLETE; 03-08, 03-09 remaining)
-Status: 03-06 complete (Tasks/Resource-Requests UI: Task List, Create/Edit Task, Task Detail, Resource Request List, Create/Edit Resource Request, Resource Request Detail) — ready for 03-08 (Incident Workspace tab embedding)
-Last activity: 2026-11-17 — Plan 03-06 complete (six Task/Resource-Request screens composed entirely from window.EPMP, making 03-01/03-02/03-04's task and resource-request APIs observable to a real browser user for the first time. Task List/Resource Request List both accept an optional incidentId prop for 03-07's embedded use; exact FRD status Badge tone mappings on both lists; a ~30s refetchInterval is the mechanism making 03-02's Overdue sweep visible and 03-04's resource-request status changes visible, both without a page reload. A new role_permissions-driven 'Coordinate' SideNav group was added to nav-config. 6 auto-fixed deviations: 2 Rule 3 backend single-record GET additions (GET /api/v1/tasks/{id}, GET /api/v1/resource-requests/{id}, same precedent as 03-03/03-05's GET /api/v1/plans/{id}), 1 Rule 3 owner-reassignment PATCH addition, 1 Rule 3 test-fixture jurisdiction-scope grant for planner@epmp.local (same root cause 02-07 already fixed for commander@epmp.local), and 2 Rule 1 Playwright bugs (DatePicker time-fill, ambiguous option locator). All 7 Playwright assertions passed, including the critical Overdue-visibility proof. Full backend suite (11 files, 55 tests) green with zero regressions; tsc --noEmit and all three builds (backend, design-system, frontend/app) clean; zero regressions across 4 other e2e specs sharing the touched files)
+Plan: 8 of 9 complete in current phase (03-01, 03-02, 03-03, 03-04, 03-07, 03-05, 03-06, 03-08 — waves 1/2/3/4/5/6 — COMPLETE; 03-09 remaining)
+Status: 03-08 complete (Incident Workspace tab embedding — the phase's terminal integration-proof plan) — ready for 03-09
+Last activity: 2026-11-17 — Plan 03-08 complete (Incident Workspace's Tasks/Resources tabs now embed the REAL TaskList/ResourceRequestList from 03-06, replacing 02-06's Phase-2 placeholders; "New task" header action navigates for real instead of a no-op. A single comprehensive Playwright spec (plan-to-task-materialization.spec.ts) proves the complete F3->F4 cross-module handoff end-to-end in one browser session: author creates+submits a plan, a DIFFERENT reviewer approves it, the author links a task template directly from the Approved plan's Detail reading view, a real incident is created, materialize-tasks is called, and the resulting task is asserted visible in that SAME incident's real embedded TaskList — plus a resource request created in-workspace appears live with no page reload. 2 auto-fixed deviations found while writing the spec: 1 Rule 2 missing-critical fix (PlanDetail.tsx had NO Link Tasks entry point at all — only PlanEditor's Draft-only flow could reach LinkTasksModal — added a "Link tasks" button per section to PlanDetail's Sections Card) and 1 Rule 1 bug fix (CreateResourceRequest.tsx always navigated to the standalone detail page even when incident-scoped, breaking the "same workspace, no reload" flow — fixed to mirror CreateTask.tsx's already-correct pattern). All 7 Playwright assertions passed, confirmed stable across 2 consecutive runs. Full regression check: all 9 e2e spec files (32 tests) + full backend suite (11 files, 55 tests) green; tsc --noEmit and all three builds clean)
 
-Progress: [███░░░░░░░] 34%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
@@ -81,6 +81,7 @@ Progress: [███░░░░░░░] 34%
 | Phase 03 P03 | 6 min | 3 tasks | 6 files |
 | Phase 03 P05 | 48 min | 3 tasks | 13 files |
 | Phase 03 P06 | 35 min | 3 tasks | 11 files |
+| Phase 03 P08 | 35 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -163,6 +164,8 @@ Recent decisions affecting current work:
 - [Phase 03-05]: ReviewPlanModal shows CURRENT plan sections only (not a full diff against the last Approved content_snapshot) and "View this version" renders a summary-only modal (no full historical text) — both documented as budget-scoped simplifications of the FRD's literal language, not regressions
 - [Phase 03-06]: Added GET /api/v1/tasks/{id} and GET /api/v1/resource-requests/{id} (both embedding status_history) plus PATCH /api/v1/tasks/{id}/owner — TechArch's literal endpoint table has none of the three, but Task/Resource-Request Detail pages and the Task List's bulk-reassign action genuinely need them; same precedent as 03-03/03-05's GET /api/v1/plans/{id}
 - [Phase 03-06]: Task/CreateTask's owner Comboboxes source from GET /api/v1/incidents/personnel, not GET /api/v1/admin/users — confirmed via seed.ts that all 4 roles holding tasks permissions (incident_commander, eoc_director, planning_logistics_chief, field_responder) hold incidents:view but none hold admin:view, same gap CommandRoleModal.tsx already documented and fixed
+- [Phase 03-08]: PlanDetail.tsx gained a 'Link tasks' entry point reusing LinkTasksModal — previously only PlanEditor's Draft-only flow could reach it, which blocked linking a task template to an already-Approved plan through the real UI
+- [Phase 03-08]: CreateResourceRequest.tsx now returns to the originating Incident Workspace when routeIncidentId is present, mirroring CreateTask.tsx's already-correct incident-aware navigate() pattern
 
 ### Pending Todos
 
@@ -174,6 +177,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-17T14:54:28.000Z
-Stopped at: Completed 03-06-PLAN.md
+Last session: 2026-11-17T15:43:15.764Z
+Stopped at: Completed 03-08-PLAN.md
 Resume file: None
