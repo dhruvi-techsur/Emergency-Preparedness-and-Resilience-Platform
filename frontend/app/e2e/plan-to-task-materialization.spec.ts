@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { Pool } from 'pg';
 import {
   signInAsPlanningChief,
@@ -30,43 +30,17 @@ import {
  * Runs against the live compose stack (db, nats, opa, keycloak) + the
  * backend dev server + this app's own Vite dev server, started by this
  * plan's documented <verify> pre-steps before this spec file runs.
+ *
+ * 03-10 gap closure (UAT ref 1): step 5 ("Materialize") previously called
+ * `POST /api/v1/plans/{id}/materialize-tasks` via a raw `page.evaluate()`
+ * fetch, bypassing the UI entirely, because no dedicated "Materialize
+ * tasks" button existed yet. 03-10 shipped that button + its modal
+ * (`PlanDetail.tsx` / `MaterializeTasksModal.tsx`) — step 5 below now
+ * drives the real control: click the button, select the incident in the
+ * modal's Combobox, click "Materialize tasks", and assert the result
+ * renders inside the modal. This is the exact UI interaction the UAT's
+ * human walkthrough attempted and found missing.
  */
-
-/** Same pattern tasks-resources.spec.ts's apiPostViaPage/apiGetViaPage use:
- * reads the session token straight out of sessionStorage (the same key
- * src/auth/session-storage.ts owns) and issues a real fetch through the
- * SAME origin the page is already on (Vite's own /api dev proxy). Used
- * here for the materialize-tasks call itself, since 03-05's scope did not
- * build a dedicated UI "Materialize tasks" button for
- * `POST /api/v1/plans/{id}/materialize-tasks` (confirmed: no reference to
- * this endpoint exists anywhere under frontend/app/src/pages/plans/) — a
- * reasonable future UI enhancement 03-05 didn't literally build. Calling
- * the real endpoint via an authenticated fetch from the already-signed-in
- * browser session is an acceptable proof of the BACKEND integration; the
- * critical assertion this test makes (step 6 below) is that the
- * materialized task becomes visible in the real, embedded TaskList inside
- * the Incident Workspace — not just that the API call itself succeeds. */
-async function apiPostViaPage<T>(page: Page, path: string, body: object): Promise<T> {
-  return page.evaluate(
-    async ({ path, body }) => {
-      const token = window.sessionStorage.getItem('epmp_session_token');
-      const res = await fetch(path, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`POST ${path} failed: ${res.status} ${text}`);
-      }
-      return res.json();
-    },
-    { path, body },
-  );
-}
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL ?? 'postgres://postgres:devpass@localhost:5432/epmp',
@@ -103,6 +77,7 @@ test.describe.serial('Plan-to-task materialization — the complete F3\u2192F4 c
   let planName: string;
   let planId: string;
   let incidentId: string;
+  let incidentName: string;
   const templateTitle = 'Pre-position generators';
 
   test.afterAll(async () => {
@@ -211,7 +186,7 @@ test.describe.serial('Plan-to-task materialization — the complete F3\u2192F4 c
     await signInAsEocDirector(page);
     await page.goto('/incidents/new');
 
-    const incidentName = `E2E Materialization Incident ${Date.now()}`;
+    incidentName = `E2E Materialization Incident ${Date.now()}`;
     await page.getByLabel('Name', { exact: false }).fill(incidentName);
     await page.getByLabel('Type', { exact: true }).selectOption('Flood');
     await page.getByLabel('Severity', { exact: true }).selectOption('Elevated');
@@ -229,27 +204,36 @@ test.describe.serial('Plan-to-task materialization — the complete F3\u2192F4 c
     expect(incidentId).toBeTruthy();
   });
 
-  test('5. Materializing the plan\'s linked task template against the real incident creates a real task (via the backend endpoint, no dedicated UI trigger exists yet)', async ({
+  test("5. Materializing the plan's linked task template against the real incident creates a real task, driven through the real 'Materialize tasks' button", async ({
     page,
   }) => {
-    // No UI button exists anywhere under frontend/app/src/pages/plans/
-    // for POST /api/v1/plans/{id}/materialize-tasks (confirmed directly —
-    // 03-05's scope didn't build one; a "Materialize tasks" button is a
-    // reasonable future UI enhancement). Calling the real endpoint
-    // through the already-signed-in browser session proves the backend
-    // integration; step 6 below is the critical assertion proving the
-    // resulting task is visible through the real, embedded UI.
+    // 03-10 gap closure (UAT ref 1): this is the exact UI interaction
+    // the UAT's human walkthrough attempted and found missing — a real,
+    // visible "Materialize tasks" button on the Plan Detail page, not a
+    // blank/manual form and not a raw page.evaluate() fetch.
     await signInAsPlanningChief(page);
     await page.goto(`/plans/${planId}`);
 
-    const result = await apiPostViaPage<{
-      created: Array<{ id: string; title: string; status: string }>;
-      skipped: Array<{ template_id: string; reason: string }>;
-    }>(page, `/api/v1/plans/${planId}/materialize-tasks`, { incident_id: incidentId });
+    await expect(page.getByRole('button', { name: 'Materialize tasks' })).toBeVisible({
+      timeout: 10_000,
+    });
+    await page.getByRole('button', { name: 'Materialize tasks' }).click();
 
-    expect(result.skipped).toHaveLength(0);
-    expect(result.created.length).toBeGreaterThanOrEqual(1);
-    expect(result.created.some((t) => t.title === templateTitle)).toBe(true);
+    const modal = page.getByRole('dialog', { name: /Materialize tasks/ });
+    await expect(modal).toBeVisible();
+
+    const incidentCombo = modal.getByLabel('Incident', { exact: false });
+    await incidentCombo.click();
+    await incidentCombo.fill(incidentName);
+    await modal.getByRole('option', { name: incidentName }).click();
+
+    await modal.getByRole('button', { name: 'Materialize tasks' }).click();
+
+    await expect(modal.getByText(new RegExp(templateTitle))).toBeVisible({ timeout: 10_000 });
+    await expect(modal.getByText(/skipped/i)).not.toBeVisible();
+
+    await modal.getByRole('button', { name: 'Done' }).click();
+    await expect(modal).not.toBeVisible();
   });
 
   test('6. The materialized task appears in the SAME incident\'s real, embedded TaskList \u2014 the critical F3\u2192F4 cross-module proof', async ({
