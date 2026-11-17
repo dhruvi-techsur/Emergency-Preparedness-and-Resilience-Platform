@@ -1,0 +1,75 @@
+/*
+ * F3 S3.2 — Plan Detail / Reading View layout. Sidebar (jump links +
+ * version history) alongside a content area constrained to the
+ * `--reading-max` (720px) token per F0/F3's explicit requirement.
+ */
+
+.ep-plan-detail__layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+@media (max-width: 767px) {
+  .ep-plan-detail__layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ep-plan-detail__sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.ep-plan-detail__jump-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ep-plan-detail__jump-links li {
+  padding-bottom: var(--space-2);
+  border-bottom: var(--border-1) solid var(--border);
+}
+
+.ep-plan-detail__jump-links li:last-child {
+  border-bottom: none;
+}
+
+.ep-plan-detail__version-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ep-plan-detail__version-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: var(--border-1) solid var(--border);
+}
+
+.ep-plan-detail__version-row:last-child {
+  border-bottom: none;
+}
+
+/* reading-max: the content area's exact 720px constraint — the plan body
+ * text never exceeds this width regardless of viewport, per F3's
+ * "Reading view respecting reading-max (720px) line length" sub-feature. */
+.ep-plan-detail__content {
+  max-width: var(--reading-max);
+}
+
+.ep-plan-detail__content > section + section {
+  margin-top: var(--space-6);
+}
