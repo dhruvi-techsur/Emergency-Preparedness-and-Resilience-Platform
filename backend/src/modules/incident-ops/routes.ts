@@ -5,6 +5,7 @@ import activationRoutes from './activation.js';
 import closureRoutes from './closure.js';
 import operatingPictureRoutes from './operating-picture.js';
 import taskRoutes from './tasks.js';
+import resourceRequestRoutes from './resource-requests.js';
 
 /**
  * Mounts the incident-ops module's F1/F2/F4 endpoints as a Fastify plugin,
@@ -19,4 +20,6 @@ export default async function incidentOpsRoutes(app: FastifyInstance) {
   await app.register(operatingPictureRoutes);
   // 03-01 F4 task routes (register.*task)
   await app.register(taskRoutes);
+  // 03-04 F4 resource-request routes
+  await app.register(resourceRequestRoutes);
 }
