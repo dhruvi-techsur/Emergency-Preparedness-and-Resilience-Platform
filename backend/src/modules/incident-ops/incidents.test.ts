@@ -280,3 +280,182 @@ describe('incident-ops incidents routes', () => {
     ).rejects.toThrow(/append-only/);
   });
 });
+
+// 03-07: proves the real seed script's role_permissions grants for
+// plans/tasks/resource_requests actually authorize real requests end-to-end
+// through OPA — not just that the rows exist in the database. Deliberately
+// does NOT insert any custom test-only role_permissions row for these three
+// features: every permission check below resolves against whatever
+// `backend/scripts/seed.ts` itself already wrote for the FRD-named roles
+// (incident_commander, planning_logistics_chief, field_responder). This
+// file's `npm run seed` must have already run against the same database
+// this test suite connects to (see this plan's own <verify> block, which
+// runs `npm run seed` immediately before `vitest run` for exactly this
+// reason) — if it hasn't, `findSeededRoleId` below throws a clear error
+// rather than silently creating a throwaway role that would make this test
+// pass for the wrong reason.
+describe('03-07: seeded role_permissions grants authorize real requests end-to-end', () => {
+  let seededJurisdictionId: string;
+  let commanderRoleId: string;
+  let logisticsRoleId: string;
+  let fieldResponderRoleId: string;
+  let commanderUserId: string;
+  let logisticsUserId: string;
+  let fieldResponderUserId: string;
+
+  async function findSeededRoleId(name: string): Promise<string> {
+    const rows = await query<{ id: string }>(`SELECT id FROM roles WHERE name = $1`, [name]);
+    if (!rows[0]) {
+      throw new Error(
+        `Role '${name}' not found — this test requires 'npm run seed' to have already run ` +
+          `against this database (per this plan's own <verify> block), so the REAL seeded ` +
+          `role_permissions grants from backend/scripts/seed.ts can be exercised end-to-end.`,
+      );
+    }
+    return rows[0].id;
+  }
+
+  async function createSeededRoleTestUser(roleId: string, label: string): Promise<string> {
+    const email = `seed-perm-test-${label}-${Date.now()}-${Math.random().toString(36).slice(2)}@epmp.local`;
+    const inserted = await query<{ id: string }>(
+      `INSERT INTO users (email, name, role_id, jurisdiction_scope, status) VALUES ($1, $2, $3, $4, 'Active') RETURNING id`,
+      [email, `Seed Perm Test ${label}`, roleId, [seededJurisdictionId]],
+    );
+    return inserted[0].id;
+  }
+
+  beforeAll(async () => {
+    seededJurisdictionId = await findOrCreateJurisdiction('Seed Permissions Test Jurisdiction');
+
+    commanderRoleId = await findSeededRoleId('incident_commander');
+    logisticsRoleId = await findSeededRoleId('planning_logistics_chief');
+    fieldResponderRoleId = await findSeededRoleId('field_responder');
+
+    // Re-sync the FULL current role_permissions table to OPA's data
+    // document — OPA's data starts EMPTY on every container boot
+    // (server.ts's own startup-sync docstring), so a test run against a
+    // freshly-started OPA container would fail-closed on every check
+    // without this, exactly the gap server.ts's start() fixes for a real
+    // boot. This is a re-sync of REAL rows already written by `npm run
+    // seed`, not an insertion of new test-only grants.
+    const allPerms = await query<{ role_id: string; feature: string; actions: string[] }>(
+      `SELECT role_id, feature, actions FROM role_permissions`,
+    );
+    await syncRolePermissionsToOpa(allPerms);
+
+    commanderUserId = await createSeededRoleTestUser(commanderRoleId, 'commander');
+    logisticsUserId = await createSeededRoleTestUser(logisticsRoleId, 'logistics');
+    fieldResponderUserId = await createSeededRoleTestUser(fieldResponderRoleId, 'field-responder');
+  });
+
+  it("incident_commander's seeded 'tasks' grant authorizes a real POST /api/v1/tasks (201)", async () => {
+    const commanderToken = await mintSessionToken({
+      id: commanderUserId,
+      role_id: commanderRoleId,
+      jurisdiction_scope: [seededJurisdictionId],
+    });
+
+    // incident_commander's seeded 'incidents' grant includes 'create',
+    // needed only to set up a target incident for the task — the
+    // assertion under test is the 'tasks' grant on the POST below.
+    const incidentRes = await request(app.server)
+      .post('/api/v1/incidents')
+      .set('Authorization', `Bearer ${commanderToken}`)
+      .send({
+        name: `Seed Perm Test Incident ${Date.now()}`,
+        type: 'Flood',
+        severity: 'Normal',
+        jurisdiction_id: seededJurisdictionId,
+        opened_at: new Date().toISOString(),
+      });
+    expect(incidentRes.status).toBe(201);
+
+    const taskRes = await request(app.server)
+      .post('/api/v1/tasks')
+      .set('Authorization', `Bearer ${commanderToken}`)
+      .send({
+        title: `Seed Perm Test Task ${Date.now()}`,
+        owner_id: commanderUserId,
+        due_at: new Date(Date.now() + 3600_000).toISOString(),
+        incident_id: incidentRes.body.id,
+      });
+    expect(taskRes.status).toBe(201);
+  });
+
+  it("planning_logistics_chief's seeded 'resource_requests' approve grant authorizes POST .../approve on a DIFFERENT user's request (200, not 403)", async () => {
+    const commanderToken = await mintSessionToken({
+      id: commanderUserId,
+      role_id: commanderRoleId,
+      jurisdiction_scope: [seededJurisdictionId],
+    });
+    const logisticsToken = await mintSessionToken({
+      id: logisticsUserId,
+      role_id: logisticsRoleId,
+      jurisdiction_scope: [seededJurisdictionId],
+    });
+
+    // incident_commander creates the incident and the resource request
+    // (its seeded grant includes resource_requests:create, but NOT
+    // :approve — asserted implicitly by the fact the approval below must
+    // come from the logistics user instead).
+    const incidentRes = await request(app.server)
+      .post('/api/v1/incidents')
+      .set('Authorization', `Bearer ${commanderToken}`)
+      .send({
+        name: `Seed Perm Test Incident (RR) ${Date.now()}`,
+        type: 'Wildfire',
+        severity: 'Elevated',
+        jurisdiction_id: seededJurisdictionId,
+        opened_at: new Date().toISOString(),
+      });
+    expect(incidentRes.status).toBe(201);
+
+    const createRrRes = await request(app.server)
+      .post('/api/v1/resource-requests')
+      .set('Authorization', `Bearer ${commanderToken}`)
+      .send({
+        resource_type: 'Equipment',
+        description: 'Seed-permission-test generators',
+        quantity: 1,
+        incident_id: incidentRes.body.id,
+        needed_by: new Date(Date.now() + 86_400_000).toISOString(),
+        requesting_role: 'Command',
+      });
+    expect(createRrRes.status).toBe(201);
+    expect(createRrRes.body.status).toBe('Awaiting approval');
+
+    // The DIFFERENT user (planning_logistics_chief) approves it — proving
+    // the seeded 'approve' action-level grant authorizes this request
+    // through real OPA policy evaluation, not a 403.
+    const approveRes = await request(app.server)
+      .post(`/api/v1/resource-requests/${createRrRes.body.id}/approve`)
+      .set('Authorization', `Bearer ${logisticsToken}`)
+      .send();
+    expect(approveRes.status).toBe(200);
+    expect(approveRes.body.status).toBe('Approved');
+  });
+
+  it("field_responder's seeded view-only 'tasks' grant permits GET (200) but rejects POST create (403)", async () => {
+    const fieldResponderToken = await mintSessionToken({
+      id: fieldResponderUserId,
+      role_id: fieldResponderRoleId,
+      jurisdiction_scope: [seededJurisdictionId],
+    });
+
+    const getRes = await request(app.server)
+      .get('/api/v1/tasks')
+      .set('Authorization', `Bearer ${fieldResponderToken}`)
+      .query({ page_size: 5 });
+    expect(getRes.status).toBe(200);
+
+    const createRes = await request(app.server)
+      .post('/api/v1/tasks')
+      .set('Authorization', `Bearer ${fieldResponderToken}`)
+      .send({
+        title: `Field Responder Should Not Create ${Date.now()}`,
+        owner_id: fieldResponderUserId,
+        due_at: new Date(Date.now() + 3600_000).toISOString(),
+      });
+    expect(createRes.status).toBe(403);
+  });
+});
