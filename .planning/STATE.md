@@ -3,15 +3,15 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 03-08-PLAN.md
-last_updated: "2026-11-17T15:43:29.329Z"
-last_activity: "2026-11-17 — Plan 03-08 complete (Incident Workspace's Tasks/Resources tabs now embed the REAL TaskList/ResourceRequestList from 03-06, replacing 02-06's Phase-2 placeholders; a single comprehensive Playwright spec proves the complete F3->F4 cross-module handoff end-to-end in one browser session: plan authoring -> cross-reviewer approval -> task-template linking on the Approved plan's Detail view -> real incident creation -> materialization -> the resulting task visible in that SAME incident's real embedded TaskList -> a resource request created in-workspace appearing live with no page reload. 2 auto-fixed deviations: 1 Rule 2 missing-critical fix (PlanDetail.tsx had no Link Tasks entry point at all) and 1 Rule 1 bug fix (CreateResourceRequest.tsx's incident-scoped navigation). All 7 Playwright assertions passed, stable across 2 runs; full e2e suite (9 files, 32 tests) + full backend suite (11 files, 55 tests) green; all builds clean)"
+stopped_at: Completed 03-09-PLAN.md
+last_updated: "2026-11-17T16:12:05Z"
+last_activity: "2026-11-17 — Plan 03-09 complete (operating-picture markers endpoint extended with resource-request triangle markers, closing the plan checker's identified gap in success criterion 4's 'visible on the operating picture' clause. operating-picture.ts's markers query now unions incidents (diamond) with in-flight resource_requests (triangle, inheriting their linked incident's location, excluding Fulfilled/Declined entirely) into the SAME generic MapMarker[] array 02-03 deliberately kept open for this extension — zero response-shape change. GET .../layers gained a second toggleable 'resource-requests' layer entry. OperatingPicture.tsx's MapPopup now branches on marker.type for resource-specific facts + deep-link to ResourceRequestDetail, with a Rule 1 bug fix along the way: layer-visibility filtering previously gated the ENTIRE markers array on the single 'incidents' layer's checked state, which would have incorrectly hidden resource markers too now that a second layer/marker-type exists — generalized to a per-marker-type->layer-id map. New operating-picture-resource-markers.spec.ts proves the full lifecycle end-to-end: a resource request created through the real Incident Workspace Resources tab appears as a triangle marker near its incident's diamond marker, its popup tone updates on approval, and it disappears from the map once Fulfilled. All 3 new Playwright assertions passed, stable across 2 runs; full e2e suite (11 files, 51 tests) + full backend suite (11 files, 55 tests, one pre-existing documented flaky re-run) green; all three builds clean. Phase 3 (Plans, Tasks & Resource Requests) is now fully complete: all 9 plans done.)"
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 32
-  completed_plans: 31
-  percent: 33
+  completed_plans: 32
+  percent: 50
 ---
 
 # Project State
@@ -21,24 +21,24 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 3 — Plans, Tasks & Resource Requests (in progress)
+**Current focus:** Phase 3 — Plans, Tasks & Resource Requests (COMPLETE) — ready for Phase 4 planning
 
 ## Current Position
 
-Phase: 3 of 6 (Plans, Tasks & Resource Requests) — IN PROGRESS
-Plan: 8 of 9 complete in current phase (03-01, 03-02, 03-03, 03-04, 03-07, 03-05, 03-06, 03-08 — waves 1/2/3/4/5/6 — COMPLETE; 03-09 remaining)
-Status: 03-08 complete (Incident Workspace tab embedding — the phase's terminal integration-proof plan) — ready for 03-09
-Last activity: 2026-11-17 — Plan 03-08 complete (Incident Workspace's Tasks/Resources tabs now embed the REAL TaskList/ResourceRequestList from 03-06, replacing 02-06's Phase-2 placeholders; "New task" header action navigates for real instead of a no-op. A single comprehensive Playwright spec (plan-to-task-materialization.spec.ts) proves the complete F3->F4 cross-module handoff end-to-end in one browser session: author creates+submits a plan, a DIFFERENT reviewer approves it, the author links a task template directly from the Approved plan's Detail reading view, a real incident is created, materialize-tasks is called, and the resulting task is asserted visible in that SAME incident's real embedded TaskList — plus a resource request created in-workspace appears live with no page reload. 2 auto-fixed deviations found while writing the spec: 1 Rule 2 missing-critical fix (PlanDetail.tsx had NO Link Tasks entry point at all — only PlanEditor's Draft-only flow could reach LinkTasksModal — added a "Link tasks" button per section to PlanDetail's Sections Card) and 1 Rule 1 bug fix (CreateResourceRequest.tsx always navigated to the standalone detail page even when incident-scoped, breaking the "same workspace, no reload" flow — fixed to mirror CreateTask.tsx's already-correct pattern). All 7 Playwright assertions passed, confirmed stable across 2 consecutive runs. Full regression check: all 9 e2e spec files (32 tests) + full backend suite (11 files, 55 tests) green; tsc --noEmit and all three builds clean)
+Phase: 3 of 6 (Plans, Tasks & Resource Requests) — COMPLETE
+Plan: 9 of 9 complete in current phase (03-01 through 03-09, waves 1-7 — ALL COMPLETE)
+Status: 03-09 complete (operating-picture resource-request markers — the phase's terminal plan) — Phase 3 fully done, ready for Phase 4 planning
+Last activity: 2026-11-17 — Plan 03-09 complete (operating-picture markers endpoint extended with resource-request triangle markers, closing the plan checker's identified gap in success criterion 4's "visible on the operating picture" clause. operating-picture.ts's markers query now unions incidents (diamond) with in-flight resource_requests (triangle, inheriting their linked incident's location, excluding Fulfilled/Declined entirely) into the SAME generic MapMarker[] array 02-03 deliberately kept open for this extension — zero response-shape change. GET .../layers gained a second toggleable 'resource-requests' layer entry. OperatingPicture.tsx's MapPopup now branches on marker.type for resource-specific facts + deep-link to ResourceRequestDetail. 2 auto-fixed deviations: 1 Rule 1 bug fix (layer-visibility filtering previously gated the ENTIRE markers array on the single 'incidents' layer, which would have hidden resource markers too — generalized to a per-marker-type->layer-id map) and 1 Rule 3 blocking fix (a Playwright test signed in as the wrong identity due to signIn's no-op-on-already-resolved-session behavior). New operating-picture-resource-markers.spec.ts (3 tests) passed, stable across 2 runs; full e2e suite (11 files, 51 tests) + full backend suite (11 files, 55 tests, one pre-existing documented flaky re-run) green; all three builds clean. Phase 3 is now fully complete: all 9 plans done.)
 
-Progress: [███░░░░░░░] 33%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 24
+- Total plans completed: 32
 - Average duration: 23 min
-- Total execution time: 10.7 hours
+- Total execution time: 11.5 hours
 
 **By Phase:**
 
@@ -82,6 +82,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 03 P05 | 48 min | 3 tasks | 13 files |
 | Phase 03 P06 | 35 min | 3 tasks | 11 files |
 | Phase 03 P08 | 35 min | 2 tasks | 4 files |
+| Phase 03 P09 | 50 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -166,6 +167,9 @@ Recent decisions affecting current work:
 - [Phase 03-06]: Task/CreateTask's owner Comboboxes source from GET /api/v1/incidents/personnel, not GET /api/v1/admin/users — confirmed via seed.ts that all 4 roles holding tasks permissions (incident_commander, eoc_director, planning_logistics_chief, field_responder) hold incidents:view but none hold admin:view, same gap CommandRoleModal.tsx already documented and fixed
 - [Phase 03-08]: PlanDetail.tsx gained a 'Link tasks' entry point reusing LinkTasksModal — previously only PlanEditor's Draft-only flow could reach it, which blocked linking a task template to an already-Approved plan through the real UI
 - [Phase 03-08]: CreateResourceRequest.tsx now returns to the originating Incident Workspace when routeIncidentId is present, mirroring CreateTask.tsx's already-correct incident-aware navigate() pattern
+- [Phase 03-09]: resourceStatusToTone's Draft case maps to 'brand' (not a 6th invented tone) since MapMarker's MarkerTone type has no 'neutral' entry — Fulfilled/Declined never reach this function since they're excluded from operating-picture.ts's query WHERE clause entirely
+- [Phase 03-09]: Layer-visibility filtering generalized from a single hardcoded 'incidents' check to a marker-type->layer-id map, fixing a latent bug where toggling the 'incidents' layer would have also hidden resource markers once a second real layer/marker-type existed
+- [Phase 03-09]: Resource-marker MapPopup renders directly from the thin marker object already in the polled markers array (no extra GET /api/v1/resource-requests/{id} fetch) — unlike the incident popup, which needs full detail (jurisdiction name, opened_at) the thin marker shape doesn't carry
 
 ### Pending Todos
 
@@ -177,6 +181,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-17T15:43:15.764Z
-Stopped at: Completed 03-08-PLAN.md
+Last session: 2026-11-17T16:12:05Z
+Stopped at: Completed 03-09-PLAN.md — Phase 3 fully complete, ready for Phase 4 planning
 Resume file: None
