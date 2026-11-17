@@ -92,12 +92,17 @@ root.render(
               <Route path="tasks/new" element={<CreateTask />} />
               <Route path="tasks/:id" element={<TaskDetail />} />
               <Route path="incidents/:incidentId/tasks/new" element={<CreateTask />} />
+              <Route path="incidents/:incidentId/tasks/:id" element={<TaskDetail />} />
               <Route path="resource-requests" element={<ResourceRequestList />} />
               <Route path="resource-requests/new" element={<CreateResourceRequest />} />
               <Route path="resource-requests/:id" element={<ResourceRequestDetail />} />
               <Route
                 path="incidents/:incidentId/resource-requests/new"
                 element={<CreateResourceRequest />}
+              />
+              <Route
+                path="incidents/:incidentId/resource-requests/:id"
+                element={<ResourceRequestDetail />}
               />
             </Route>
           </Routes>
