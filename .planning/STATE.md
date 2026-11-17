@@ -3,9 +3,8 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 02-08-PLAN.md
-last_updated: "2026-11-17T11:13:08.594Z"
-last_activity: 2026-11-17 — Plan 02-08 complete (gap-closure: fixed UAT gap ref 2, blocker — Keycloak OIDC sign-in unreachable through Pivota's preview proxy. Same-origin OIDC authority + Vite Keycloak-path proxying + Keycloak forwarded-header trust + relative realm redirectUris. 1 auto-fixed Rule 1 deviation, discovered during the plan's own reproduction: http-proxy's xfwd:true corrupts the forwarded port in a chained-proxy scenario)
+last_updated: "2026-11-17T13:23:23.073Z"
+last_activity: "2026-11-17 — Phase 2 complete"
 progress:
   total_phases: 6
   completed_phases: 2
