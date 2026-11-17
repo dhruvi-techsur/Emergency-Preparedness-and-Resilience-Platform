@@ -1,0 +1,64 @@
+---
+status: diagnosed
+trigger: "Investigate issue: materialize-tasks-ui-trigger-missing — A user can link a plan section to a task template, and when an incident references that plan, the linked template should be offered for one-click task creation rather than writing the task from scratch — but no such UI control exists."
+created: 2026-11-17T00:00:00Z
+updated: 2026-11-17T00:20:00Z
+---
+
+## Current Focus
+
+hypothesis: CONFIRMED. Root cause is structural/architectural scope gap - no plan in Phase 3's 9-plan sequence included building a UI trigger for materialize-tasks, AND incidents table has no FK to plans table at all.
+test: Read materialize.ts, incident-ops migration, CreateTask.tsx, PlanDetail.tsx, IncidentWorkspace.tsx, and all 03-0X-PLAN.md/SUMMARY.md files to confirm scope boundaries and schema.
+expecting: Confirm (a) incidents table truly has no plan_id/linked-plan column, (b) no plan's scope mentions building this UI control, (c) identify exact plan(s) where this should have been added.
+next_action: Investigation complete. Return ROOT CAUSE FOUND (goal=find_root_cause_only, no fix applied).
+
+## Symptoms
+
+expected: Per roadmap success criterion 2 (Phase 3: Plans, Tasks & Resource Requests), when viewing an Approved plan with a linked task template, or when viewing an incident, a user should find a button/menu item/affordance that triggers POST /api/v1/plans/{id}/materialize-tasks against a chosen incident, creating a real task from the template with one click — not a blank form requiring manual entry.
+actual: No such control exists anywhere in the frontend. Repo-wide grep for materialize-tasks/materializeTask/Materialize across frontend/app/src returns zero matches. The closest candidate — the Incident Workspace's "New task" button (under Tasks, in the Coordinate section) — opens CreateTask.tsx, an ordinary manual create-task form with a permanently empty/disabled "Linked plan section" Combobox (hardcoded `planSectionOptionsSource: PlanSection[] = []`). The backend endpoint itself (POST /api/v1/plans/{id}/materialize-tasks -> TaskService.createFromTemplate in backend/src/modules/plans/materialize.ts) is fully functional — verified end-to-end this session: a real session as planner@epmp.local (planning_logistics_chief), driven through the port-7777 preview proxy, POSTed to /api/v1/plans/dd4f6c95-ea2e-4cc2-a375-1e9a36a63a59/materialize-tasks with {"incident_id":"ab8eba10-9a07-4181-9f5f-83bc2f72e702"} and got 200 {"created":[{"title":"Pre-position generators (UAT)","status":"Open"}],"skipped":[]}.
+errors: None — this is not a crash/error, it is a missing feature (absent UI control).
+reproduction: UAT Test 1 in .planning/phases/03-plans-tasks-resource-requests/03-UAT.md — "Materialize-Tasks UI Trigger Check". Sign in as planner@epmp.local / devpass123, open plan "UAT-MATERIALIZE-READY Generator Pre-Positioning Plan" (id dd4f6c95-ea2e-4cc2-a375-1e9a36a63a59, has 1 linked task template "Pre-position generators (UAT)" on section "Generator pre-positioning"), then open an incident (e.g. "UAT-ASSIGN-ROLE Default Agency Flood", id ab8eba10-9a07-4181-9f5f-83bc2f72e702) and look for a one-click task-creation-from-template control.
+started: Discovered during Phase 3 UAT (2026-11-17). Also independently documented by 03-VERIFICATION.md (the phase's own automated verifier) and by the phase's own e2e test comments (plan-to-task-materialization.spec.ts lines 39-48, which explicitly states no UI button exists and drives the endpoint via raw browser-console fetch() instead of a real click).
+
+## Eliminated
+
+- hypothesis: "Maybe the UI control exists but is hidden/disabled behind a feature flag or permission check"
+  evidence: "03-VERIFICATION.md documents a repo-wide grep across frontend/app/src for 'materialize-tasks' found only the e2e spec's raw fetch() call -- zero UI call sites. Confirmed independently by reading PlanDetail.tsx (331 lines, full content) and IncidentWorkspace.tsx (376 lines, full content) end to end: no button/menu/affordance anywhere invokes this endpoint."
+  timestamp: "2026-11-17T00:10:00Z"
+
+## Evidence
+
+- timestamp: "2026-11-17T00:05:00Z"
+  checked: "backend/src/modules/plans/materialize.ts (full 171 lines)"
+  found: "POST /api/v1/plans/:id/materialize-tasks is fully implemented: validates plan.status==='Approved' (409 otherwise), enforces jurisdiction-scope on both plan and target incident, resolves default_owner_role to a concrete owner_id, computes due_at from incident.opened_at + offset, calls TaskService.createFromTemplate in a transaction, returns {created, skipped}. No bugs found -- this endpoint is correct and production-ready."
+  implication: "Backend is NOT the gap. Confirms prior_cause's claim that the endpoint is fully functional."
+
+- timestamp: "2026-11-17T00:06:00Z"
+  checked: "backend/migrations/1700000000002_incident-ops-schema.js (incidents table DDL, full file)"
+  found: "incidents table columns: id, name, type, severity, jurisdiction_id, description, activation_level, status, opened_at, closed_at, location (GEOGRAPHY), created_by, created_at, updated_at. NO plan_id or any column referencing the plans table anywhere in this migration or any other incident-ops migration."
+  implication: "Confirms prior_cause: there is no schema-level way for an 'incident' to reference a 'plan'. The roadmap's literal premise ('when an incident references that plan') has zero data-model support. This is a SEPARATE gap from the missing UI button -- even with a button, there's no stored association; the button's flow would have to be 'select a plan, then select/search an incident' (which is exactly what materialize.ts's POST body already expects: {incident_id, section_ids?}), not 'view an incident and see its linked plan.'"
+
+- timestamp: "2026-11-17T00:08:00Z"
+  checked: "frontend/app/src/pages/plans/PlanDetail.tsx (full 331 lines)"
+  found: "Renders a 'Link tasks' ghost button per section (added in 03-08 as a fix) which opens LinkTasksModal -- this covers the AUTHORING side (section -> template linkage) only. No 'Materialize tasks' button, no incident-picker, no call to apiPost('/api/v1/plans/{id}/materialize-tasks', ...) anywhere in this file."
+  implication: "Confirms the PlanDetail screen -- the most natural home for a 'Materialize tasks' trigger (user is already looking at an Approved plan with linked templates) -- has no such control."
+
+- timestamp: "2026-11-17T00:09:00Z"
+  checked: "frontend/app/src/pages/incidents/IncidentWorkspace.tsx (full 376 lines)"
+  found: "PageHeader actions include 'Generate SITREP' (deliberate no-op placeholder, Phase 4/6 scope), 'New task' (navigates to CreateTask.tsx, a blank manual form), and conditionally 'Close incident'. No action/affordance offers 'this incident's linked plan has N task templates -- create them now.' Tasks tab renders real TaskList; Resources tab renders real ResourceRequestList. Comments throughout are explicit and self-aware about what IS and ISN'T built (e.g., line 107-124 doc comment explicitly describes 03-08's scope as replacing TWO Phase-2 placeholders, SITREP correctly deferred) -- materialize-tasks is never mentioned as in-scope anywhere in this file's comments."
+  implication: "Confirms IncidentWorkspace -- the other natural home per the roadmap's 'when viewing an incident' language -- also has no control."
+
+- timestamp: "2026-11-17T00:11:00Z"
+  checked: "frontend/app/src/pages/tasks-resources/CreateTask.tsx (full 265 lines)"
+  found: "Line 74-84: explicit code comment states 'the plan_section Combobox's options would come from the pre-filled incident's referenced plan, if any -- but TechArch's incidents row shape carries no linked plan foreign key this form could follow to reach a specific plan's sections... so there is no real source to query yet.' planSectionOptionsSource is hardcoded to an empty array, making the Combobox always disabled. This is the SAME root schema gap found independently in the migration file."
+  implication: "Triple-confirms (migration + this comment + 03-UAT symptom text) that the incidents->plans FK gap is real and was already recognized by the engineer who wrote 03-06's CreateTask.tsx, but correctly scoped out as 03-06's own responsibility to fix (it's a schema change, not a form-rendering change)."
+
+- timestamp: "2026-11-17T00:13:00Z"
+  checked: "project_specs/FRD/F03-plans-playbooks.md line 57, F04-tasks-resource-requests.md Process step 1 (line 40), TechArch/02-data-model.md lines 36-39 (ER diagram)"
+  found: "FRD F03 line 57 states the EXACT roadmap language: 'Task templates available for one-click materialization into actual tasks when an incident references the plan.' FRD F04 Process step 1 similarly describes '...or materialized from a plan's linked task template (F3) when an incident activates.' TechArch's ER diagram shows plan_task_templates --materializes--> tasks, with NO edge at all from incidents to plans -- the ER diagram itself never depicts an incident-to-plan relationship, only template-to-task."
+  implication: "The FRD's own prose ALREADY assumes a plan<->incident relationship exists ('when an incident references the plan') but NEITHER the FRD's own data outputs section NOR TechArch's ER diagram NOR TechArch's literal endpoint table ever define what that relationship concretely is (no incident.plan_id, no join table, nothing). This is an FRD/TechArch-level spec gap, not just an implementation gap -- the spec describes a UX premise it never defines the data model for. 03-03-PLAN.md's Task 3 description (line 245) independently corroborates this: 'TechArch's endpoint table lists link-tasks for the AUTHORING side but has no explicit literal endpoint for the MATERIALIZATION side' -- the spec authors already knew TechArch's endpoint table was incomplete for this exact feature, and materialize-tasks itself was added as a judgment call filling an acknowledged gap. No plan ever similarly added the missing incidents->plans schema link or its corresponding UI trigger."
+
+- timestamp: "2026-11-17T00:16:00Z"
+  checked: ".planning/phases/03-plans-tasks-resource-requests/03-03-PLAN.md (Task 3 objective/action), 03-03-SUMMARY.md, 03-05-PLAN.md/SUMMARY.md, 03-08-PLAN.md (Task 2 action, step 5), 03-08-SUMMARY.md (key-decisions), 03-VERIFICATION.md (full gap writeup)"
+  found: "03-03 built ONLY the backend endpoint (explicitly scoped: 'Output: ...full Draft->Review->Approved->link-tasks->materialize API surface' -- API surface only, no UI mentioned). 03-05 built PlanDetail/PlanEditor/LinkTasksModal/ReviewPlanModal -- its own feature_dependencies section (line 83) says 'Enables: 03-08's end-to-end Playwright test exercises the full plan-to-task-materialization flow through this plan's screens' but 03-05's own task list (Task 1-3) never includes a materialize-tasks button; it stops at link-tasks (the authoring/linking half). 03-08 (Phase 3's TERMINAL integration-proof plan) is the one place the gap becomes explicit and self-aware: Task 2 step 5 literally instructs the AI to 'trigger materialization (if no dedicated UI button exists yet... check 03-05's actual Task list; if absent, call the endpoint directly via the test's own apiPost helper... document this explicitly... noting a UI Materialize tasks button as a reasonable future enhancement 03-05 didn't literally build).' 03-08-SUMMARY.md's key-decisions section confirms this exact path was taken. 03-VERIFICATION.md (the phase's own automated verifier, run after 03-08 completed) independently re-confirms the gap and flags it as the ONE blocking partial-criterion."
+  implication: "Pinpoints the EXACT scope boundary: 03-03-PLAN.md explicitly scoped itself to backend-only ('API surface', no mention of UI). 03-05-PLAN.md built the plan-authoring/linking UI but its task list never included a 'Materialize tasks' button -- an omission from that plan's own task breakdown, not a documented decision to exclude it (unlike e.g. PlanDetail's 'Import new version' which IS explicitly deferred with a disabled button + comment citing F17/v2 scope). 03-08-PLAN.md is where a human plan-author pre-emptively anticipated this exact gap in its own instructions ('if no dedicated UI button exists yet') and explicitly authorized working around it via raw fetch() rather than requiring 03-08 to build the missing button itself -- meaning 03-08 was written with full awareness of the gap and chose to defer closing it, documenting the choice as 'a reasonable future enhancement' three separate times (03-05-SUMMARY implicitly, 03-08-SUMMARY explicitly, 03-VERIFICATION explicitly). No subsequent plan in the 9-plan Phase 3 sequence (03-09 was operating-picture/resource markers, unrelated) ever revisited this. The gap was never silently introduced -- it was explicitly named and knowingly deferred three times, but never assigned to a plan that actually closed it."

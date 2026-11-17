@@ -1,9 +1,9 @@
 ---
-status: complete
+status: diagnosed
 phase: 03-plans-tasks-resource-requests
 source: [03-VERIFICATION.md]
 started: 2026-11-17T18:10:48Z
-updated: 2026-11-17T20:41:41Z
+updated: 2026-11-17T20:48:00Z
 ---
 
 ## Current Test
@@ -71,12 +71,17 @@ per_test:
   test: 1
   source: self_check
   confidence: proven
-  root_cause: ""
+  root_cause: "Two compounding, independently-confirmed scope-boundary omissions, not bugs. (1) UI gap: no plan in Phase 3's 9-plan sequence ever included a task to build a materialize-tasks UI control — 03-03-PLAN.md scoped materialize-tasks as backend-API-only; 03-05-PLAN.md built the plan-authoring/linking UI but never included a materialize-trigger button; 03-08-PLAN.md (the phase's terminal integration-proof plan) is where the gap became self-aware, pre-emptively authorizing its own e2e test to call the endpoint via raw fetch() 'if no dedicated UI button exists yet.' (2) Schema gap: incidents (backend/migrations/1700000000002_incident-ops-schema.js) has zero columns referencing plans — confirmed by direct read, and independently confirmed by CreateTask.tsx's own code comment hardcoding planSectionOptionsSource=[]. TechArch's ER diagram never depicts an incident->plan edge either, only plan_task_templates->tasks — this is an FRD/TechArch spec-level gap, not just an implementation oversight. materialize.ts's actual API shape ({incident_id, section_ids?}) works around the missing FK by having the user supply the target incident explicitly (a plan-initiated flow) rather than the incident-initiated flow the roadmap's literal language implies."
   artifacts:
     - path: "frontend/app/src/pages/plans/PlanDetail.tsx"
-      issue: "No 'Materialize tasks' button or any control that calls POST /api/v1/plans/{id}/materialize-tasks"
+      issue: "No 'Materialize tasks' button or any control that calls POST /api/v1/plans/{id}/materialize-tasks — most natural home for a plan-initiated flow, requires no schema change"
     - path: "frontend/app/src/pages/incidents/IncidentWorkspace.tsx"
-      issue: "No affordance offering a linked plan's task templates for one-click creation when viewing an incident"
+      issue: "No reciprocal affordance for an incident-initiated flow ('this incident's plan has N linked templates — create them now'); would require the schema change below first"
+    - path: "frontend/app/src/pages/tasks-resources/CreateTask.tsx"
+      issue: "planSectionOptionsSource hardcoded to an empty array (line ~84) — symptom of the same incidents->plans schema gap"
+    - path: "backend/migrations/1700000000002_incident-ops-schema.js"
+      issue: "incidents table has no plan_id / linked-plan column — FRD's 'when an incident references that plan' premise has no schema support anywhere in the phase"
   missing:
-    - "A UI control (e.g. on PlanDetail or IncidentWorkspace) that calls POST /api/v1/plans/{id}/materialize-tasks against a real incident, surfacing created/skipped results to the user"
-  debug_session: ""
+    - "Minimal/correct-now fix (no schema change): a 'Materialize tasks' button on PlanDetail.tsx (visible when plan.status === 'Approved' and any section has linked templates) that opens a modal with an incident Combobox (same pattern CreateTask.tsx already uses) and calls POST /api/v1/plans/{id}/materialize-tasks, surfacing {created, skipped} to the user"
+    - "Full roadmap-literal fix (larger, optional): add incidents.plan_id (nullable FK), surface it in incident create/edit, add the reciprocal affordance in IncidentWorkspace.tsx, and wire CreateTask.tsx's currently-empty plan-section lookup to a real query"
+  debug_session: ".planning/debug/materialize-tasks-ui-trigger-missing.md"
