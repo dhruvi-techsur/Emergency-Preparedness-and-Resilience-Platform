@@ -75,6 +75,14 @@ test.describe.serial('Plans & playbooks — authoring, approval workflow, readin
     await signInAsPlanningChief(page);
     await page.goto(`/plans/${planId}`);
 
+    // 03-10 gap-closure addition: this plan is Review-status with zero
+    // linked task templates — the "Materialize tasks" PageHeader action
+    // (added by 03-10) must be absent here. Catches any regression where
+    // the button's visibility gate (plan.status === 'Approved' &&
+    // hasEligibleSections) is loosened, which would otherwise let a user
+    // click into a 409 INVALID_STATUS_TRANSITION or materialize nothing.
+    await expect(page.getByRole('button', { name: 'Materialize tasks' })).not.toBeVisible();
+
     // Per this plan's own documented scope note on PlanDetail.tsx (and
     // its threat_model T-03-11): the frontend does NOT independently
     // check "review" permission beyond rendering the button when
