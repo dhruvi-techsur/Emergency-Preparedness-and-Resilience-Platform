@@ -3,7 +3,7 @@ phase: 02
 gate_status: passed
 build_command: "rc=0; npm run build || rc=$?; (cd frontend/design-system && npm run build) || rc=$?; (cd frontend/app && npm run build) || rc=$?; exit $rc"
 test_command: "rc=0; npm test || rc=$?; (cd frontend/design-system && npm test) || rc=$?; exit $rc"
-last_updated: 2026-11-17T11:15:16Z
+last_updated: 2026-11-17T11:21:59Z
 tests_disabled_during_fixes: none
 shadowed_sources: 0
 review_blockers_open: 0
