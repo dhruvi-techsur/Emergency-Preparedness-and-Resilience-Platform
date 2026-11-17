@@ -1,9 +1,9 @@
 ---
-status: complete
+status: diagnosed
 phase: 02-incident-command-operating-picture
 source: [02-VERIFICATION.md, 02-05-SUMMARY.md, 02-06-SUMMARY.md, 02-07-SUMMARY.md]
 started: 2026-11-17T10:32:47Z
-updated: 2026-11-17T10:40:00Z
+updated: 2026-11-17T10:42:00Z
 ---
 
 ## Current Test
