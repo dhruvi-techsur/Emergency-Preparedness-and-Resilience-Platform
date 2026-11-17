@@ -3,9 +3,9 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 03-07-PLAN.md
-last_updated: "2026-11-17T13:49:31.539Z"
-last_activity: "2026-11-17 — Plan 03-07 complete (seed.ts extended with 12 idempotent role_permissions grant blocks for the plans/tasks/resource_requests feature-permissions 03-01/03-03/03-04 introduced, granted to the FRD-named roles — incident_commander, eoc_director, planning_logistics_chief, field_responder — with the review/approve action-levels deliberately split onto a DIFFERENT role than create/edit so 03-03/03-08's cross-reviewer and segregation-of-duties Playwright tests are satisfiable against real seeded accounts, not just test-only fixture rows. Verified idempotent by running npm run seed twice (12 inserted first run, 0 second run, 0 duplicate-row groups). New integration-test describe block in incidents.test.ts proves the real seed grants authorize real HTTP requests through OPA end-to-end: incident_commander's tasks grant -> POST /api/v1/tasks 201; planning_logistics_chief's resource_requests approve grant -> POST .../approve on a DIFFERENT user's request 200 not 403; field_responder's view-only tasks grant -> GET 200, POST create 403. 0 deviations — plan executed exactly as written. Full backend suite (10 files, 52 tests) green with zero regressions; tsc --noEmit and npm run build both clean)"
+stopped_at: Completed 03-03-PLAN.md
+last_updated: "2026-11-17T13:50:19.325Z"
+last_activity: "2026-11-17 — Plan 03-03 complete (new `plans` Fastify module built from scratch: plans/plan_versions/plan_sections/plan_task_templates/document_links schema per TechArch 02c exact DDL, closing 03-01's deferred tasks.plan_section_id FK. Draft->Review->Approved workflow with immutable append-only version history — content_snapshot written at submit-review time, never UPDATEd afterward; no-self-approval enforced at two layers (app check returning 403 SELF_APPROVAL_BLOCKED before any write, backstopped by chk_no_self_approval DB CHECK constraint). link-tasks deliberately status-unrestricted (section metadata, not plan content) — proven directly by linking a template to an Approved plan and asserting 204 not 409. materialize-tasks calls 03-01's TaskService.createFromTemplate cross-module inside one transaction, with role-to-user owner resolution and incident.opened_at-relative due-date resolution; the materialized task is independently readable via 03-01's own GET /api/v1/tasks. 1 auto-fixed deviation (Rule 3 — migration renumbered 1700000000005->1700000000007 to avoid an out-of-order conflict with 03-02's already-applied 1700000000006 in this sandbox's database; DDL content unchanged). All 3 new integration tests passed first run. Full backend suite (11 files, 55 tests) green with zero regressions against 03-07's parallel-landed seed changes; tsc --noEmit and npm run build both clean)"
 progress:
   total_phases: 6
   completed_phases: 2
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 3 of 6 (Plans, Tasks & Resource Requests) — IN PROGRESS
-Plan: 4 of 9 complete in current phase (03-01, 03-02, 03-04, 03-07 — waves 1/2/3 — COMPLETE; 03-03 executing in parallel; 03-05, 03-06, 03-08, 03-09 remaining)
-Status: 03-07 complete (seed grants for plans/tasks/resource_requests role_permissions, proven end-to-end through real OPA policy checks) — ready for 03-05/03-06 frontend plans once 03-03 lands
-Last activity: 2026-11-17 — Plan 03-07 complete (seed.ts extended with 12 idempotent role_permissions grant blocks for the plans/tasks/resource_requests feature-permissions 03-01/03-03/03-04 introduced, granted to the FRD-named roles — incident_commander, eoc_director, planning_logistics_chief, field_responder — with the review/approve action-levels deliberately split onto a DIFFERENT role than create/edit so 03-03/03-08's cross-reviewer and segregation-of-duties Playwright tests are satisfiable against real seeded accounts, not just test-only fixture rows. Verified idempotent by running npm run seed twice (12 inserted first run, 0 second run, 0 duplicate-row groups). New integration-test describe block in incidents.test.ts proves the real seed grants authorize real HTTP requests through OPA end-to-end: incident_commander's tasks grant -> POST /api/v1/tasks 201; planning_logistics_chief's resource_requests approve grant -> POST .../approve on a DIFFERENT user's request 200 not 403; field_responder's view-only tasks grant -> GET 200, POST create 403. 0 deviations — plan executed exactly as written. Full backend suite (10 files, 52 tests) green with zero regressions; tsc --noEmit and npm run build both clean)
+Plan: 5 of 9 complete in current phase (03-01, 03-02, 03-03, 03-04, 03-07 — waves 1/2/3 — COMPLETE; 03-05, 03-06, 03-08, 03-09 remaining)
+Status: 03-03 complete (plans module: Draft->Review->Approved workflow, no-self-approval, link-tasks, task materialization) — ready for 03-05/03-06 frontend plans
+Last activity: 2026-11-17 — Plan 03-03 complete (new `plans` Fastify module built from scratch: plans/plan_versions/plan_sections/plan_task_templates/document_links schema per TechArch 02c exact DDL, closing 03-01's deferred tasks.plan_section_id FK. Draft->Review->Approved workflow with immutable append-only version history — content_snapshot written at submit-review time, never UPDATEd afterward; no-self-approval enforced at two layers (app check returning 403 SELF_APPROVAL_BLOCKED before any write, backstopped by chk_no_self_approval DB CHECK constraint). link-tasks deliberately status-unrestricted (section metadata, not plan content) — proven directly by linking a template to an Approved plan and asserting 204 not 409. materialize-tasks calls 03-01's TaskService.createFromTemplate cross-module inside one transaction, with role-to-user owner resolution and incident.opened_at-relative due-date resolution; the materialized task is independently readable via 03-01's own GET /api/v1/tasks. 1 auto-fixed deviation (Rule 3 — migration renumbered 1700000000005->1700000000007 to avoid an out-of-order conflict with 03-02's already-applied 1700000000006 in this sandbox's database; DDL content unchanged). All 3 new integration tests passed first run. Full backend suite (11 files, 55 tests) green with zero regressions against 03-07's parallel-landed seed changes; tsc --noEmit and npm run build both clean)
 
 Progress: [███░░░░░░░] 33%
 
@@ -78,6 +78,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 03 P02 | 15 min | 3 tasks | 5 files |
 | Phase 03 P04 | 20 min | 2 tasks | 3 files |
 | Phase 03 P07 | 25 min | 2 tasks | 2 files |
+| Phase 03 P03 | 6 min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -154,6 +155,7 @@ Recent decisions affecting current work:
 - [Phase 03-04]: save_as_draft:true added as a documented extension beyond the FRD's literal request shape, giving Draft a real reachable resting state since the UX mockup's Create/Edit form shows no separate "save as draft" action
 - [Phase 03-07]: resource_requests 'approve' action-level granted ONLY to planning_logistics_chief (not incident_commander/eoc_director) — command staff can create a request but logistics alone approves it, per the FRD's explicit role split
 - [Phase 03-07]: plans 'review' action-level granted to eoc_director specifically, SEPARATE from planning_logistics_chief's create/edit grant — makes the no-self-approval workflow satisfiable with real seeded accounts
+- [Phase 03-03]: materialize-tasks split into its own file (materialize.ts) rather than appended to plans.ts, once plans.ts crossed ~400 lines — Plan's own stated discretion for file organization once the single-file size grows past the plan's 2-3-task budget comfort
 
 ### Pending Todos
 
@@ -165,6 +167,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-17T13:49:31.538Z
-Stopped at: Completed 03-07-PLAN.md
+Last session: 2026-11-17T13:50:19.324Z
+Stopped at: Completed 03-03-PLAN.md
 Resume file: None
