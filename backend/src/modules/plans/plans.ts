@@ -55,16 +55,34 @@ function shapePlanListRow(row: PlanRow) {
   };
 }
 
-async function fetchPlanRow(client: { query: typeof query } | typeof query, planId: string): Promise<PlanRow | null> {
+// `jurisdictionScope`, when passed, restricts the lookup to plans whose
+// jurisdiction_id is in the caller's own jurisdiction_scope — same
+// app-layer enforcement pattern as incidents.ts's fetchIncidentForMutation
+// (F-01 fix, 03-SECURITY.md). Omitting it (undefined) means "no
+// jurisdiction restriction", used only by call sites that have already
+// established the caller is allowed to see this exact plan (e.g. the
+// POST /plans creation round-trip fetching the plan it just created on
+// the caller's own behalf).
+async function fetchPlanRow(
+  client: { query: typeof query } | typeof query,
+  planId: string,
+  jurisdictionScope?: string[],
+): Promise<PlanRow | null> {
   const runner = typeof client === 'function' ? client : (client as { query: typeof query }).query;
+  const params: unknown[] = [planId];
+  let scopeClause = '';
+  if (jurisdictionScope) {
+    params.push(jurisdictionScope);
+    scopeClause = ` AND p.jurisdiction_id = ANY($${params.length})`;
+  }
   const rows = await runner<PlanRow>(
     `SELECT p.id, p.name, p.type, p.status, p.jurisdiction_id, j.name AS jurisdiction_name,
             p.current_version, p.owner_id, u.name AS owner_name, p.source_document_ref
      FROM plans p
      JOIN jurisdictions j ON j.id = p.jurisdiction_id
      JOIN users u ON u.id = p.owner_id
-     WHERE p.id = $1`,
-    [planId],
+     WHERE p.id = $1${scopeClause}`,
+    params,
   );
   return rows[0] ?? null;
 }
@@ -109,8 +127,8 @@ async function fetchVersionHistory(planId: string) {
 // interface: base Plan fields + sections (each carrying its
 // linked_task_templates ids, ready for one-click materialization) +
 // version_history ordered newest-first.
-async function fetchPlanDetail(planId: string) {
-  const plan = await fetchPlanRow(query, planId);
+async function fetchPlanDetail(planId: string, jurisdictionScope?: string[]) {
+  const plan = await fetchPlanRow(query, planId, jurisdictionScope);
   if (!plan) return null;
 
   const sections = await fetchPlanSections(planId);
@@ -148,9 +166,12 @@ export default async function plansRoutes(app: FastifyInstance) {
       const page_size = Math.max(1, parseInt(req.query.page_size ?? '25', 10) || 25);
       const offset = (page - 1) * page_size;
 
-      const conditions: string[] = [];
-      const params: unknown[] = [];
-      let idx = 1;
+      // Jurisdiction-scope enforcement (F-01 fix, 03-SECURITY.md): every
+      // plans-list caller only ever sees plans in their own
+      // jurisdiction_scope, mirroring incidents.ts's list-route filter.
+      const conditions: string[] = ['p.jurisdiction_id = ANY($1)'];
+      const params: unknown[] = [req.epmpUser!.jurisdiction_scope];
+      let idx = 2;
 
       if (type) {
         conditions.push(`p.type = $${idx++}`);
@@ -251,7 +272,10 @@ export default async function plansRoutes(app: FastifyInstance) {
     '/api/v1/plans/:id',
     { preHandler: requirePermission('plans', 'view') },
     async (req, reply) => {
-      const detail = await fetchPlanDetail(req.params.id);
+      // Jurisdiction-scope enforcement (F-01 fix, 03-SECURITY.md): a
+      // caller can only read a plan in their own jurisdiction_scope,
+      // mirroring incidents.ts's fetchIncidentForMutation pattern.
+      const detail = await fetchPlanDetail(req.params.id, req.epmpUser!.jurisdiction_scope);
       if (!detail) {
         return reply.code(404).send(PLAN_NOT_FOUND);
       }
@@ -276,7 +300,9 @@ export default async function plansRoutes(app: FastifyInstance) {
       const { id } = req.params;
       const { name, jurisdiction_id, sections } = req.body ?? ({} as never);
 
-      const existing = await fetchPlanRow(query, id);
+      // Jurisdiction-scope enforcement (F-01 fix, 03-SECURITY.md): a
+      // caller can only edit a plan in their own jurisdiction_scope.
+      const existing = await fetchPlanRow(query, id, req.epmpUser!.jurisdiction_scope);
       if (!existing) {
         return reply.code(404).send(PLAN_NOT_FOUND);
       }
@@ -353,7 +379,7 @@ export default async function plansRoutes(app: FastifyInstance) {
         }
       }
 
-      const detail = await fetchPlanDetail(id);
+      const detail = await fetchPlanDetail(id, req.epmpUser!.jurisdiction_scope);
       return reply.code(200).send(detail);
     },
   );
@@ -363,7 +389,8 @@ export default async function plansRoutes(app: FastifyInstance) {
     { preHandler: requirePermission('plans', 'edit') },
     async (req, reply) => {
       const { id } = req.params;
-      const existing = await fetchPlanRow(query, id);
+      // Jurisdiction-scope enforcement (F-01 fix, 03-SECURITY.md).
+      const existing = await fetchPlanRow(query, id, req.epmpUser!.jurisdiction_scope);
       if (!existing) {
         return reply.code(404).send(PLAN_NOT_FOUND);
       }
@@ -371,7 +398,7 @@ export default async function plansRoutes(app: FastifyInstance) {
       // Submitting an already-Review/Approved plan is a no-op returning
       // the current state, not an error — only act when status is Draft.
       if (existing.status !== 'Draft') {
-        const detail = await fetchPlanDetail(id);
+        const detail = await fetchPlanDetail(id, req.epmpUser!.jurisdiction_scope);
         return reply.code(200).send(detail);
       }
 
@@ -418,7 +445,7 @@ export default async function plansRoutes(app: FastifyInstance) {
         client.release();
       }
 
-      const detail = await fetchPlanDetail(id);
+      const detail = await fetchPlanDetail(id, req.epmpUser!.jurisdiction_scope);
       return reply.code(200).send(detail);
     },
   );
@@ -437,7 +464,10 @@ export default async function plansRoutes(app: FastifyInstance) {
       const { id } = req.params;
       const { review_action, comments } = req.body ?? ({} as never);
 
-      const existing = await fetchPlanRow(query, id);
+      // Jurisdiction-scope enforcement (F-01 fix, 03-SECURITY.md): a
+      // caller holding plans:review can only review a plan in their own
+      // jurisdiction_scope.
+      const existing = await fetchPlanRow(query, id, req.epmpUser!.jurisdiction_scope);
       if (!existing) {
         return reply.code(404).send(PLAN_NOT_FOUND);
       }
@@ -508,7 +538,7 @@ export default async function plansRoutes(app: FastifyInstance) {
         });
       }
 
-      const detail = await fetchPlanDetail(id);
+      const detail = await fetchPlanDetail(id, req.epmpUser!.jurisdiction_scope);
       return reply.code(200).send(detail);
     },
   );
@@ -539,7 +569,8 @@ export default async function plansRoutes(app: FastifyInstance) {
       const { id, sectionId } = req.params;
       const { task_template_ids, new_template } = req.body ?? ({} as never);
 
-      const plan = await fetchPlanRow(query, id);
+      // Jurisdiction-scope enforcement (F-01 fix, 03-SECURITY.md).
+      const plan = await fetchPlanRow(query, id, req.epmpUser!.jurisdiction_scope);
       if (!plan) {
         return reply.code(404).send(PLAN_NOT_FOUND);
       }

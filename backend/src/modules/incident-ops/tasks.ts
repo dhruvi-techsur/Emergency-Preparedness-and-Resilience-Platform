@@ -81,15 +81,36 @@ function isValidTransition(current: TaskStatus, next: TaskStatus, requiresApprov
   }
 }
 
-async function fetchTaskRow(client: { query: typeof query } | typeof query, taskId: string): Promise<TaskRow | null> {
+// `jurisdictionScope`, when passed, restricts the lookup to tasks whose
+// linked incident's jurisdiction_id is in the caller's own
+// jurisdiction_scope — same app-layer enforcement pattern as incidents.ts's
+// fetchIncidentForMutation (F-01 fix, 03-SECURITY.md). tasks has no
+// jurisdiction_id column of its own, so the scope check joins through
+// incident_id -> incidents.jurisdiction_id (same join pattern
+// operating-picture.ts's resource-marker query already uses). A standalone
+// task (incident_id IS NULL, a documented valid resting state) carries no
+// jurisdiction data at all and is left unscoped — there is no jurisdiction
+// boundary to enforce against a task that isn't linked to any incident.
+async function fetchTaskRow(
+  client: { query: typeof query } | typeof query,
+  taskId: string,
+  jurisdictionScope?: string[],
+): Promise<TaskRow | null> {
   const runner = typeof client === 'function' ? client : (client as { query: typeof query }).query;
+  const params: unknown[] = [taskId];
+  let scopeClause = '';
+  if (jurisdictionScope) {
+    params.push(jurisdictionScope);
+    scopeClause = ` AND (t.incident_id IS NULL OR i.jurisdiction_id = ANY($${params.length}))`;
+  }
   const rows = await runner<TaskRow>(
     `SELECT t.id, t.title, t.description, t.status, t.owner_id, u.name AS owner_name,
             t.incident_id, t.plan_section_id, t.due_at, t.requires_approval
      FROM tasks t
      JOIN users u ON u.id = t.owner_id
-     WHERE t.id = $1`,
-    [taskId],
+     LEFT JOIN incidents i ON i.id = t.incident_id
+     WHERE t.id = $1${scopeClause}`,
+    params,
   );
   return rows[0] ?? null;
 }
@@ -169,9 +190,13 @@ export default async function tasksRoutes(app: FastifyInstance) {
       const page_size = Math.max(1, parseInt(req.query.page_size ?? '25', 10) || 25);
       const offset = (page - 1) * page_size;
 
-      const conditions: string[] = [];
-      const params: unknown[] = [];
-      let idx = 1;
+      // Jurisdiction-scope enforcement (F-01 fix, 03-SECURITY.md): every
+      // tasks-list caller only ever sees tasks whose linked incident is
+      // in their own jurisdiction_scope; standalone tasks (incident_id
+      // IS NULL) carry no jurisdiction data and are left unfiltered.
+      const conditions: string[] = ['(t.incident_id IS NULL OR i.jurisdiction_id = ANY($1))'];
+      const params: unknown[] = [req.epmpUser!.jurisdiction_scope];
+      let idx = 2;
 
       if (owner) {
         conditions.push(`t.owner_id = $${idx++}`);
@@ -198,7 +223,7 @@ export default async function tasksRoutes(app: FastifyInstance) {
       const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
       const countRows = await query<{ count: string }>(
-        `SELECT COUNT(*) AS count FROM tasks t ${whereClause}`,
+        `SELECT COUNT(*) AS count FROM tasks t LEFT JOIN incidents i ON i.id = t.incident_id ${whereClause}`,
         params,
       );
       const total = parseInt(countRows[0]?.count ?? '0', 10);
@@ -210,6 +235,7 @@ export default async function tasksRoutes(app: FastifyInstance) {
                 t.incident_id, t.plan_section_id, t.due_at, t.requires_approval
          FROM tasks t
          JOIN users u ON u.id = t.owner_id
+         LEFT JOIN incidents i ON i.id = t.incident_id
          ${whereClause}
          ORDER BY t.due_at ASC
          LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
@@ -337,7 +363,10 @@ export default async function tasksRoutes(app: FastifyInstance) {
     '/api/v1/tasks/:id',
     { preHandler: requirePermission('tasks', 'view') },
     async (req, reply) => {
-      const detail = await fetchTaskRow(query, req.params.id);
+      // Jurisdiction-scope enforcement (F-01 fix, 03-SECURITY.md): a
+      // caller can only read a task whose linked incident is in their
+      // own jurisdiction_scope (standalone tasks are left unscoped).
+      const detail = await fetchTaskRow(query, req.params.id, req.epmpUser!.jurisdiction_scope);
       if (!detail) {
         return reply.code(404).send(RECORD_NOT_FOUND);
       }
@@ -369,7 +398,8 @@ export default async function tasksRoutes(app: FastifyInstance) {
           message: 'Assign an owner before creating this task.',
         });
       }
-      const existing = await fetchTaskRow(query, id);
+      // Jurisdiction-scope enforcement (F-01 fix, 03-SECURITY.md).
+      const existing = await fetchTaskRow(query, id, req.epmpUser!.jurisdiction_scope);
       if (!existing) {
         return reply.code(404).send(RECORD_NOT_FOUND);
       }
@@ -389,7 +419,8 @@ export default async function tasksRoutes(app: FastifyInstance) {
       const { id } = req.params;
       const { new_status } = req.body ?? ({} as never);
 
-      const existing = await fetchTaskRow(query, id);
+      // Jurisdiction-scope enforcement (F-01 fix, 03-SECURITY.md).
+      const existing = await fetchTaskRow(query, id, req.epmpUser!.jurisdiction_scope);
       if (!existing) {
         return reply.code(404).send(RECORD_NOT_FOUND);
       }

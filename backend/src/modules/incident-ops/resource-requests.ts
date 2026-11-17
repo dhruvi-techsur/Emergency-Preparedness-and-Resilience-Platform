@@ -41,19 +41,36 @@ function shapeResourceRequestRow(row: ResourceRequestRow) {
   };
 }
 
+// `jurisdictionScope`, when passed, restricts the lookup to resource
+// requests whose linked incident's jurisdiction_id is in the caller's own
+// jurisdiction_scope — same app-layer enforcement pattern as incidents.ts's
+// fetchIncidentForMutation (F-01 fix, 03-SECURITY.md). resource_requests
+// has no jurisdiction_id column of its own, so the scope check joins
+// through incident_id -> incidents.jurisdiction_id (same join pattern
+// operating-picture.ts's resource-marker query already uses; incident_id
+// is NOT NULL on this table, unlike tasks, so no unscoped-standalone-row
+// carve-out is needed here).
 async function fetchResourceRequestRow(
   client: { query: typeof query } | typeof query,
   id: string,
+  jurisdictionScope?: string[],
 ): Promise<ResourceRequestRow | null> {
   const runner = typeof client === 'function' ? client : (client as { query: typeof query }).query;
+  const params: unknown[] = [id];
+  let scopeClause = '';
+  if (jurisdictionScope) {
+    params.push(jurisdictionScope);
+    scopeClause = ` AND i.jurisdiction_id = ANY($${params.length})`;
+  }
   const rows = await runner<ResourceRequestRow>(
     `SELECT r.id, r.resource_type, r.description, r.quantity, r.status, r.incident_id, r.task_id,
             r.requesting_role, r.needed_by, r.requested_by AS requested_by_id, u.name AS requested_by_name,
             r.decline_reason, r.assigned_to
      FROM resource_requests r
      JOIN users u ON u.id = r.requested_by
-     WHERE r.id = $1`,
-    [id],
+     JOIN incidents i ON i.id = r.incident_id
+     WHERE r.id = $1${scopeClause}`,
+    params,
   );
   return rows[0] ?? null;
 }
@@ -90,9 +107,12 @@ export default async function resourceRequestRoutes(app: FastifyInstance) {
       const page_size = Math.max(1, parseInt(req.query.page_size ?? '25', 10) || 25);
       const offset = (page - 1) * page_size;
 
-      const conditions: string[] = [];
-      const params: unknown[] = [];
-      let idx = 1;
+      // Jurisdiction-scope enforcement (F-01 fix, 03-SECURITY.md): every
+      // resource-requests-list caller only ever sees requests whose
+      // linked incident is in their own jurisdiction_scope.
+      const conditions: string[] = ['i.jurisdiction_id = ANY($1)'];
+      const params: unknown[] = [req.epmpUser!.jurisdiction_scope];
+      let idx = 2;
 
       if (status) {
         conditions.push(`r.status = $${idx++}`);
@@ -110,7 +130,7 @@ export default async function resourceRequestRoutes(app: FastifyInstance) {
       const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
       const countRows = await query<{ count: string }>(
-        `SELECT COUNT(*) AS count FROM resource_requests r ${whereClause}`,
+        `SELECT COUNT(*) AS count FROM resource_requests r JOIN incidents i ON i.id = r.incident_id ${whereClause}`,
         params,
       );
       const total = parseInt(countRows[0]?.count ?? '0', 10);
@@ -123,6 +143,7 @@ export default async function resourceRequestRoutes(app: FastifyInstance) {
                 r.decline_reason, r.assigned_to
          FROM resource_requests r
          JOIN users u ON u.id = r.requested_by
+         JOIN incidents i ON i.id = r.incident_id
          ${whereClause}
          ORDER BY r.created_at DESC
          LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
@@ -149,7 +170,8 @@ export default async function resourceRequestRoutes(app: FastifyInstance) {
     '/api/v1/resource-requests/:id',
     { preHandler: requirePermission('resource_requests', 'view') },
     async (req, reply) => {
-      const detail = await fetchResourceRequestRow(query, req.params.id);
+      // Jurisdiction-scope enforcement (F-01 fix, 03-SECURITY.md).
+      const detail = await fetchResourceRequestRow(query, req.params.id, req.epmpUser!.jurisdiction_scope);
       if (!detail) {
         return reply.code(404).send(RECORD_NOT_FOUND);
       }
@@ -284,7 +306,8 @@ export default async function resourceRequestRoutes(app: FastifyInstance) {
     { preHandler: requirePermission('resource_requests', 'approve') },
     async (req, reply) => {
       const { id } = req.params;
-      const existing = await fetchResourceRequestRow(query, id);
+      // Jurisdiction-scope enforcement (F-01 fix, 03-SECURITY.md).
+      const existing = await fetchResourceRequestRow(query, id, req.epmpUser!.jurisdiction_scope);
       if (!existing) {
         return reply.code(404).send(RECORD_NOT_FOUND);
       }
@@ -352,7 +375,8 @@ export default async function resourceRequestRoutes(app: FastifyInstance) {
         });
       }
 
-      const existing = await fetchResourceRequestRow(query, id);
+      // Jurisdiction-scope enforcement (F-01 fix, 03-SECURITY.md).
+      const existing = await fetchResourceRequestRow(query, id, req.epmpUser!.jurisdiction_scope);
       if (!existing) {
         return reply.code(404).send(RECORD_NOT_FOUND);
       }
@@ -426,7 +450,8 @@ export default async function resourceRequestRoutes(app: FastifyInstance) {
       const { id } = req.params;
       const { assigned_to } = req.body ?? ({} as never);
 
-      const existing = await fetchResourceRequestRow(query, id);
+      // Jurisdiction-scope enforcement (F-01 fix, 03-SECURITY.md).
+      const existing = await fetchResourceRequestRow(query, id, req.epmpUser!.jurisdiction_scope);
       if (!existing) {
         return reply.code(404).send(RECORD_NOT_FOUND);
       }

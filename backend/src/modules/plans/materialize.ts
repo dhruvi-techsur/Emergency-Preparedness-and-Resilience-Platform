@@ -12,6 +12,7 @@ import { PLAN_NOT_FOUND } from './plans.js';
 
 interface PlanStatusRow {
   status: string;
+  jurisdiction_id: string;
 }
 
 interface TemplateRow {
@@ -24,6 +25,7 @@ interface TemplateRow {
 
 interface IncidentOpenedAtRow {
   opened_at: string;
+  jurisdiction_id: string;
 }
 
 export default async function materializeRoutes(app: FastifyInstance) {
@@ -36,8 +38,15 @@ export default async function materializeRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const { id: planId } = req.params;
       const { incident_id, section_ids } = req.body ?? ({} as never);
+      const jurisdictionScope = req.epmpUser!.jurisdiction_scope;
 
-      const planRows = await query<PlanStatusRow>(`SELECT status FROM plans WHERE id = $1`, [planId]);
+      // Jurisdiction-scope enforcement (F-01 fix, 03-SECURITY.md): the
+      // source plan must be in the caller's own jurisdiction_scope —
+      // same app-layer check plans.ts applies to every other plan route.
+      const planRows = await query<PlanStatusRow>(
+        `SELECT status, jurisdiction_id FROM plans WHERE id = $1 AND jurisdiction_id = ANY($2)`,
+        [planId, jurisdictionScope],
+      );
       const plan = planRows[0];
       if (!plan) {
         return reply.code(404).send(PLAN_NOT_FOUND);
@@ -53,9 +62,14 @@ export default async function materializeRoutes(app: FastifyInstance) {
         });
       }
 
+      // Jurisdiction-scope enforcement (F-01 fix, 03-SECURITY.md): the
+      // TARGET incident (where the new tasks will be created) must ALSO
+      // be in the caller's own jurisdiction_scope — a caller who owns an
+      // in-scope Approved plan must not be able to materialize its
+      // templates into tasks against an out-of-scope incident_id.
       const incidentRows = await query<IncidentOpenedAtRow>(
-        `SELECT opened_at FROM incidents WHERE id = $1`,
-        [incident_id],
+        `SELECT opened_at, jurisdiction_id FROM incidents WHERE id = $1 AND jurisdiction_id = ANY($2)`,
+        [incident_id, jurisdictionScope],
       );
       const incident = incidentRows[0];
       if (!incident) {
