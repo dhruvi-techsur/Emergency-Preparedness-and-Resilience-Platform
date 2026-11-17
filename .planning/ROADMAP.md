@@ -161,7 +161,19 @@ Plans:
   3. A user can request AI-assisted drafting of an ICS form field or incident/SITREP narrative, and the result renders only inside the `AIDraft` component with `Provenance` source chips — it never appears pre-inserted into the record.
   4. AI-drafted content cannot become part of an official record without a named-person approval, recorded with reviewer identity and timestamp in the incident Timeline; a write carrying `ai_origin: true` without `approved_by` is rejected at the API, not just hidden in the UI.
   5. Signal triage surfaces candidate events clustered from hazard feeds in a queue for human validation but never auto-promotes a signal directly into an active incident.
-**Plans**: TBD
+**Plans:** 10 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — Backend F9 governance substrate: ics_forms/ai_drafts/signals/signal_source_events/hazard_feed_* schema, shared assertAiOriginApproved guard, ICS forms API, dashboard/summary API
+- [ ] 06-02-PLAN.md — Backend F18 landing config: role_landing_config seed rows for all 5 personas, GET /api/v1/me/landing-config with ROLE_VIEW_UNMAPPED fallback
+- [ ] 06-03-PLAN.md — Backend AI-drafts request/approve/discard lifecycle (model-neutral gateway stub) + ai_assist permission seed
+- [ ] 06-04-PLAN.md — Backend signal triage: deterministic hazard-feed clustering + GET/promote(pre-fill-only)/dismiss(reason-required) API
+- [ ] 06-05-PLAN.md — Design system: AIDraft component (the sole AI-output UI surface) + Provenance integration
+- [ ] 06-06-PLAN.md — Frontend: EOC Dashboard (PER-01) + My Work Dashboard (PER-03), RouteGuard landing-config redirect, Signals nav item
+- [ ] 06-07-PLAN.md — Frontend: Field Home (PER-04, bottom-bar-only) + Executive Dashboard (PER-05 facet, 1-3 display-scale KPIs) + FacetToggle
+- [ ] 06-08-PLAN.md — Frontend: ICS Form Editor with embedded AIDraft+Provenance, wired into Incident Workspace's Reports tab
+- [ ] 06-09-PLAN.md — Frontend: Signal Triage Queue + Signal Detail, Promote-to-incident pre-fill navigation (never auto-creates)
+- [ ] 06-10-PLAN.md — Integration: cross-persona landing/nav-visibility sweep across all 5 personas, closing the PER-02 redirect-mechanism gap
 
 ## Progress
 
@@ -175,4 +187,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 3. Plans, Tasks & Resource Requests | 0/9 | In progress | - |
 | 4. Notifications & Reporting/Learning | 0/7 | Not started | - |
 | 5. Mobile Field Operations | 0/TBD | Not started | - |
-| 6. Persona Dashboards & AI Assistance | 0/TBD | Not started | - |
+| 6. Persona Dashboards & AI Assistance | 0/10 | Not started | - |
