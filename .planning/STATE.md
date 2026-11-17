@@ -3,15 +3,15 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 03-05-PLAN.md
-last_updated: "2026-11-17T14:50:00.000Z"
-last_activity: "2026-11-17 — Plan 03-05 complete (five Plans & Playbooks screens — Plan Repository, Plan Detail/Reading View, Plan Editor, Link Tasks modal, Approval Workflow modal — composed entirely from window.EPMP, making 03-03's Draft->Review->Approved plans API observable to a real browser user for the first time. Plan Repository's status Badge uses the exact FRD tone mapping (Draft=neutral, Review=warning, Approved=success); Plan Detail's content area is hard-constrained to --reading-max (720px), verified via getBoundingClientRect in the Playwright spec; version history is strictly read-only. Plan Editor's Submit for review surfaces the exact 422 PLAN_EMPTY Alert without navigating away; a debounced ~3s save-on-blur implements the mockup's autosave indicator. ReviewPlanModal renders 403 SELF_APPROVAL_BLOCKED as an inline Alert that keeps the modal open. A new role_permissions-driven 'Prepare' SideNav group was added to nav-config. 2 auto-fixed deviations: Rule 3 (two new seeded Keycloak identities — planner@epmp.local/planning_logistics_chief and eocdirector@epmp.local/eoc_director — were required since no prior phase seeded distinct author/reviewer accounts for this feature's segregation-of-duties rule to be testable at all) and Rule 1 (Playwright Badge-locator strict-mode fix, scoping to .ep-page-header__status). All 4 new Playwright assertions passed first re-run after the locator fix. Full backend suite (11 files, 55 tests) green with zero regressions; tsc --noEmit and both npm run build (backend + frontend/app) clean)"
+stopped_at: Completed 03-06-PLAN.md
+last_updated: "2026-11-17T14:54:28.000Z"
+last_activity: "2026-11-17 — Plan 03-06 complete (six Task/Resource-Request screens — Task List, Create/Edit Task, Task Detail, Resource Request List, Create/Edit Resource Request, Resource Request Detail — composed entirely from window.EPMP, making 03-01's task API, 03-02's Overdue sweep, and 03-04's resource-request API observable to a real browser user for the first time. Task List/Resource Request List both accept an optional incidentId prop for 03-07's embedded Incident Workspace tab use. Exact FRD status Badge tone mappings on both lists (tasks: Open=info/In progress=brand/Awaiting approval=warning/Done=success/Overdue=danger; resource requests: Draft=neutral/Awaiting approval=warning/Approved=info/Fulfilled=success/Declined=danger). A ~30s refetchInterval is the Phase-3 mechanism making 03-02's time-based Overdue flip AND 03-04's resource-request status changes both visible without a page reload — proven end-to-end by this plan's own Playwright spec watching a backdated task flip to Overdue purely via the real scheduler + polling, zero manual action. A new role_permissions-driven 'Coordinate' SideNav group was added to nav-config. 6 auto-fixed deviations: 3 Rule 3 backend additions (GET /api/v1/tasks/{id}, GET /api/v1/resource-requests/{id} — same precedent as 03-03/03-05's GET /api/v1/plans/{id} — plus PATCH /api/v1/tasks/{id}/owner for the bulk-reassign action), 1 Rule 3 test-fixture jurisdiction-scope grant for planner@epmp.local (same root cause 02-07 already fixed for commander@epmp.local), and 2 Rule 1 Playwright-test-only bugs (DatePicker two-input time-fill, ambiguous native-select-vs-Combobox option locator). All 7 Playwright assertions passed. Full backend suite (11 files, 55 tests) green with zero regressions; tsc --noEmit and all three builds (backend, design-system, frontend/app) clean; zero regressions across 4 other e2e specs sharing the touched shared files)"
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 32
-  completed_plans: 30
-  percent: 34
+  completed_plans: 31
+  percent: 36
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 3 of 6 (Plans, Tasks & Resource Requests) — IN PROGRESS
-Plan: 6 of 9 complete in current phase (03-01, 03-02, 03-03, 03-04, 03-07, 03-05 — waves 1/2/3/4 — COMPLETE; 03-06, 03-08, 03-09 remaining)
-Status: 03-05 complete (Plans & Playbooks UI: Plan Repository, Plan Detail, Plan Editor, Link Tasks modal, Approval Workflow modal) — ready for 03-06 (Tasks/Resource-Requests UI)
-Last activity: 2026-11-17 — Plan 03-05 complete (five Plans & Playbooks screens composed entirely from window.EPMP, making 03-03's plans API observable to a real browser user for the first time — see frontmatter last_activity for full detail; two new seeded Keycloak identities added as a Rule 3 blocking deviation so the cross-reviewer no-self-approval flow could be tested end-to-end with real distinct accounts)
+Plan: 7 of 9 complete in current phase (03-01, 03-02, 03-03, 03-04, 03-07, 03-05, 03-06 — waves 1/2/3/4/5 — COMPLETE; 03-08, 03-09 remaining)
+Status: 03-06 complete (Tasks/Resource-Requests UI: Task List, Create/Edit Task, Task Detail, Resource Request List, Create/Edit Resource Request, Resource Request Detail) — ready for 03-08 (Incident Workspace tab embedding)
+Last activity: 2026-11-17 — Plan 03-06 complete (six Task/Resource-Request screens composed entirely from window.EPMP, making 03-01/03-02/03-04's task and resource-request APIs observable to a real browser user for the first time. Task List/Resource Request List both accept an optional incidentId prop for 03-07's embedded use; exact FRD status Badge tone mappings on both lists; a ~30s refetchInterval is the mechanism making 03-02's Overdue sweep visible and 03-04's resource-request status changes visible, both without a page reload. A new role_permissions-driven 'Coordinate' SideNav group was added to nav-config. 6 auto-fixed deviations: 2 Rule 3 backend single-record GET additions (GET /api/v1/tasks/{id}, GET /api/v1/resource-requests/{id}, same precedent as 03-03/03-05's GET /api/v1/plans/{id}), 1 Rule 3 owner-reassignment PATCH addition, 1 Rule 3 test-fixture jurisdiction-scope grant for planner@epmp.local (same root cause 02-07 already fixed for commander@epmp.local), and 2 Rule 1 Playwright bugs (DatePicker time-fill, ambiguous option locator). All 7 Playwright assertions passed, including the critical Overdue-visibility proof. Full backend suite (11 files, 55 tests) green with zero regressions; tsc --noEmit and all three builds (backend, design-system, frontend/app) clean; zero regressions across 4 other e2e specs sharing the touched files)
 
 Progress: [███░░░░░░░] 34%
 
@@ -36,9 +36,9 @@ Progress: [███░░░░░░░] 34%
 
 **Velocity:**
 
-- Total plans completed: 23
+- Total plans completed: 24
 - Average duration: 23 min
-- Total execution time: 10.1 hours
+- Total execution time: 10.7 hours
 
 **By Phase:**
 
@@ -80,6 +80,7 @@ Progress: [███░░░░░░░] 34%
 | Phase 03 P07 | 25 min | 2 tasks | 2 files |
 | Phase 03 P03 | 6 min | 3 tasks | 6 files |
 | Phase 03 P05 | 48 min | 3 tasks | 13 files |
+| Phase 03 P06 | 35 min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -160,6 +161,8 @@ Recent decisions affecting current work:
 - [Phase 03-05]: LinkTasksModal's "Default owner role" Select offers the 5 real persona role names (what materialize.ts actually resolves against roles.name), not the 6 similarly-named ICS "command role" titles assigned per-incident via CommandRoleModal — a distinct, unrelated concept despite the name overlap
 - [Phase 03-05]: Two new seeded Keycloak identities (planner@epmp.local -> planning_logistics_chief, eocdirector@epmp.local -> eoc_director) added to epmp-realm.json + seed.ts's group_to_role_mapping, following 02-05's exact commander@epmp.local pattern — required since no prior phase seeded distinct author/reviewer accounts for the plans feature's segregation-of-duties rule
 - [Phase 03-05]: ReviewPlanModal shows CURRENT plan sections only (not a full diff against the last Approved content_snapshot) and "View this version" renders a summary-only modal (no full historical text) — both documented as budget-scoped simplifications of the FRD's literal language, not regressions
+- [Phase 03-06]: Added GET /api/v1/tasks/{id} and GET /api/v1/resource-requests/{id} (both embedding status_history) plus PATCH /api/v1/tasks/{id}/owner — TechArch's literal endpoint table has none of the three, but Task/Resource-Request Detail pages and the Task List's bulk-reassign action genuinely need them; same precedent as 03-03/03-05's GET /api/v1/plans/{id}
+- [Phase 03-06]: Task/CreateTask's owner Comboboxes source from GET /api/v1/incidents/personnel, not GET /api/v1/admin/users — confirmed via seed.ts that all 4 roles holding tasks permissions (incident_commander, eoc_director, planning_logistics_chief, field_responder) hold incidents:view but none hold admin:view, same gap CommandRoleModal.tsx already documented and fixed
 
 ### Pending Todos
 
@@ -171,6 +174,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-17T14:50:00.000Z
-Stopped at: Completed 03-05-PLAN.md
+Last session: 2026-11-17T14:54:28.000Z
+Stopped at: Completed 03-06-PLAN.md
 Resume file: None
