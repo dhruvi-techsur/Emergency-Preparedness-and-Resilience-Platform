@@ -318,6 +318,19 @@ async function main() {
     // above) — see backend/keycloak/epmp-realm.json's
     // "epmp-incident-commanders" group + "commander@epmp.local" user.
     { idp_group: '/epmp-incident-commanders', role_id: roleIds['incident_commander'] },
+    // Phase 3 (F3, 03-05): two more seeded Keycloak groups/users so this
+    // phase's Playwright suite can sign in as the author
+    // (planning_logistics_chief) and the reviewer (eoc_director) roles —
+    // the DISTINCT roles 03-07's seed deliberately grants `plans`
+    // create/edit vs `plans` review to, so the no-self-approval Plan
+    // Repository/Approval Workflow flow (03-05) and the cross-feature
+    // plan-to-task-materialization flow (03-08) can both be exercised
+    // end-to-end with real, distinct identities — see
+    // backend/keycloak/epmp-realm.json's "epmp-planning-logistics-chiefs"/
+    // "epmp-eoc-directors" groups + "planner@epmp.local"/
+    // "eocdirector@epmp.local" users.
+    { idp_group: '/epmp-planning-logistics-chiefs', role_id: roleIds['planning_logistics_chief'] },
+    { idp_group: '/epmp-eoc-directors', role_id: roleIds['eoc_director'] },
   ];
   const ssoConfig = await findOrInsert(
     'sso_config',

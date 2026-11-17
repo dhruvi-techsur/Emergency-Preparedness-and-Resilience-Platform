@@ -187,8 +187,25 @@ export default async function authOrgRoutes(app: FastifyInstance) {
       // single cross-cutting fix reconciling 02-01's newly-seeded
       // `incidents` permissions with the nav the shell actually renders.
       const hasIncidents = permRows.some((r) => r.feature === 'incidents' && r.actions.length > 0);
+      // Phase 3 (F3): any role holding ANY 'plans' permission (03-07's
+      // seed grants view-only to incident_commander/field_responder,
+      // create/edit to planning_logistics_chief, and view+review to
+      // eoc_director) sees the "Prepare" SideNav group's "Plans &
+      // playbooks" item, per the UX mockup's Navigation Map
+      // (`SideNav → Prepare: "Plans & playbooks"`). Same
+      // role_permissions-driven derivation pattern as `hasIncidents`/
+      // `hasAdmin` above.
+      const hasPlans = permRows.some((r) => r.feature === 'plans' && r.actions.length > 0);
 
       const nav_groups = [
+        ...(hasPlans
+          ? [
+              {
+                label: 'Prepare',
+                items: [{ id: 'plans', label: 'Plans & playbooks', icon: 'file', href: '/plans' }],
+              },
+            ]
+          : []),
         // Phase 2 (F2/F11, 02-07): the operating picture reads incident
         // data and is gated server-side by the SAME 'incidents'/'view'
         // permission as the markers/layers endpoints

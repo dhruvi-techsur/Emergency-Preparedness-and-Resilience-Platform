@@ -39,6 +39,14 @@
     {
       "name": "epmp-incident-commanders",
       "path": "/epmp-incident-commanders"
+    },
+    {
+      "name": "epmp-planning-logistics-chiefs",
+      "path": "/epmp-planning-logistics-chiefs"
+    },
+    {
+      "name": "epmp-eoc-directors",
+      "path": "/epmp-eoc-directors"
     }
   ],
   "users": [
@@ -73,6 +81,38 @@
         }
       ],
       "groups": ["/epmp-incident-commanders"]
+    },
+    {
+      "username": "planner@epmp.local",
+      "email": "planner@epmp.local",
+      "firstName": "Planning",
+      "lastName": "Chief",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "devpass123",
+          "temporary": false
+        }
+      ],
+      "groups": ["/epmp-planning-logistics-chiefs"]
+    },
+    {
+      "username": "eocdirector@epmp.local",
+      "email": "eocdirector@epmp.local",
+      "firstName": "EOC",
+      "lastName": "Director",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "devpass123",
+          "temporary": false
+        }
+      ],
+      "groups": ["/epmp-eoc-directors"]
     }
   ]
 }

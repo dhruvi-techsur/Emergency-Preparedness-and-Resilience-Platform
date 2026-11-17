@@ -36,6 +36,9 @@ import { IncidentList } from './pages/incidents/IncidentList';
 import { CreateIncident } from './pages/incidents/CreateIncident';
 import { IncidentWorkspace } from './pages/incidents/IncidentWorkspace';
 import { OperatingPicture } from './pages/operating-picture/OperatingPicture';
+import { PlanRepository } from './pages/plans/PlanRepository';
+import { PlanDetail } from './pages/plans/PlanDetail';
+import { PlanEditor } from './pages/plans/PlanEditor';
 
 const queryClient = new QueryClient();
 
@@ -71,6 +74,10 @@ root.render(
               <Route path="incidents/new" element={<CreateIncident />} />
               <Route path="incidents/:id" element={<IncidentWorkspace />} />
               <Route path="operating-picture" element={<OperatingPicture />} />
+              <Route path="plans" element={<PlanRepository />} />
+              <Route path="plans/new" element={<PlanEditor />} />
+              <Route path="plans/:id" element={<PlanDetail />} />
+              <Route path="plans/:id/edit" element={<PlanEditor />} />
             </Route>
           </Routes>
         </RouteGuard>

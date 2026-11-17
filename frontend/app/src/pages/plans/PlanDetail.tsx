@@ -10,7 +10,9 @@ import {
   Modal,
   type BadgeTone,
 } from '@epmp/design-system';
+import { useQueryClient } from '@tanstack/react-query';
 import { apiGet, ApiRequestError } from '../../lib/api-client';
+import { ReviewPlanModal } from './ReviewPlanModal';
 import './PlanDetail.css';
 
 type PlanType = 'EOP' | 'SOP' | 'Annex';
@@ -87,8 +89,10 @@ function sectionAnchorId(sectionId: string): string {
 export function PlanDetail(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [historyOpen, setHistoryOpen] = React.useState(true);
   const [viewingVersion, setViewingVersion] = React.useState<PlanVersionHistoryEntry | null>(null);
+  const [reviewModalOpen, setReviewModalOpen] = React.useState(false);
 
   const planQuery = useQuery({
     queryKey: ['plan', id],
@@ -154,6 +158,22 @@ export function PlanDetail(): JSX.Element {
           >
             Import new version
           </Button>,
+          // The frontend renders this button whenever the plan is in
+          // Review status — it does NOT independently check "does this
+          // user hold review permission" beyond that. The actual
+          // authorization boundary is 03-03's server-side
+          // requirePermission('plans','review') on POST .../review; a
+          // user without that permission who somehow reaches this button
+          // still gets a 403 from the real gate, matching 02-06's
+          // documented pattern for ActivationModal's analogous threat
+          // (see this plan's own threat_model, T-03-11).
+          ...(plan.status === 'Review'
+            ? [
+                <Button key="review" variant="primary" onClick={() => setReviewModalOpen(true)}>
+                  Review plan
+                </Button>,
+              ]
+            : []),
         ]}
       />
 
@@ -254,6 +274,14 @@ export function PlanDetail(): JSX.Element {
           </p>
         ) : null}
       </Modal>
+
+      <ReviewPlanModal
+        planId={plan.id}
+        planName={plan.name}
+        open={reviewModalOpen}
+        onClose={() => setReviewModalOpen(false)}
+        onReviewed={() => void queryClient.invalidateQueries({ queryKey: ['plan', id] })}
+      />
     </div>
   );
 }
