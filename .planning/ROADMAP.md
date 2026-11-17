@@ -68,7 +68,8 @@ Plans:
 
 ### Phase 2: Incident Command & Operating Picture
 **Goal**: Command staff can intake and activate an incident, assign named command roles, and see a shared, time-stamped operating picture that never fails to render — even when the live GIS feed is unavailable.
-**Status**: Passed
+**Status**: Complete (2026-11-17)
+**Last Updated**: 2026-11-17T13:23:08Z
 **Depends on**: Phase 1
 **Requirements**: F1, F2, F11
 **Success Criteria** (what must be TRUE):
