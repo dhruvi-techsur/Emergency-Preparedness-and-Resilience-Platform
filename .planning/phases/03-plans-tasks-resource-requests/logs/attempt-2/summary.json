@@ -1,0 +1,23 @@
+{
+  "duration_secs": 10590.0,
+  "token_usage": {
+    "input": 335,
+    "output": 151532,
+    "total": 20729804,
+    "cache_read": 19856922,
+    "cache_write": 721015,
+    "cost": 7.289911899999999
+  },
+  "model": "claude-sonnet-5",
+  "files_changed": [
+    ".planning/debug/materialize-tasks-ui-trigger-missing.md",
+    ".planning/phases/03-plans-tasks-resource-requests/03-UAT.md",
+    ".planning/phases/03-plans-tasks-resource-requests/03-UAT.summary.json",
+    "backend/scripts/seed.ts"
+  ],
+  "verification_status": "failed",
+  "error_message": null,
+  "attempt_number": 2,
+  "created_at": "2026-11-17T17:49:34.880373+00:00",
+  "completed_at": "2026-11-17T20:46:04.992245361+00:00"
+}
