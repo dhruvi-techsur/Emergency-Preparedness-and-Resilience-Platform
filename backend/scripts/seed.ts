@@ -428,6 +428,11 @@ async function main() {
     },
   ] as const;
 
+  // Captured during the loop below so the UAT Overdue-task fixture
+  // (Phase 3, F4 success criterion 3) can reference a real incident_id
+  // without a second lookup pass.
+  const incidentIdsByName: Record<string, string> = {};
+
   for (const inc of incidentsToSeed) {
     const incidentResult = await findOrInsert(
       'incidents',
@@ -437,6 +442,7 @@ async function main() {
       [inc.name, inc.type, inc.severity, jurisdiction.id, new Date().toISOString(), commanderUser.id],
     );
     record('incidents', incidentResult);
+    incidentIdsByName[inc.name] = incidentResult.id;
 
     // `location` is nullable (see 1700000000002's own documented
     // deviation) and isn't part of findOrInsert's generic insert-column
@@ -530,6 +536,75 @@ async function main() {
     [[jurisdiction.id], jurisdiction.id],
   );
 
+  // UAT data-doctor fixture (Phase 3 UAT re-run): at least one Overdue
+  // task, reachable via the Task List's DEFAULT view (no filter applied,
+  // page 1, ORDER BY due_at ASC per tasks.ts's list route) for every role
+  // holding `tasks:edit` (incident_commander, eoc_director,
+  // planning_logistics_chief — all three share 'Default Agency'
+  // jurisdiction_scope and therefore all see this task through
+  // tasks.ts's jurisdiction-scope filter, which leaves it unfiltered for
+  // any of them). due_at is set deliberately far in the past so
+  // ORDER BY due_at ASC sorts it onto page 1 ahead of any
+  // later-due/non-overdue task a human may have since created by hand
+  // through the UI during a prior UAT pass (never overwritten — this
+  // fixture is only ever inserted once, on the first run, per
+  // findOrInsert's natural-key match on title+owner_id below).
+  //
+  // Status is written as 'Overdue' directly (not left 'Open' for
+  // overdue-sweep.ts's 60s scheduler to flip) so the precondition is
+  // deterministically true the instant this script finishes, rather than
+  // depending on a timing race with the background scheduler on a
+  // freshly-booted sandbox. The resulting row is schema-identical to one
+  // overdue-sweep.ts would have produced itself: same task_status_history
+  // audit trail shape (NULL->Open by the creator, then Open->Overdue with
+  // changed_by=NULL marking it system-driven, matching overdue-sweep.ts's
+  // own documented convention), same incident_timeline danger-tone entry.
+  const uatOverdueIncidentId =
+    incidentIdsByName['UAT-ASSIGN-ROLE Default Agency Flood'];
+  const uatOverdueTask = await findOrInsert(
+    'tasks',
+    ['title', 'owner_id'],
+    ['UAT-OVERDUE Verify generator fuel levels', commanderUser.id],
+    [
+      'title',
+      'description',
+      'status',
+      'owner_id',
+      'incident_id',
+      'due_at',
+      'requires_approval',
+      'created_by',
+    ],
+    [
+      'UAT-OVERDUE Verify generator fuel levels',
+      'Confirm pre-positioned generators have adequate fuel reserves.',
+      'Overdue',
+      commanderUser.id,
+      uatOverdueIncidentId,
+      '2026-01-01T00:00:00.000Z', // deliberately far in the past
+      false,
+      commanderUser.id,
+    ],
+  );
+  record('tasks', uatOverdueTask);
+  if (uatOverdueTask.inserted) {
+    await pool.query(
+      `INSERT INTO task_status_history (task_id, from_status, to_status, changed_by)
+       VALUES ($1, NULL, 'Open', $2)`,
+      [uatOverdueTask.id, commanderUser.id],
+    );
+    await pool.query(
+      `INSERT INTO task_status_history (task_id, from_status, to_status, changed_by)
+       VALUES ($1, 'Open', 'Overdue', NULL)`,
+      [uatOverdueTask.id],
+    );
+    await pool.query(
+      `INSERT INTO incident_timeline (incident_id, title, tone, actor_id, source)
+       VALUES ($1, 'Task overdue: UAT-OVERDUE Verify generator fuel levels', 'danger', NULL, 'system')`,
+      [uatOverdueIncidentId],
+    );
+  }
+
   // Phase 3 (F3/F4, roadmap success criterion 2) UAT fixture: an
   // already-Approved plan with a linked task template, so a human
   // tester's UAT walkthrough of "Materialize-Tasks UI Trigger Check"
@@ -620,6 +695,81 @@ async function main() {
     ],
   );
   record('plan_versions', uatPlanVersion);
+
+  // UAT data-doctor fixture (Phase 3 UAT re-run, test "Link Plan Section to
+  // Task Template"): a SECOND Approved plan whose one section has ZERO
+  // linked task templates, so the PlanDetail reading view's "Link tasks"
+  // action can be exercised as a genuinely fresh "define new template"
+  // flow — the original UAT-MATERIALIZE-READY plan above deliberately
+  // already has its one section pre-linked (that plan exists specifically
+  // so the Materialize-Tasks test never needs to author a template first),
+  // so re-using it here would only ever show the already-linked state,
+  // never the empty one this test needs to see. Same author/reviewer
+  // pair and same cross-reviewer plan_versions shape as the fixture
+  // above, satisfying chk_no_self_approval identically.
+  const uatUnlinkedPlan = await findOrInsert(
+    'plans',
+    ['name', 'jurisdiction_id'],
+    ['UAT-LINK-TASKS-READY Shelter Activation Plan', jurisdiction.id],
+    ['name', 'type', 'jurisdiction_id', 'owner_id', 'status', 'current_version'],
+    [
+      'UAT-LINK-TASKS-READY Shelter Activation Plan',
+      'EOP',
+      jurisdiction.id,
+      plannerUser.id,
+      'Approved',
+      2,
+    ],
+  );
+  record('plans', uatUnlinkedPlan);
+
+  const uatUnlinkedPlanSection = await findOrInsert(
+    'plan_sections',
+    ['plan_id', 'heading'],
+    [uatUnlinkedPlan.id, 'Shelter activation'],
+    ['plan_id', 'heading', 'body', 'sort_order'],
+    [
+      uatUnlinkedPlan.id,
+      'Shelter activation',
+      'Open and staff emergency shelters ahead of expected displacement.',
+      0,
+    ],
+  );
+  record('plan_sections', uatUnlinkedPlanSection);
+  // Deliberately NO plan_task_templates row created for this section —
+  // that absence IS the precondition this fixture exists to guarantee.
+
+  const uatUnlinkedPlanVersion = await findOrInsert(
+    'plan_versions',
+    ['plan_id', 'version_number'],
+    [uatUnlinkedPlan.id, 1],
+    [
+      'plan_id',
+      'version_number',
+      'content_snapshot',
+      'submitted_by',
+      'reviewed_by',
+      'review_action',
+      'reviewed_at',
+    ],
+    [
+      uatUnlinkedPlan.id,
+      1,
+      JSON.stringify([
+        {
+          id: uatUnlinkedPlanSection.id,
+          heading: 'Shelter activation',
+          body: 'Open and staff emergency shelters ahead of expected displacement.',
+          sort_order: 0,
+        },
+      ]),
+      plannerUser.id,
+      eocDirectorUser.id,
+      'approve',
+      new Date().toISOString(),
+    ],
+  );
+  record('plan_versions', uatUnlinkedPlanVersion);
 
   // record_authority_registry baseline rows (natural key: record_type, which IS unique)
   const authorityRows = [
