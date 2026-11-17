@@ -75,14 +75,46 @@ export default async function closureRoutes(app: FastifyInstance) {
           // exists a genuinely different SQL error whose message happens
           // to contain this substring could be masked. Phase 3 must
           // narrow this to checking `err.code === '42P01'` specifically.
+          //
+          // Fixed in Phase 3's 03-02 per the plan checker's finding that
+          // the original bulk cascade silently violated the project's own
+          // "exactly one task_status_history row per transition" invariant
+          // — this is a deliberate, reviewed correction, not an accidental
+          // behavior change to Phase 2's closure semantics (the INCIDENT's
+          // own closure behavior — status flip, single generic Timeline
+          // entry, single transaction — is unchanged; only the PER-TASK
+          // audit completeness is added). This loop runs INSIDE the
+          // closure's own single transaction (not withTimelineTransaction
+          // per-task the way overdue-sweep.ts does for ITS cascade) because
+          // all these tasks share the SAME incident and the SAME atomic
+          // close-the-incident operation — if any cascaded task's history
+          // write failed, the entire closure (including the incident's own
+          // status flip) should roll back together, which is the correct
+          // behavior here, unlike the sweep's independent-tasks-spanning
+          // design which needs per-task fault isolation instead.
           await client.query(`SAVEPOINT tasks_cascade`);
           try {
-            await client.query(
+            const cascaded = await client.query<{ id: string; title: string }>(
               `UPDATE tasks SET status = 'Overdue', updated_at = now()
                WHERE incident_id = $1 AND status NOT IN ('Done','Overdue')
-               RETURNING id`,
+               RETURNING id, title`,
               [incidentId],
             );
+            for (const task of cascaded.rows) {
+              await client.query(
+                `INSERT INTO task_status_history (task_id, from_status, to_status, changed_by) VALUES ($1, NULL, 'Overdue', NULL)`,
+                [task.id],
+              );
+              await TimelineService.append(
+                client,
+                incidentId,
+                `Task overdue (incident closed): ${task.title}`,
+                undefined,
+                'danger',
+                null,
+                'system',
+              );
+            }
             await client.query(`RELEASE SAVEPOINT tasks_cascade`);
           } catch (taskErr) {
             const message = taskErr instanceof Error ? taskErr.message : String(taskErr);
@@ -91,7 +123,11 @@ export default async function closureRoutes(app: FastifyInstance) {
             }
             // tasks table doesn't exist yet in Phase 2 — forward-compatible
             // no-op. Roll back to the savepoint so the aborted statement
-            // doesn't poison the rest of this transaction.
+            // doesn't poison the rest of this transaction. This guard's
+            // purpose is unchanged by this fix — only what happens on the
+            // success path once the table demonstrably exists (which it
+            // always does from 03-01 forward) now also writes the per-task
+            // audit trail above.
             await client.query(`ROLLBACK TO SAVEPOINT tasks_cascade`);
           }
 
