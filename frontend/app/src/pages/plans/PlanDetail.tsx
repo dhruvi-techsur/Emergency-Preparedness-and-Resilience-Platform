@@ -14,6 +14,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { apiGet, ApiRequestError } from '../../lib/api-client';
 import { ReviewPlanModal } from './ReviewPlanModal';
 import { LinkTasksModal } from './LinkTasksModal';
+import { MaterializeTasksModal } from './MaterializeTasksModal';
 import './PlanDetail.css';
 
 type PlanType = 'EOP' | 'SOP' | 'Annex';
@@ -95,6 +96,7 @@ export function PlanDetail(): JSX.Element {
   const [viewingVersion, setViewingVersion] = React.useState<PlanVersionHistoryEntry | null>(null);
   const [reviewModalOpen, setReviewModalOpen] = React.useState(false);
   const [linkModalSectionId, setLinkModalSectionId] = React.useState<string | null>(null);
+  const [materializeModalOpen, setMaterializeModalOpen] = React.useState(false);
 
   const planQuery = useQuery({
     queryKey: ['plan', id],
@@ -130,6 +132,10 @@ export function PlanDetail(): JSX.Element {
   const plan = planQuery.data;
   const sortedSections = [...plan.sections].sort((a, b) => a.sort_order - b.sort_order);
   const sortedHistory = [...plan.version_history].sort((a, b) => b.version_number - a.version_number);
+  // 03-10 gap closure (uat:1): a plan with zero linked task templates, or
+  // a plan not yet Approved, must never show the materialize control —
+  // clicking it would 404/409 against materialize.ts's own gates.
+  const hasEligibleSections = sortedSections.some((s) => s.linked_task_templates.length > 0);
 
   return (
     <div className="ep-plan-detail">
@@ -173,6 +179,24 @@ export function PlanDetail(): JSX.Element {
             ? [
                 <Button key="review" variant="primary" onClick={() => setReviewModalOpen(true)}>
                   Review plan
+                </Button>,
+              ]
+            : []),
+          // 03-10 gap closure (uat:1): the ONLY new entry point for
+          // POST /api/v1/plans/{id}/materialize-tasks — a plan-level
+          // action, not per-section (per-section "Link tasks" above is a
+          // separate concern: authoring the template, not materializing
+          // it). Gated identically to materialize.ts's own server-side
+          // checks so this button never appears where clicking it would
+          // 404/409.
+          ...(plan.status === 'Approved' && hasEligibleSections
+            ? [
+                <Button
+                  key="materialize"
+                  variant="primary"
+                  onClick={() => setMaterializeModalOpen(true)}
+                >
+                  Materialize tasks
                 </Button>,
               ]
             : []),
@@ -326,6 +350,18 @@ export function PlanDetail(): JSX.Element {
           onLinked={() => void queryClient.invalidateQueries({ queryKey: ['plan', id] })}
         />
       ) : null}
+
+      {/* 03-10 gap closure (uat:1): materializing a task does not change
+          the PLAN's own detail response (no section/template count
+          changes), only the target incident's task list, which this
+          component doesn't render — so no onLinked-style refetch callback
+          is needed here, unlike LinkTasksModal above. */}
+      <MaterializeTasksModal
+        planId={plan.id}
+        sections={sortedSections}
+        open={materializeModalOpen}
+        onClose={() => setMaterializeModalOpen(false)}
+      />
     </div>
   );
 }
