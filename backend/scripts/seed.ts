@@ -489,6 +489,138 @@ async function main() {
     }
   }
 
+  // Phase 3 (F3, 03-08) UAT fixture: planner@epmp.local and
+  // eocdirector@epmp.local, pre-provisioned with the 'Default Agency'
+  // jurisdiction_scope up front — identical rationale/pattern to
+  // commander@epmp.local's treatment above (02-07's documented gap fix):
+  // sso.ts's JIT provisioning on first-ever Keycloak login sets
+  // jurisdiction_scope = '{}', which would otherwise leave these two
+  // identities unable to see the 'Default Agency' plan/incident data this
+  // seed creates below for them. idp_subject is intentionally left NULL
+  // here — sso.ts's `ON CONFLICT (email) DO UPDATE SET idp_subject = ...`
+  // only ever touches idp_subject/last_login_at on an existing email
+  // match, so a real first login still JIT-resolves the subject exactly
+  // as it would for a genuinely new row; pre-seeding here only fixes the
+  // jurisdiction_scope gap, nothing else.
+  const plannerUser = await findOrInsert(
+    'users',
+    ['email'],
+    ['planner@epmp.local'],
+    ['email', 'name', 'role_id', 'jurisdiction_scope'],
+    ['planner@epmp.local', 'Planning Chief', roleIds['planning_logistics_chief'], [jurisdiction.id]],
+  );
+  record('users', plannerUser);
+  await pool.query(
+    `UPDATE users SET jurisdiction_scope = jurisdiction_scope || $1
+     WHERE email = 'planner@epmp.local' AND NOT ($2 = ANY(jurisdiction_scope))`,
+    [[jurisdiction.id], jurisdiction.id],
+  );
+
+  const eocDirectorUser = await findOrInsert(
+    'users',
+    ['email'],
+    ['eocdirector@epmp.local'],
+    ['email', 'name', 'role_id', 'jurisdiction_scope'],
+    ['eocdirector@epmp.local', 'EOC Director', roleIds['eoc_director'], [jurisdiction.id]],
+  );
+  record('users', eocDirectorUser);
+  await pool.query(
+    `UPDATE users SET jurisdiction_scope = jurisdiction_scope || $1
+     WHERE email = 'eocdirector@epmp.local' AND NOT ($2 = ANY(jurisdiction_scope))`,
+    [[jurisdiction.id], jurisdiction.id],
+  );
+
+  // Phase 3 (F3/F4, roadmap success criterion 2) UAT fixture: an
+  // already-Approved plan with a linked task template, so a human
+  // tester's UAT walkthrough of "Materialize-Tasks UI Trigger Check"
+  // never has to author+approve a plan from scratch just to reach the
+  // precondition state. Authored by planner@epmp.local (the
+  // planning_logistics_chief role actually holding `plans` create/edit),
+  // reviewed/approved by eocdirector@epmp.local (the eoc_director role
+  // holding the SEPARATE `plans` review action-level) — the identical
+  // cross-reviewer pair 03-08's own plan-to-task-materialization.spec.ts
+  // uses, satisfying chk_no_self_approval for real.
+  //
+  // Natural key: (name, jurisdiction_id), same pattern this file already
+  // uses for incidents above — plans has no UNIQUE constraint on name
+  // alone, so this find-or-insert is scoped the same way.
+  const uatPlan = await findOrInsert(
+    'plans',
+    ['name', 'jurisdiction_id'],
+    ['UAT-MATERIALIZE-READY Generator Pre-Positioning Plan', jurisdiction.id],
+    ['name', 'type', 'jurisdiction_id', 'owner_id', 'status', 'current_version'],
+    [
+      'UAT-MATERIALIZE-READY Generator Pre-Positioning Plan',
+      'EOP',
+      jurisdiction.id,
+      plannerUser.id,
+      'Approved',
+      2, // mirrors plans.ts's review-approve step, which increments current_version on approval
+    ],
+  );
+  record('plans', uatPlan);
+
+  const uatPlanSection = await findOrInsert(
+    'plan_sections',
+    ['plan_id', 'heading'],
+    [uatPlan.id, 'Generator pre-positioning'],
+    ['plan_id', 'heading', 'body', 'sort_order'],
+    [
+      uatPlan.id,
+      'Generator pre-positioning',
+      'Pre-position backup generators at critical facilities ahead of expected outages.',
+      0,
+    ],
+  );
+  record('plan_sections', uatPlanSection);
+
+  const uatTaskTemplate = await findOrInsert(
+    'plan_task_templates',
+    ['plan_section_id', 'default_title'],
+    [uatPlanSection.id, 'Pre-position generators (UAT)'],
+    ['plan_section_id', 'default_title', 'default_owner_role', 'default_due_offset_minutes'],
+    [uatPlanSection.id, 'Pre-position generators (UAT)', 'incident_commander', 120],
+  );
+  record('plan_task_templates', uatTaskTemplate);
+
+  // plan_versions row proving the Approved status actually went through a
+  // real submit->review->approve cycle (version_number=1, the version
+  // active before plans.ts's approval step bumped plans.current_version
+  // to 2 above) — reviewed_by deliberately differs from submitted_by to
+  // satisfy chk_no_self_approval, matching the real no-self-approval
+  // workflow a human tester would have produced by hand.
+  const uatPlanVersion = await findOrInsert(
+    'plan_versions',
+    ['plan_id', 'version_number'],
+    [uatPlan.id, 1],
+    [
+      'plan_id',
+      'version_number',
+      'content_snapshot',
+      'submitted_by',
+      'reviewed_by',
+      'review_action',
+      'reviewed_at',
+    ],
+    [
+      uatPlan.id,
+      1,
+      JSON.stringify([
+        {
+          id: uatPlanSection.id,
+          heading: 'Generator pre-positioning',
+          body: 'Pre-position backup generators at critical facilities ahead of expected outages.',
+          sort_order: 0,
+        },
+      ]),
+      plannerUser.id,
+      eocDirectorUser.id,
+      'approve',
+      new Date().toISOString(),
+    ],
+  );
+  record('plan_versions', uatPlanVersion);
+
   // record_authority_registry baseline rows (natural key: record_type, which IS unique)
   const authorityRows = [
     { record_type: 'user_identity', authoritative_system: 'EPMP' },
