@@ -123,7 +123,16 @@ Plans:
   3. A user can view a per-recipient delivery and acknowledgment tracking table showing current status for any sent notification.
   4. A user can generate ICS-standard output/SITREPs and an initial after-action report (timeline export, decisions log, resource-request history, findings/corrective-action list) directly from an incident's existing data, without manually re-entering it.
   5. A user can view an append-only, exportable evidence/audit log and an analytics/reporting dashboard summarizing incident, task, and resource-request activity.
-**Plans**: TBD
+**Plans:** 7 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Backend comms-reporting module: recipient-groups/message-templates CRUD, compose→send lifecycle, delivery-status tracking, shared assertAiOriginApproved AI-governance guard
+- [ ] 04-02-PLAN.md — Backend comms-reporting module: SITREP/AAR auto-assembly from Timeline/task/resource data, finding-ownership + finalize-immutability, evidence-log aggregation, analytics KPI endpoint
+- [ ] 04-03-PLAN.md — Design system: Progress, LineChart, BarChart, DonutChart
+- [ ] 04-04-PLAN.md — Seed role-permission grants for notifications/reporting features (PER-02 PIO-merge approval split)
+- [ ] 04-05-PLAN.md — Frontend: Recipient Groups, Message Templates, Compose Notification (4-step), Delivery & Acknowledgment Tracking
+- [ ] 04-06-PLAN.md — Frontend: SITREP Generator, AAR Generator, Evidence & Audit Log View, Analytics & Reporting Dashboard
+- [ ] 04-07-PLAN.md — Integration: wire Reports tab + Compose-notification action into Incident Workspace, end-to-end cross-phase Timeline/evidence-trail proof
 
 ### Phase 5: Mobile Field Operations
 **Goal**: Field responders can submit structured observations and task updates from an installable mobile web app that keeps working fully offline and reconciles safely when connectivity returns — so field-to-EOC reporting never silently loses or overwrites data.
@@ -158,6 +167,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 1. Platform Foundation & Deployable Shell | 0/TBD | Complete | 2026-11-16 |
 | 2. Incident Command & Operating Picture | 7/7 | Complete | 2026-11-17 |
 | 3. Plans, Tasks & Resource Requests | 0/9 | In progress | - |
-| 4. Notifications & Reporting/Learning | 0/TBD | Not started | - |
+| 4. Notifications & Reporting/Learning | 0/7 | Not started | - |
 | 5. Mobile Field Operations | 0/TBD | Not started | - |
 | 6. Persona Dashboards & AI Assistance | 0/TBD | Not started | - |
