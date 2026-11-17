@@ -143,7 +143,13 @@ Plans:
   2. Every edit remains possible while offline; a queued submission shows "Queued" via `SyncStatus` pinned at the top of every mobile screen rather than appearing to fail or disappear.
   3. On reconnect, queued field data syncs to the EOC automatically and appends a Timeline entry noting the sync, with no manual "upload" step required from the responder.
   4. When the same record was changed both offline and at the EOC, the conflict is surfaced to a named person for resolution — the system never silently keeps one value and discards the other.
-**Plans**: TBD
+**Plans:** 5 plans
+Plans:
+- [ ] 05-01-PLAN.md — Field-operations schema (field_reports, field_report_photos, sync_conflicts) + idempotent submit/sync-batch/photo-upload/resolve API
+- [ ] 05-02-PLAN.md — SyncStatus design-system component + IndexedDB-backed offline queue + PWA manifest/service-worker scaffolding
+- [ ] 05-03-PLAN.md — Field Home, My Tasks (field view), Report Observation screens + shared FieldMobileShell
+- [ ] 05-04-PLAN.md — Queued Submissions, Sync Conflict Resolution, Field Map screens + route-tree/bottom-nav wiring
+- [ ] 05-05-PLAN.md — field_reports seed/RBAC grants + real Keycloak field-responder identity + end-to-end permission proof
 
 ### Phase 6: Persona Dashboards & AI Assistance
 **Goal**: Every named persona lands on a dashboard scoped to their job the moment they sign in, and planning/communications staff get governed AI drafting and signal-triage assistance that accelerates their work without ever bypassing human accountability.
