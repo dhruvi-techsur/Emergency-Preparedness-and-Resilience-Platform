@@ -264,7 +264,10 @@ export default async function plansRoutes(app: FastifyInstance) {
     Body: {
       name?: string;
       jurisdiction_id?: string;
-      sections?: Array<{ id: string; heading?: string; body?: string }>;
+      // `id` is omitted for a section added client-side during this edit
+      // session (not yet persisted) — see the INSERT branch below, which
+      // mirrors how POST /api/v1/plans seeds brand-new sections.
+      sections?: Array<{ id?: string; heading?: string; body?: string }>;
     };
   }>(
     '/api/v1/plans/:id',
@@ -306,24 +309,46 @@ export default async function plansRoutes(app: FastifyInstance) {
       }
 
       if (sections) {
+        // Sections carrying a real `id` are edits to already-persisted
+        // rows (UPDATE). Sections with no `id` were added client-side
+        // this editing session (e.g. PlanEditor's "+ Add section") and
+        // have never been sent to the server before — these need an
+        // INSERT, mirroring the create-branch's section-seeding logic in
+        // POST /api/v1/plans above, or they'd be silently discarded.
+        let nextSortOrder: number | null = null;
         for (const section of sections) {
-          const sectionUpdates: string[] = [];
-          const sectionParams: unknown[] = [];
-          let sIdx = 1;
-          if (section.heading !== undefined) {
-            sectionUpdates.push(`heading = $${sIdx++}`);
-            sectionParams.push(section.heading);
-          }
-          if (section.body !== undefined) {
-            sectionUpdates.push(`body = $${sIdx++}`);
-            sectionParams.push(section.body);
-          }
-          if (sectionUpdates.length > 0) {
-            sectionParams.push(section.id, id);
+          if (section.id) {
+            const sectionUpdates: string[] = [];
+            const sectionParams: unknown[] = [];
+            let sIdx = 1;
+            if (section.heading !== undefined) {
+              sectionUpdates.push(`heading = $${sIdx++}`);
+              sectionParams.push(section.heading);
+            }
+            if (section.body !== undefined) {
+              sectionUpdates.push(`body = $${sIdx++}`);
+              sectionParams.push(section.body);
+            }
+            if (sectionUpdates.length > 0) {
+              sectionParams.push(section.id, id);
+              await query(
+                `UPDATE plan_sections SET ${sectionUpdates.join(', ')}, updated_at = now() WHERE id = $${sIdx} AND plan_id = $${sIdx + 1}`,
+                sectionParams,
+              );
+            }
+          } else {
+            if (nextSortOrder === null) {
+              const maxRows = await query<{ max_sort_order: number | null }>(
+                `SELECT MAX(sort_order) AS max_sort_order FROM plan_sections WHERE plan_id = $1`,
+                [id],
+              );
+              nextSortOrder = (maxRows[0]?.max_sort_order ?? -1) + 1;
+            }
             await query(
-              `UPDATE plan_sections SET ${sectionUpdates.join(', ')}, updated_at = now() WHERE id = $${sIdx} AND plan_id = $${sIdx + 1}`,
-              sectionParams,
+              `INSERT INTO plan_sections (plan_id, heading, body, sort_order) VALUES ($1,$2,$3,$4)`,
+              [id, section.heading ?? '', section.body ?? null, nextSortOrder],
             );
+            nextSortOrder += 1;
           }
         }
       }

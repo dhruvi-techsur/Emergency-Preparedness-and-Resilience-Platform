@@ -163,10 +163,19 @@ export function PlanEditor(): JSX.Element {
     const updated = await apiPatch<PlanDetailResponse>(`/api/v1/plans/${planId}`, {
       name: name.trim(),
       jurisdiction_id: jurisdictionId,
-      sections: sections
-        .filter((s) => s.id)
-        .map((s) => ({ id: s.id!, heading: s.heading, body: s.body })),
+      // Sections added this session (no `id` yet) must still be sent —
+      // the backend INSERTs them and returns their new ids in `updated`,
+      // which we reconcile back into local state below exactly as the
+      // create-branch above does. Filtering these out here was the root
+      // cause of newly-added sections being silently discarded.
+      sections: sections.map((s) => ({ id: s.id, heading: s.heading, body: s.body })),
     });
+    setSections((prev) =>
+      prev.map((s, i) => ({
+        ...s,
+        id: s.id ?? updated.sections[i]?.id,
+      })),
+    );
     return updated.id;
   };
 
