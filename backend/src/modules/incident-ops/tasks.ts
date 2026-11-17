@@ -29,7 +29,22 @@ function shapeTaskRow(row: TaskRow) {
     incident_id: row.incident_id ?? undefined,
     plan_section_id: row.plan_section_id ?? undefined,
     due_at: row.due_at,
+    requires_approval: row.requires_approval,
   };
+}
+
+interface TaskStatusHistoryRow {
+  from_status: TaskStatus | null;
+  to_status: TaskStatus;
+  changed_at: string;
+}
+
+async function fetchTaskStatusHistory(taskId: string): Promise<TaskStatusHistoryRow[]> {
+  return query<TaskStatusHistoryRow>(
+    `SELECT from_status, to_status, changed_at FROM task_status_history
+     WHERE task_id = $1 ORDER BY changed_at ASC`,
+    [taskId],
+  );
 }
 
 export const RECORD_NOT_FOUND = {
@@ -307,6 +322,60 @@ export default async function tasksRoutes(app: FastifyInstance) {
           message: "This action didn't record to the incident timeline. Retry before continuing.",
         });
       }
+    },
+  );
+
+  // GET /api/v1/tasks/{id} -- TechArch's literal endpoint table has no
+  // single-task GET (only the list + PATCH-status), but Task Detail (S4.3,
+  // 03-06) needs one: fetching the full list client-side and filtering by
+  // id would mean every Task Detail view-load pulls every task in the
+  // system, which is both wasteful and silently breaks once pagination
+  // ever truncates the list. This is a thin, same-shape addition (reuses
+  // fetchTaskRow + shapeTaskRow exactly as the other handlers do) rather
+  // than a new concept -- same precedent as 03-03's GET /api/v1/plans/{id}.
+  app.get<{ Params: { id: string } }>(
+    '/api/v1/tasks/:id',
+    { preHandler: requirePermission('tasks', 'view') },
+    async (req, reply) => {
+      const detail = await fetchTaskRow(query, req.params.id);
+      if (!detail) {
+        return reply.code(404).send(RECORD_NOT_FOUND);
+      }
+      // status_history: Task Detail's "Status history" Timeline section
+      // (S4.3) needs the real task_status_history rows, not a simplified
+      // inline list -- this single-task endpoint is the natural place to
+      // embed it rather than adding yet another dedicated route.
+      const history = await fetchTaskStatusHistory(req.params.id);
+      return reply.code(200).send({ ...shapeTaskRow(detail), status_history: history });
+    },
+  );
+
+  // PATCH /api/v1/tasks/{id}/owner -- a thin, metadata-only write (not a
+  // status transition, no task_status_history row, same "metadata vs.
+  // transition" distinction 03-04's resource-requests.ts fulfill endpoint
+  // documents for assigned_to) needed by Task List's (S4.1) "Reassign"
+  // bulk action. No literal endpoint exists for this in TechArch's table;
+  // this is the minimal addition that makes the mockup's documented bulk
+  // action actually work end-to-end.
+  app.patch<{ Params: { id: string }; Body: { owner_id: string } }>(
+    '/api/v1/tasks/:id/owner',
+    { preHandler: requirePermission('tasks', 'edit') },
+    async (req, reply) => {
+      const { id } = req.params;
+      const { owner_id } = req.body ?? ({} as never);
+      if (!owner_id) {
+        return reply.code(422).send({
+          error_code: 'TASK_OWNER_REQUIRED',
+          message: 'Assign an owner before creating this task.',
+        });
+      }
+      const existing = await fetchTaskRow(query, id);
+      if (!existing) {
+        return reply.code(404).send(RECORD_NOT_FOUND);
+      }
+      await query(`UPDATE tasks SET owner_id=$1, updated_at=now() WHERE id=$2`, [owner_id, id]);
+      const detail = await fetchTaskRow(query, id);
+      return reply.code(200).send(shapeTaskRow(detail!));
     },
   );
 
