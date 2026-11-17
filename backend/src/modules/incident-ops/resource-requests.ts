@@ -138,6 +138,34 @@ export default async function resourceRequestRoutes(app: FastifyInstance) {
     },
   );
 
+  // GET /api/v1/resource-requests/{id} -- same gap TechArch's literal
+  // endpoint table leaves for tasks (03-06's TaskDetail hits the identical
+  // issue): Resource Request Detail (S4.6/S4.7) needs single-record
+  // lookup, not a full-list client-side filter. Thin addition reusing
+  // fetchResourceRequestRow/shapeResourceRequestRow exactly as the other
+  // handlers do, same precedent as 03-03's GET /api/v1/plans/{id} and this
+  // plan's own GET /api/v1/tasks/{id} addition.
+  app.get<{ Params: { id: string } }>(
+    '/api/v1/resource-requests/:id',
+    { preHandler: requirePermission('resource_requests', 'view') },
+    async (req, reply) => {
+      const detail = await fetchResourceRequestRow(query, req.params.id);
+      if (!detail) {
+        return reply.code(404).send(RECORD_NOT_FOUND);
+      }
+      const history = await query<{
+        from_status: ResourceRequestStatus | null;
+        to_status: ResourceRequestStatus;
+        changed_at: string;
+      }>(
+        `SELECT from_status, to_status, changed_at FROM resource_request_status_history
+         WHERE resource_request_id = $1 ORDER BY changed_at ASC`,
+        [req.params.id],
+      );
+      return reply.code(200).send({ ...shapeResourceRequestRow(detail), status_history: history });
+    },
+  );
+
   app.post<{
     Body: {
       resource_type: ResourceType;
