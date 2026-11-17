@@ -3,15 +3,15 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 03-02-PLAN.md
-last_updated: "2026-11-17T13:37:52.393Z"
-last_activity: 2026-11-17 — Plan 03-02 complete (background_jobs.job_type CHECK constraint extended to allow 'task_overdue_sweep' — Phase 1's original list silently rejected the sweep's own monitoring insert on every run; runOverdueSweep() flips every task with due_at < now() and status NOT IN ('Done','Overdue') to Overdue, one transaction per task, writing a changed_by=NULL task_status_history row and a system-sourced Timeline entry when incident-linked; startOverdueSweepScheduler() runs it every 60s from server.ts boot with the same graceful-degradation posture as 01-09's NATS connection; Phase 2's closure.ts cascade fixed to write one task_status_history row + one Timeline entry PER cascaded task instead of a single generic entry, closing the gap where the phase's own "exactly one history row per transition" invariant didn't hold for the closure path. 0 deviations — plan executed exactly as written, including its own pre-verification instruction to confirm the real background_jobs_job_type_check constraint name against the live database before finalizing the migration (confirmed correct). Full backend suite (9 files, 45 tests) green with zero regressions; plan-level build clean)
+stopped_at: Completed 03-04-PLAN.md
+last_updated: "2026-11-17T13:38:35.000Z"
+last_activity: 2026-11-17 — Plan 03-04 complete (resource-request lifecycle API built on 03-01's schema: GET/POST /api/v1/resource-requests, POST .../approve, .../decline, .../fulfill, all transactional via withTimelineTransaction; POST immediately transitions Draft -> Awaiting approval in one call unless save_as_draft:true; two-phase assign-then-fulfill on the single .../fulfill endpoint reconciles the UX mockup's "Assigned" sub-state with TechArch's 5-value status enum via assigned_to IS NOT NULL; every transition publishes resource_request.status_changed to NATS JetStream via publishEvent, fire-and-forget so a NATS outage never blocks the response. 0 deviations — plan executed exactly as written; all 4 integration-test assertions passed first run, including a real webhook-subscriber delivery proof of the event-bus publish. Full backend suite (10 files, 49 tests) green with zero regressions; plan-level build clean)
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 32
-  completed_plans: 25
-  percent: 33
+  completed_plans: 26
+  percent: 34
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 3 of 6 (Plans, Tasks & Resource Requests) — IN PROGRESS
-Plan: 2 of 9 complete in current phase (03-01, 03-02 — wave 1/2 — COMPLETE; 03-03 through 03-09 remaining)
-Status: 03-02 complete (time-based Overdue sweep + closure-cascade per-task audit fix) — ready for 03-03 (plan_sections/plan_task_templates)
-Last activity: 2026-11-17 — Plan 03-02 complete (background_jobs.job_type CHECK constraint extended to allow 'task_overdue_sweep' — Phase 1's original list silently rejected the sweep's own monitoring insert on every run; runOverdueSweep() flips every task with due_at < now() and status NOT IN ('Done','Overdue') to Overdue, one transaction per task, writing a changed_by=NULL task_status_history row and a system-sourced Timeline entry when incident-linked; startOverdueSweepScheduler() runs it every 60s from server.ts boot with the same graceful-degradation posture as 01-09's NATS connection; Phase 2's closure.ts cascade fixed to write one task_status_history row + one Timeline entry PER cascaded task instead of a single generic entry, closing the gap where the phase's own "exactly one history row per transition" invariant didn't hold for the closure path. 0 deviations — plan executed exactly as written, including its own pre-verification instruction to confirm the real background_jobs_job_type_check constraint name against the live database before finalizing the migration (confirmed correct). Full backend suite (9 files, 45 tests) green with zero regressions; plan-level build clean)
+Plan: 3 of 9 complete in current phase (03-01, 03-02, 03-04 — waves 1/2 — COMPLETE; 03-03, 03-05 through 03-09 remaining)
+Status: 03-04 complete (resource-request lifecycle API + event-bus publish) — ready for 03-03 (plan_sections/plan_task_templates) and remaining Phase 3 plans
+Last activity: 2026-11-17 — Plan 03-04 complete (resource-request lifecycle API built on 03-01's schema: GET/POST /api/v1/resource-requests, POST .../approve, .../decline, .../fulfill, all transactional via withTimelineTransaction; POST immediately transitions Draft -> Awaiting approval in one call unless save_as_draft:true; two-phase assign-then-fulfill on the single .../fulfill endpoint reconciles the UX mockup's "Assigned" sub-state with TechArch's 5-value status enum via assigned_to IS NOT NULL; every transition publishes resource_request.status_changed to NATS JetStream via publishEvent, fire-and-forget so a NATS outage never blocks the response. 0 deviations — plan executed exactly as written; all 4 integration-test assertions passed first run, including a real webhook-subscriber delivery proof of the event-bus publish. Full backend suite (10 files, 49 tests) green with zero regressions; plan-level build clean)
 
-Progress: [███░░░░░░░] 33%
+Progress: [███░░░░░░░] 34%
 
 ## Performance Metrics
 
@@ -76,6 +76,7 @@ Progress: [███░░░░░░░] 33%
 *Updated after each plan completion*
 | Phase 03 P01 | 35 min | 3 tasks | 4 files |
 | Phase 03 P02 | 15 min | 3 tasks | 5 files |
+| Phase 03 P04 | 20 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -147,6 +148,9 @@ Recent decisions affecting current work:
 - [Phase 03-01]: fetchTaskRow() is parameterized over either the bare query helper or a transaction client, so the pre-PATCH existence/current-state lookup and the post-mutation re-fetch-for-response share one implementation instead of two near-duplicates
 - [Phase 03-02]: overdue-sweep.ts uses one transaction PER flipped task (not one transaction for the whole sweep run) since the sweep spans many independent tasks/incidents and needs per-task fault isolation; closure.ts's per-task audit loop instead runs INSIDE the closure's existing single transaction since all cascaded tasks share one atomic close-the-incident operation that must roll back together on any failure
 - [Phase 03-02]: Confirmed background_jobs_job_type_check is the real constraint name in the migrated database (via pg_constraint query) before finalizing the ALTER migration, per the plan's own verify-before-commit instruction — the default node-pg-migrate naming assumption held, no adjustment needed
+- [Phase 03-04]: Declining a resource request is gated on the 'approve' RBAC action (not 'edit'), since declining is itself an approval-adjacent decision requiring the same permission level as approving
+- [Phase 03-04]: The UX mockup's "Assigned" state is reconciled as a sub-state of 'Approved' (assigned_to IS NOT NULL), not a distinct status enum value — the single POST .../fulfill endpoint handles both the first assign-only call (no status-history row, since assignment is metadata not a transition) and the second true-fulfill call
+- [Phase 03-04]: save_as_draft:true added as a documented extension beyond the FRD's literal request shape, giving Draft a real reachable resting state since the UX mockup's Create/Edit form shows no separate "save as draft" action
 
 ### Pending Todos
 
@@ -158,6 +162,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-17T13:36:07Z
-Stopped at: Completed 03-02-PLAN.md
+Last session: 2026-11-17T13:38:35Z
+Stopped at: Completed 03-04-PLAN.md
 Resume file: None
