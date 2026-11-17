@@ -3,14 +3,14 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 02-07-PLAN.md
-last_updated: "2026-11-16T14:22:16.215Z"
-last_activity: 2026-11-16 — Plan 02-07 complete (Operating Picture (S2.1) map screen; status bar + MapCanvas offline prop both derived from the same backend status_bar.base_layer_source string; 2 auto-fixed deviations, both confined to the new Playwright spec — a test-fixture jurisdiction-scope grant and a marker-overlap selector fix)
+stopped_at: Completed 02-08-PLAN.md
+last_updated: "2026-11-17T11:13:08.594Z"
+last_activity: 2026-11-17 — Plan 02-08 complete (gap-closure: fixed UAT gap ref 2, blocker — Keycloak OIDC sign-in unreachable through Pivota's preview proxy. Same-origin OIDC authority + Vite Keycloak-path proxying + Keycloak forwarded-header trust + relative realm redirectUris. 1 auto-fixed Rule 1 deviation, discovered during the plan's own reproduction: http-proxy's xfwd:true corrupts the forwarded port in a chained-proxy scenario)
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 31
-  completed_plans: 22
+  total_plans: 32
+  completed_plans: 23
   percent: 33
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 2 — Incident Command & Operating Picture (in progress)
+**Current focus:** Phase 2 — Incident Command & Operating Picture (complete, gap-closure done)
 
 ## Current Position
 
-Phase: 2 of 6 (Incident Command & Operating Picture) — COMPLETE
-Plan: 7 of 7 complete in current phase (02-01, 02-04 — wave 1; 02-02 — wave 2, depends_on 02-01; 02-03, 02-05 — wave 3, depends_on 02-01[+02-02]; 02-06 — wave 4, depends_on 02-01+02-02+02-05; 02-07 — wave 5, depends_on 02-03+02-04+02-06 — ALL COMPLETE)
-Status: Phase 2 fully complete — ready for Phase 3 planning (Plans, Tasks & Resource Requests)
-Last activity: 2026-11-16 — Plan 02-07 complete (Operating Picture (S2.1) map screen; status bar + MapCanvas offline prop both derived from the same backend status_bar.base_layer_source string; 2 auto-fixed deviations, both confined to the new Playwright spec — a test-fixture jurisdiction-scope grant and a marker-overlap selector fix)
+Phase: 2 of 6 (Incident Command & Operating Picture) — COMPLETE (including gap closure)
+Plan: 8 of 8 complete in current phase (02-01, 02-04 — wave 1; 02-02 — wave 2, depends_on 02-01; 02-03, 02-05 — wave 3, depends_on 02-01[+02-02]; 02-06 — wave 4, depends_on 02-01+02-02+02-05; 02-07 — wave 5, depends_on 02-03+02-04+02-06; 02-08 — wave 6, gap_closure:true, no functional depends_on — ALL COMPLETE)
+Status: Phase 2 fully complete, UAT gap ref 2 (blocker: "A user can log in" via preview proxy) closed — ready for Phase 2 UAT re-run (tests 2-5) and Phase 3 planning (Plans, Tasks & Resource Requests)
+Last activity: 2026-11-17 — Plan 02-08 complete (gap-closure: Keycloak OIDC sign-in now reachable through Pivota's preview proxy — same-origin OIDC authority, Vite dev-proxy forwarding Keycloak's browser-facing paths, Keycloak forwarded-header trust, relative realm redirectUris. Proven end-to-end via forged X-Forwarded-* headers through the real :7777 proxy infrastructure, with zero regression on the existing direct-sandbox Playwright SSO suite. 1 auto-fixed Rule 1 deviation discovered during the plan's own reproduction: http-proxy's xfwd:true corrupts the forwarded port in a chained-proxy scenario)
 
 Progress: [███░░░░░░░] 33%
 
@@ -36,9 +36,9 @@ Progress: [███░░░░░░░] 33%
 
 **Velocity:**
 
-- Total plans completed: 22
-- Average duration: 24 min
-- Total execution time: 9.9 hours
+- Total plans completed: 23
+- Average duration: 23 min
+- Total execution time: 10.1 hours
 
 **By Phase:**
 
@@ -66,14 +66,14 @@ Progress: [███░░░░░░░] 33%
 | Phase 02 P05 | 35 min | 3 tasks | 9 files |
 | Phase 02 P06 | 25 min | 3 tasks | 7 files |
 | Phase 02 P07 | 25 min | 2 tasks | 6 files |
+| Phase 02 P08 | 13 min | 2 tasks | 4 files |
 
 **Recent Trend:**
 
-- Last 5 plans: 12 min, 35 min, 25 min, 25 min
-- Trend: Phase 1 is now fully complete: all 15 plans (13 original + 2 gap-closure) done. Phase 2 is now ALSO fully complete: all 7 plans done, with a parallel-wave structure (02-01 and 02-04 both wave 1; 02-02 wave 2 depends_on 02-01; 02-03/02-05 wave 3; 02-06 wave 4; 02-07 wave 5, depends_on 02-03+02-04+02-06). 02-05 shipped the Incident List/Create Incident screens (success criterion 1). 02-06 shipped the Incident Workspace plus the Command Role Assignment and Activation Level Change Modals (success criteria 2 and 3). 02-07 shipped the Operating Picture map screen (success criteria 4 and 5), composing 02-04's MAPS component family over 02-03's markers/layers endpoints, with its Playwright suite proving the page survives a forced GIS outage end-to-end. Plan 02-01 ran one trivial auto-fixed deviation. Plan 02-04 ran one trivial test-infrastructure-only deviation. Plan 02-02 ran one auto-fixed Rule 1 bug (SAVEPOINT). Plan 02-03 ran clean. Plan 02-05 ran two auto-fixed deviations (Rule 3 Keycloak identity seed, Rule 1 Playwright label fix). Plan 02-06 ran one auto-fixed Rule 3 deviation (GET /api/v1/incidents/personnel). Plan 02-07 ran two auto-fixed deviations, both confined to its own new Playwright spec file (no production code touched): a Rule 3 test-fixture jurisdiction-scope grant for commander@epmp.local (the markers endpoint correctly enforces jurisdiction_scope filtering where the plain incidents-list endpoint doesn't yet — T-02-03) and a Rule 1 marker-overlap selector fix (exact-name aria-label matching instead of `.first()`, plus per-incident lat/lng jitter). All seven Phase 2 plans' own verify commands (build + full test suite, with 02-01/02-02/02-03/02-05/02-06/02-07 also running a live-stack integration/Playwright test) passed clean.
+- Last 5 plans: 25 min, 25 min, 13 min
+- Trend: Phase 1 is now fully complete: all 15 plans (13 original + 2 gap-closure) done. Phase 2 is now ALSO fully complete: all 8 plans done (7 original + 1 gap-closure), with a parallel-wave structure (02-01 and 02-04 both wave 1; 02-02 wave 2 depends_on 02-01; 02-03/02-05 wave 3; 02-06 wave 4; 02-07 wave 5, depends_on 02-03+02-04+02-06; 02-08 wave 6, gap_closure, isolated for infra reasons not a functional dependency). 02-05 shipped the Incident List/Create Incident screens (success criterion 1). 02-06 shipped the Incident Workspace plus the Command Role Assignment and Activation Level Change Modals (success criteria 2 and 3). 02-07 shipped the Operating Picture map screen (success criteria 4 and 5), composing 02-04's MAPS component family over 02-03's markers/layers endpoints, with its Playwright suite proving the page survives a forced GIS outage end-to-end. 02-08 closed UAT gap ref 2 (blocker): Keycloak OIDC sign-in is now reachable through Pivota's preview proxy, not just direct sandbox access — four compounding fixes (same-origin OIDC authority, Vite dev-proxy forwarding Keycloak's browser-facing paths, Keycloak KC_PROXY_HEADERS forwarded-header trust, relative realm redirectUris), proven end-to-end via forged X-Forwarded-* headers through the real :7777 proxy with zero regression on the existing direct-sandbox Playwright suite. Plan 02-01 ran one trivial auto-fixed deviation. Plan 02-04 ran one trivial test-infrastructure-only deviation. Plan 02-02 ran one auto-fixed Rule 1 bug (SAVEPOINT). Plan 02-03 ran clean. Plan 02-05 ran two auto-fixed deviations (Rule 3 Keycloak identity seed, Rule 1 Playwright label fix). Plan 02-06 ran one auto-fixed Rule 3 deviation (GET /api/v1/incidents/personnel). Plan 02-07 ran two auto-fixed deviations, both confined to its own new Playwright spec file (no production code touched): a Rule 3 test-fixture jurisdiction-scope grant for commander@epmp.local (the markers endpoint correctly enforces jurisdiction_scope filtering where the plain incidents-list endpoint doesn't yet — T-02-03) and a Rule 1 marker-overlap selector fix (exact-name aria-label matching instead of `.first()`, plus per-incident lat/lng jitter). Plan 02-08 ran one auto-fixed Rule 1 deviation (http-proxy's xfwd:true port-pollution bug, discovered during the plan's own reproduction, not assumed from documentation). All eight Phase 2 plans' own verify commands (build + full test suite, with 02-01/02-02/02-03/02-05/02-06/02-07/02-08 also running a live-stack integration/Playwright test) passed clean.
 
 *Updated after each plan completion*
-| Phase 02-incident-command-operating-picture P07 | 25 min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -138,6 +138,9 @@ Recent decisions affecting current work:
 - [Phase 02-07]: Status bar text and MapCanvas's offline prop are both derived from the identical backend status_bar.base_layer_source string (never independently tracked) — structurally impossible to show contradictory GIS-outage states
 - [Phase 02-07]: projectToPercent(lat, lng, bbox) colocated in the page file (not the design system) — a documented linear approximation standing in for a real MapLibre/Leaflet/ArcGIS JS integration's own screen-coordinate output, since no map-engine license/tile-server credential exists in this sandbox
 - [Phase 02-07]: Discovered (not caused by this plan) that commander@epmp.local's JIT-provisioned jurisdiction_scope is empty by design, and that operating-picture.ts's markers query (unlike the still-unscoped GET /api/v1/incidents list endpoint, T-02-03) correctly enforces it — fixed via a test-fixture-only grant in the new Playwright spec, not a production code change
+- [Phase 02-08]: KEYCLOAK_AUTHORITY changed from hardcoded sandbox-internal string to window.location.origin-derived, mirroring the file's own already-correct redirect_uri pattern
+- [Phase 02-08]: Vite Keycloak proxy entries use an explicit configure() forwarded-header hook, not http-proxy's xfwd:true -- xfwd:true unconditionally appends its own listening port to X-Forwarded-Port, corrupting Keycloak's computed issuer in a chained-proxy scenario (discovered during this plan's own reproduction, not assumed)
+- [Phase 02-08]: epmp-app's redirectUris widened to the host-less relative pattern /auth/callback, /auth/callback/* (not a literal preview-domain wildcard, which Keycloak 25.0 empirically rejected) -- validated against both a simulated external preview origin and direct sandbox access
 
 ### Pending Todos
 
@@ -149,6 +152,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-16T14:22:03.751Z
-Stopped at: Completed 02-07-PLAN.md
+Last session: 2026-11-17T11:13:08.594Z
+Stopped at: Completed 02-08-PLAN.md
 Resume file: None
