@@ -1,0 +1,20 @@
+/*
+ * MapControls (MAPS) — token-only styling.
+ */
+
+.ep-map-controls {
+  display: inline-flex;
+  flex-direction: column;
+  border: var(--border-1) solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  overflow: hidden;
+}
+
+.ep-map-controls > * + * {
+  border-top: var(--border-1) solid var(--border);
+}
+
+.ep-map-controls .ep-icon-btn {
+  border-radius: 0;
+}

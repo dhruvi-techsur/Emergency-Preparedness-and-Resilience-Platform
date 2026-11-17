@@ -68,7 +68,8 @@ Plans:
 
 ### Phase 2: Incident Command & Operating Picture
 **Goal**: Command staff can intake and activate an incident, assign named command roles, and see a shared, time-stamped operating picture that never fails to render — even when the live GIS feed is unavailable.
-**Status**: Passed
+**Status**: Complete (2026-11-17)
+**Last Updated**: 2026-11-17T13:23:08Z
 **Depends on**: Phase 1
 **Requirements**: F1, F2, F11
 **Success Criteria** (what must be TRUE):
@@ -77,7 +78,7 @@ Plans:
   3. Changing the activation level (Monitoring/Partial/Full) requires a modal confirmation stating the specific operational consequence before the change takes effect, and at least one Incident Commander must be assigned before activating above Monitoring.
   4. The operating picture renders incidents, facilities, and resources as status-coded, shape-distinguished markers on a real GIS-sourced base map, with a status bar showing data age and base-layer source.
   5. When the GIS feed is unavailable, the operating picture falls back to a schematic base map clearly labeled "Schematic base map, offline" and continues rendering EPMP markers — the page never fails to render.
-**Plans:** 7 plans
+**Plans:** 8 plans
 
 Plans:
 - [ ] 02-01-PLAN.md — Backend incident-ops foundation: incidents/command-roles/timeline schema, TimelineService transaction helper, incident CRUD
@@ -87,6 +88,7 @@ Plans:
 - [ ] 02-05-PLAN.md — Frontend: Incident List + Create Incident (non-blocking duplicate warning)
 - [ ] 02-06-PLAN.md — Frontend: Incident Workspace + Command Role Modal + Activation Level Modal
 - [ ] 02-07-PLAN.md — Frontend: Operating Picture map page with degraded-mode rendering
+- [ ] 02-08-PLAN.md — Gap closure (UAT ref 2, blocker): same-origin OIDC authority + Keycloak forwarded-header trust + relative redirect allow-list, so login is reachable through Pivota's preview proxy
 
 ### Phase 3: Plans, Tasks & Resource Requests
 **Goal**: Planning staff can maintain a versioned, approved plan/SOP repository linked to generated tasks, and command/logistics staff can run tasks and resource requests through to closure — replacing manual spreadsheets and phone-based tracking.

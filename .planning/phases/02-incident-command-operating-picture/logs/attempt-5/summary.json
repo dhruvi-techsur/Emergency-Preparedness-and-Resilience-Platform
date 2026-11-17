@@ -1,0 +1,32 @@
+{
+  "duration_secs": 4513.0,
+  "token_usage": {
+    "input": 627,
+    "output": 365369,
+    "total": 45485275,
+    "cache_read": 43855870,
+    "cache_write": 1263409,
+    "cost": 15.584640500000006
+  },
+  "model": "claude-sonnet-5",
+  "files_changed": [
+    ".planning/STATE.md",
+    ".planning/phases/02-incident-command-operating-picture/02-08-SUMMARY.md",
+    ".planning/phases/02-incident-command-operating-picture/02-GATE.md",
+    ".planning/phases/02-incident-command-operating-picture/02-REVIEW.md",
+    ".planning/phases/02-incident-command-operating-picture/02-SECURITY.md",
+    ".planning/phases/02-incident-command-operating-picture/02-VERIFICATION.md",
+    ".planning/phases/02-incident-command-operating-picture/logs/attempt-5/execution.md",
+    ".planning/phases/02-incident-command-operating-picture/logs/attempt-5/summary.json",
+    ".planning/phases/02-incident-command-operating-picture/logs/attempt-5/verification.md",
+    "backend/keycloak/epmp-realm.json",
+    "docker-compose.yml",
+    "frontend/app/src/auth/oidc-config.ts",
+    "frontend/app/vite.config.ts"
+  ],
+  "verification_status": "passed",
+  "error_message": null,
+  "attempt_number": 5,
+  "created_at": "2026-11-17T10:46:42.753974+00:00",
+  "completed_at": "2026-11-17T12:01:56.104876983+00:00"
+}

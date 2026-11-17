@@ -1,0 +1,26 @@
+/*
+ * Provenance (PRODUCT PATTERNS) — token-only styling.
+ *
+ * Verified (default): solid var(--border) outline. Unverified (explicit
+ * verified=false): DASHED outline — the structural signal, never a color
+ * swap alone.
+ */
+
+.ep-provenance {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border: var(--border-1) solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.ep-provenance--unverified {
+  border-style: dashed;
+  border-color: var(--warning-border);
+  color: var(--warning-text);
+}
+
+.ep-provenance__text {
+  color: inherit;
+}

@@ -1,0 +1,84 @@
+/*
+ * MapPopup (MAPS) — token-only styling.
+ *
+ * Floats above the map surface — the exception to Card's shadow-free rule
+ * (see TSDoc comment in MapPopup.tsx).
+ */
+
+.ep-map-popup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 220px;
+  max-width: 320px;
+  padding: var(--space-4);
+  background: var(--bg-raised);
+  border: var(--border-1) solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.ep-map-popup__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.ep-map-popup__heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.ep-map-popup__title {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.ep-map-popup__close {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+.ep-map-popup__close:hover {
+  background: var(--bg-sunken);
+}
+.ep-map-popup__close:focus-visible {
+  outline: var(--border-2) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.ep-map-popup__facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink);
+}
+
+.ep-map-popup__provenance {
+  margin-top: var(--space-1);
+}
+
+.ep-map-popup__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  margin-top: var(--space-1);
+}

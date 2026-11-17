@@ -1,0 +1,50 @@
+/*
+ * F1 S1.3 — Incident Workspace layout. Left two-thirds / right third split
+ * per the FRD's workspace spec, collapsing to a single column below the
+ * design system's --bp-md breakpoint (same value AppShell.css uses for its
+ * own nav-rail/bottom-bar switch).
+ */
+
+.ep-incident-workspace__activation {
+  margin: var(--space-3) 0 var(--space-4);
+}
+
+.ep-incident-workspace__layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+@media (max-width: 767px) {
+  .ep-incident-workspace__layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ep-incident-workspace__main > *:not(:first-child) {
+  margin-top: var(--space-4);
+}
+
+.ep-incident-workspace__side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.ep-incident-workspace__role-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: var(--border-1) solid var(--border);
+}
+
+.ep-incident-workspace__role-row:last-child {
+  border-bottom: none;
+}
+
+.ep-incident-workspace__role-text {
+  flex: 1;
+  min-width: 0;
+}

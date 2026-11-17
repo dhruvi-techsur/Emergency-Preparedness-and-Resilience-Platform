@@ -110,6 +110,48 @@ async function main() {
     record('role_permissions', result);
   }
 
+  // incidents feature (Phase 2, F1): incident_commander and eoc_director are
+  // the FRD's "typically PER-01 or PER-02" creators/commanders of incidents,
+  // so they get view/create/edit. planning_logistics_chief and
+  // field_responder get read-only view access for situational awareness —
+  // Phase 2's RBAC model grants no incident-mutation rights to either role.
+  // secops_admin deliberately gets NO explicit 'incidents' row here: it
+  // already has blanket admin/platform access from the grants above, and
+  // that access is scoped to the admin console (user/role/SSO/audit
+  // management), not incident-command operations — omitting it is
+  // intentional, not an oversight.
+  const incidentsFullAccessRoles = ['incident_commander', 'eoc_director'] as const;
+  const incidentsViewOnlyRoles = ['planning_logistics_chief', 'field_responder'] as const;
+
+  for (const roleName of incidentsFullAccessRoles) {
+    const result = await findOrInsert(
+      'role_permissions',
+      ['role_id', 'feature'],
+      [roleIds[roleName], 'incidents'],
+      ['role_id', 'feature', 'actions'],
+      [roleIds[roleName], 'incidents', ['view', 'create', 'edit']],
+    );
+    record('role_permissions', result);
+  }
+
+  for (const roleName of incidentsViewOnlyRoles) {
+    const result = await findOrInsert(
+      'role_permissions',
+      ['role_id', 'feature'],
+      [roleIds[roleName], 'incidents'],
+      ['role_id', 'feature', 'actions'],
+      [roleIds[roleName], 'incidents', ['view']],
+    );
+    record('role_permissions', result);
+  }
+
+  // No explicit call to syncRolePermissionsToOpa here: unlike this plan's
+  // earlier concern, OPA's data document is re-synced fresh from
+  // role_permissions at every server.ts startup (see server.ts's `start()`),
+  // so `npm run migrate && npm run seed` followed by a normal app boot is
+  // sufficient — the newly-seeded rows reach OPA on the next server start
+  // with no separate sync step needed from this script.
+
   // 1 admin user (natural key: email, which IS unique in the schema)
   const adminUser = await findOrInsert(
     'users',
@@ -123,6 +165,16 @@ async function main() {
   // sso_config (natural key: protocol — no UNIQUE constraint in the schema,
   // but this seed only ever creates one OIDC config, so protocol='OIDC' is
   // the natural identity for this row)
+  const groupToRoleMapping = [
+    { idp_group: '/epmp-admins', role_id: secopsAdminId },
+    // Phase 2 (F1): a second seeded Keycloak group/user so this phase's
+    // Playwright suite can sign in as a role that actually holds
+    // `incidents` permissions (admin@epmp.local's secops_admin role
+    // deliberately does NOT, per this file's own documented decision
+    // above) — see backend/keycloak/epmp-realm.json's
+    // "epmp-incident-commanders" group + "commander@epmp.local" user.
+    { idp_group: '/epmp-incident-commanders', role_id: roleIds['incident_commander'] },
+  ];
   const ssoConfig = await findOrInsert(
     'sso_config',
     ['protocol'],
@@ -132,12 +184,153 @@ async function main() {
       'OIDC',
       'http://keycloak:8080/realms/epmp/.well-known/openid-configuration',
       JSON.stringify({ email_attr: 'email', name_attr: 'name', group_attr: 'groups' }),
-      JSON.stringify([{ idp_group: '/epmp-admins', role_id: secopsAdminId }]),
+      JSON.stringify(groupToRoleMapping),
       true,
       new Date().toISOString(),
     ],
   );
   record('sso_config', ssoConfig);
+  // The row may already exist from an earlier plan's seed run (persisted
+  // compose volume) without this phase's new mapping entry — findOrInsert
+  // only inserts on first-ever creation, so re-assert the full mapping
+  // idempotently on every run rather than leaving a stale array behind.
+  await pool.query(`UPDATE sso_config SET group_to_role_mapping = $1 WHERE protocol = 'OIDC'`, [
+    JSON.stringify(groupToRoleMapping),
+  ]);
+
+  // Phase 2 (F1): commander@epmp.local, pre-provisioned with the
+  // 'Default Agency' jurisdiction_scope up front — mirrors admin@epmp.local's
+  // identical treatment three lines above. This closes a documented gap
+  // (02-07-SUMMARY.md Deviation #1): a first-ever Keycloak login JIT-
+  // provisions this identity via sso.ts with jurisdiction_scope = '{}'
+  // (correct production behavior for a truly unknown identity with no
+  // seed row), which left `operating-picture.ts`'s jurisdiction_scope-
+  // filtered markers query unable to return a single row for this user.
+  // sso.ts's JIT INSERT uses `ON CONFLICT (email) DO UPDATE SET
+  // idp_subject = ..., last_login_at = ...` — it only ever touches those
+  // two columns on an existing email match, so pre-seeding this row here
+  // with the real scope makes every subsequent real OIDC login preserve
+  // it untouched. This is a seed.ts fix, not a change to sso.ts's JIT
+  // behavior: a genuinely new identity with no seed row still
+  // JIT-provisions with an empty scope exactly as before. 02-07's own
+  // Playwright spec previously worked around this with a one-time direct-
+  // Postgres grant in the test fixture itself
+  // (ensureCommanderHasJurisdictionScope in operating-picture.spec.ts);
+  // that fixture is now redundant (a no-op UPDATE) but left in place since
+  // removing it is out of this task's scope.
+  const commanderUser = await findOrInsert(
+    'users',
+    ['email'],
+    ['commander@epmp.local'],
+    ['email', 'name', 'role_id', 'jurisdiction_scope'],
+    ['commander@epmp.local', 'Incident Commander', roleIds['incident_commander'], [jurisdiction.id]],
+  );
+  record('users', commanderUser);
+  // Self-healing re-assertion for a row that already existed (e.g. a real
+  // prior login via Keycloak on a pre-fix compose volume, or a fresh
+  // insert above that already has it) — appends rather than overwrites,
+  // per the "extend, never mutate" seeding rule, so any OTHER jurisdiction
+  // an admin may have since granted this user via the admin console is
+  // never clobbered.
+  await pool.query(
+    `UPDATE users SET jurisdiction_scope = jurisdiction_scope || $1
+     WHERE email = 'commander@epmp.local' AND NOT ($2 = ANY(jurisdiction_scope))`,
+    [[jurisdiction.id], jurisdiction.id],
+  );
+
+  // Phase 2 (F1/F2) UAT fixtures: two 'Default Agency' incidents so a
+  // human tester's UI walkthrough of Create/Assign/Escalate/Operating-
+  // Picture never starts from an empty incidents list, and so the
+  // Assign-role and Escalate-activation tests (which need mutually
+  // exclusive starting states — see activation.ts's NO_COMMANDER_ASSIGNED
+  // rule) each have their own dedicated, independent target:
+  //  - UAT-ASSIGN-ROLE: Open, Monitoring, NO command role assigned yet —
+  //    the live target for "2. Assign a Command Role".
+  //  - UAT-ESCALATE-READY: Open, Monitoring, Incident Commander ALREADY
+  //    assigned — the live target for "3. Activation Level Change",
+  //    decoupled from whatever test 2 does to its own incident.
+  // Both carry a real `location` (DC-area point, the same reference point
+  // 02-03/02-07's own tests and e2e spec use) so they also satisfy tests
+  // 4/5 (Operating Picture markers + the forced-GIS-failure fallback).
+  const incidentsToSeed = [
+    {
+      name: 'UAT-ASSIGN-ROLE Default Agency Flood',
+      type: 'Flood',
+      severity: 'Elevated',
+      lng: -77.02,
+      lat: 38.89,
+      assignCommander: false,
+    },
+    {
+      name: 'UAT-ESCALATE-READY Default Agency Wildfire',
+      type: 'Wildfire',
+      severity: 'Critical',
+      lng: -77.05,
+      lat: 38.93,
+      assignCommander: true,
+    },
+  ] as const;
+
+  for (const inc of incidentsToSeed) {
+    const incidentResult = await findOrInsert(
+      'incidents',
+      ['name', 'jurisdiction_id'],
+      [inc.name, jurisdiction.id],
+      ['name', 'type', 'severity', 'jurisdiction_id', 'opened_at', 'created_by'],
+      [inc.name, inc.type, inc.severity, jurisdiction.id, new Date().toISOString(), commanderUser.id],
+    );
+    record('incidents', incidentResult);
+
+    // `location` is nullable (see 1700000000002's own documented
+    // deviation) and isn't part of findOrInsert's generic insert-column
+    // list above — set it idempotently in its own statement, same
+    // "re-assert idempotently" shape as sso_config's UPDATE above.
+    await pool.query(
+      `UPDATE incidents SET location = ST_SetSRID(ST_MakePoint($2, $3), 4326)
+       WHERE id = $1 AND location IS NULL`,
+      [incidentResult.id, inc.lng, inc.lat],
+    );
+
+    if (incidentResult.inserted) {
+      await pool.query(
+        `INSERT INTO incident_timeline (incident_id, title, tone, actor_id, source)
+         VALUES ($1, 'Incident created', 'brand', $2, 'EPMP')`,
+        [incidentResult.id, commanderUser.id],
+      );
+    }
+
+    if (inc.assignCommander) {
+      // Mirrors command-roles.ts's own "at most one ACTIVE assignment per
+      // role per incident" invariant (unassigned_at IS NULL) — a plain
+      // findOrInsert equality match on (incident_id, role_title,
+      // person_id) would incorrectly treat a historical (unassigned) row
+      // as "already present" and skip creating a live one.
+      const activeRows = await pool.query<{ id: string }>(
+        `SELECT id FROM incident_command_roles
+         WHERE incident_id = $1 AND role_title = 'Incident Commander' AND unassigned_at IS NULL`,
+        [incidentResult.id],
+      );
+      if (activeRows.rows.length === 0) {
+        await pool.query(
+          `INSERT INTO incident_command_roles (incident_id, role_title, person_id, assigned_by)
+           VALUES ($1, 'Incident Commander', $2, $2)`,
+          [incidentResult.id, commanderUser.id],
+        );
+        await pool.query(
+          `INSERT INTO incident_timeline (incident_id, title, tone, actor_id, source, detail)
+           VALUES ($1, 'Incident Commander assigned to Incident Commander', 'brand', $2, 'EPMP', $3)`,
+          [
+            incidentResult.id,
+            commanderUser.id,
+            JSON.stringify({ role_title: 'Incident Commander', person_id: commanderUser.id }),
+          ],
+        );
+        record('incident_command_roles', { id: incidentResult.id, inserted: true });
+      } else {
+        record('incident_command_roles', { id: activeRows.rows[0].id, inserted: false });
+      }
+    }
+  }
 
   // record_authority_registry baseline rows (natural key: record_type, which IS unique)
   const authorityRows = [

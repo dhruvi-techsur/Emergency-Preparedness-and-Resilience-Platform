@@ -3,14 +3,15 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-last_updated: "2026-11-16T12:09:23.432Z"
-last_activity: "2026-11-16 — Phase 1 complete"
+stopped_at: Completed 02-08-PLAN.md
+last_updated: "2026-11-17T11:13:08.594Z"
+last_activity: 2026-11-17 — Plan 02-08 complete (gap-closure: fixed UAT gap ref 2, blocker — Keycloak OIDC sign-in unreachable through Pivota's preview proxy. Same-origin OIDC authority + Vite Keycloak-path proxying + Keycloak forwarded-header trust + relative realm redirectUris. 1 auto-fixed Rule 1 deviation, discovered during the plan's own reproduction: http-proxy's xfwd:true corrupts the forwarded port in a chained-proxy scenario)
 progress:
   total_phases: 6
-  completed_phases: 1
-  total_plans: 31
-  completed_plans: 15
-  percent: 17
+  completed_phases: 2
+  total_plans: 32
+  completed_plans: 23
+  percent: 33
 ---
 
 # Project State
@@ -20,24 +21,24 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 1 — Platform Foundation & Deployable Shell (complete, including gap-closure plans)
+**Current focus:** Phase 2 — Incident Command & Operating Picture (complete, gap-closure done)
 
 ## Current Position
 
-Phase: 1 of 6 (Platform Foundation & Deployable Shell)
-Plan: 15 of 15 in current phase (01-15 — WCAG contrast audit gap closure — COMPLETE; all Phase 1 plans done)
-Status: Phase 1 complete — ready for /pivota_spec-plan-phase 2
-Last activity: 2026-11-16 — Plan 01-15 complete (WCAG contrast audit gap closure — ink-disabled token fix in light/dark themes + permanent @axe-core/playwright regression spec; UAT gap ref 4 closed; Phase 1 now fully complete, all 15 plans — 13 original + 2 gap-closure — done)
+Phase: 2 of 6 (Incident Command & Operating Picture) — COMPLETE (including gap closure)
+Plan: 8 of 8 complete in current phase (02-01, 02-04 — wave 1; 02-02 — wave 2, depends_on 02-01; 02-03, 02-05 — wave 3, depends_on 02-01[+02-02]; 02-06 — wave 4, depends_on 02-01+02-02+02-05; 02-07 — wave 5, depends_on 02-03+02-04+02-06; 02-08 — wave 6, gap_closure:true, no functional depends_on — ALL COMPLETE)
+Status: Phase 2 fully complete, UAT gap ref 2 (blocker: "A user can log in" via preview proxy) closed — ready for Phase 2 UAT re-run (tests 2-5) and Phase 3 planning (Plans, Tasks & Resource Requests)
+Last activity: 2026-11-17 — Plan 02-08 complete (gap-closure: Keycloak OIDC sign-in now reachable through Pivota's preview proxy — same-origin OIDC authority, Vite dev-proxy forwarding Keycloak's browser-facing paths, Keycloak forwarded-header trust, relative realm redirectUris. Proven end-to-end via forged X-Forwarded-* headers through the real :7777 proxy infrastructure, with zero regression on the existing direct-sandbox Playwright SSO suite. 1 auto-fixed Rule 1 deviation discovered during the plan's own reproduction: http-proxy's xfwd:true corrupts the forwarded port in a chained-proxy scenario)
 
-Progress: [██░░░░░░░░] 17%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 15
-- Average duration: 27 min
-- Total execution time: 7.1 hours
+- Total plans completed: 23
+- Average duration: 23 min
+- Total execution time: 10.1 hours
 
 **By Phase:**
 
@@ -58,11 +59,19 @@ Progress: [██░░░░░░░░] 17%
 | Phase 01 P13 | 50 min | 3 tasks | 8 files |
 | Phase 01 P14 | 8 min | 1 tasks | 2 files |
 | Phase 01 P15 | 20 min | 2 tasks | 5 files |
+| Phase 02 P01 | 45 min | 3 tasks | 7 files |
+| Phase 02 P04 | 18 min | 3 tasks | 14 files |
+| Phase 02 P02 | 9 min | 3 tasks | 6 files |
+| Phase 02 P03 | 12 min | 3 tasks | 7 files |
+| Phase 02 P05 | 35 min | 3 tasks | 9 files |
+| Phase 02 P06 | 25 min | 3 tasks | 7 files |
+| Phase 02 P07 | 25 min | 2 tasks | 6 files |
+| Phase 02 P08 | 13 min | 2 tasks | 4 files |
 
 **Recent Trend:**
 
-- Last 5 plans: 35 min, 50 min, 8 min, 20 min
-- Trend: Plan 13 (terminal deploy-packaging plan) ran one deviation beyond the plan's own stated assumption — the plan's literal Dockerfile snippet was expected to pass D7's Trivy CRITICAL-CVE gate on the full devDependency-laden node_modules, but it didn't; fixed with a dedicated production-only deps stage, then the platform's own deploy-check script passed clean on the next run. Plan 14 is a small gap-closure plan (UAT gap ref 3, partial in-repo mitigation) with zero deviations. Plan 15 (WCAG contrast audit gap closure) also ran with zero deviations — the plan's own pre-verification already correctly identified the exact token fix and the plan's literal verify commands passed as written. Phase 1 is now fully complete: all 15 plans (13 original + 2 gap-closure) done.
+- Last 5 plans: 25 min, 25 min, 13 min
+- Trend: Phase 1 is now fully complete: all 15 plans (13 original + 2 gap-closure) done. Phase 2 is now ALSO fully complete: all 8 plans done (7 original + 1 gap-closure), with a parallel-wave structure (02-01 and 02-04 both wave 1; 02-02 wave 2 depends_on 02-01; 02-03/02-05 wave 3; 02-06 wave 4; 02-07 wave 5, depends_on 02-03+02-04+02-06; 02-08 wave 6, gap_closure, isolated for infra reasons not a functional dependency). 02-05 shipped the Incident List/Create Incident screens (success criterion 1). 02-06 shipped the Incident Workspace plus the Command Role Assignment and Activation Level Change Modals (success criteria 2 and 3). 02-07 shipped the Operating Picture map screen (success criteria 4 and 5), composing 02-04's MAPS component family over 02-03's markers/layers endpoints, with its Playwright suite proving the page survives a forced GIS outage end-to-end. 02-08 closed UAT gap ref 2 (blocker): Keycloak OIDC sign-in is now reachable through Pivota's preview proxy, not just direct sandbox access — four compounding fixes (same-origin OIDC authority, Vite dev-proxy forwarding Keycloak's browser-facing paths, Keycloak KC_PROXY_HEADERS forwarded-header trust, relative realm redirectUris), proven end-to-end via forged X-Forwarded-* headers through the real :7777 proxy with zero regression on the existing direct-sandbox Playwright suite. Plan 02-01 ran one trivial auto-fixed deviation. Plan 02-04 ran one trivial test-infrastructure-only deviation. Plan 02-02 ran one auto-fixed Rule 1 bug (SAVEPOINT). Plan 02-03 ran clean. Plan 02-05 ran two auto-fixed deviations (Rule 3 Keycloak identity seed, Rule 1 Playwright label fix). Plan 02-06 ran one auto-fixed Rule 3 deviation (GET /api/v1/incidents/personnel). Plan 02-07 ran two auto-fixed deviations, both confined to its own new Playwright spec file (no production code touched): a Rule 3 test-fixture jurisdiction-scope grant for commander@epmp.local (the markers endpoint correctly enforces jurisdiction_scope filtering where the plain incidents-list endpoint doesn't yet — T-02-03) and a Rule 1 marker-overlap selector fix (exact-name aria-label matching instead of `.first()`, plus per-incident lat/lng jitter). Plan 02-08 ran one auto-fixed Rule 1 deviation (http-proxy's xfwd:true port-pollution bug, discovered during the plan's own reproduction, not assumed from documentation). All eight Phase 2 plans' own verify commands (build + full test suite, with 02-01/02-02/02-03/02-05/02-06/02-07/02-08 also running a live-stack integration/Playwright test) passed clean.
 
 *Updated after each plan completion*
 
@@ -106,6 +115,32 @@ Recent decisions affecting current work:
 - [Phase 01-13]: backend/migrations/1700000000001_seed-roles.js ships only the 5 structural persona roles + secops_admin's baseline role_permissions (0 users, 0 sso_config) as a production-safe migration, deliberately separate from scripts/seed.ts's dev-fixture admin user/sso_config which point at the local docker-compose Keycloak — solves the SSO group-to-role bootstrap problem without seeding sensitive fixture data into a real deployment
 - [Phase 01-14]: Did not write .pivota/start-dev.sh — that file is generated exclusively by the platform's init-dev-server workflow (runtime-environment.md Section 7a), outside this phase's repository scope; this plan's dev-mode port banner + README section is an explicitly partial in-repo mitigation for UAT gap ref 3
 - [Phase 01-15]: Dark theme's replacement --ink-disabled (#6c8499) derived by proportionally lightening the original #5d7284 hue 1.16x rather than an arbitrary hex, to stay in the same blue-grey hue family while clearing 4.5:1
+- [Phase 02-01]: incidents table gets a documented nullable `location GEOGRAPHY(POINT,4326)` column beyond TechArch 02b's literal DDL — F2/FRD's diamond-marker rendering and MapMarker interface need it, but S1.2's create-form has no location field, so incidents without one are simply omitted from operating-picture markers until set
+- [Phase 02-01]: incident_timeline immutability enforced via BEFORE UPDATE/DELETE trigger (not TechArch's REVOKE-based app_runtime role), identical to Phase 1's audit_log pattern, since DEPLOY-01 gives the app exactly one DB role that must also run migrations
+- [Phase 02-01]: POST /api/v1/incidents duplicate-name warning (409 INCIDENT_POSSIBLE_DUPLICATE) resolved via a confirmed_duplicate:true request-body flag on resubmission — TechArch's literal request body doesn't show this field, but the FRD's "warn, not block" rule needs some confirm-and-proceed mechanism
+- [Phase 02-01]: Generic PATCH /api/v1/incidents/{id} restricted to name/type/description with no Timeline entry — severity/activation_level/status changes get their own dedicated endpoints (later 02-* plans) with their own validation, since only those count as "state-changing actions" per FRD's Timeline-write rule
+- [Phase 02-04]: MapCanvas's offline prop gates ONLY the base fill/label branch; markers/areas/lines render from an entirely separate, always-executed branch in the same component — this structural separation (not a shared conditional) is what makes "the page never fails to render" hold even in degraded mode
+- [Phase 02-04]: Provenance's verified=false path renders fully different markup (dashed border + Icon + literal word) rather than a conditional class on shared markup, so a caller cannot accidentally make unverified data look verified by omitting a prop
+- [Phase 02-04]: LayerPanel's unverified rows reuse Provenance directly (not a second dashed-treatment implementation); MapLegend is built on Card padded={false} rather than reimplementing panel chrome
+- [Phase 02-02]: Command-role reassignment locks the existing active-role row with SELECT ... FOR UPDATE before deciding assign/reassign/no-op, closing the race where two concurrent reassignment requests could both create a simultaneously-active row for the same role
+- [Phase 02-02]: closure.ts reuses activation.ts's exact ACTIVATION_CONFIRMATION_REQUIRED error code for its own confirmed:true gate — documented as EPMP's general destructive-action confirmation convention, not duplicated per-endpoint
+- [Phase 02-02]: The tasks-cascade UPDATE (defensive against Phase 3's not-yet-existing tasks table) needed a Postgres SAVEPOINT, not just a JS try/catch, to avoid poisoning the rest of the transaction on Postgres's all-or-nothing error semantics — found via this plan's own integration test
+- [Phase 02-03]: GIS adapter stub recognizes exactly one layer_id ('agency-base-boundary'); any other value deterministically simulates a vendor timeout (GIS_FEED_TIMEOUT) — gives tests a reliable way to exercise the real adapter-throws path without random failure injection
+- [Phase 02-03]: baseLayerSource/baseLayerAsOf are initialized to the schematic-degraded values BEFORE the GIS fetch is attempted, overwritten only on a fully provenanced success — makes the fallback structurally the default code path, not a catch-block afterthought, and is what the plan's own integration test proves directly by forcing the adapter to throw
+- [Phase 02-03]: status_bar.as_of reduces to the single base layer's as_of for Phase 2 (no other provenanced layer exists yet) — documented inline as a TODO for F12/F17 to extend to the FRD's true stalest-across-all-visible-layers rule
+- [Phase 02-05]: Added GET /api/v1/jurisdictions (incidents:view gated) since no prior plan exposed a jurisdictions-list endpoint and the Create Incident form's Combobox needs a real options source
+- [Phase 02-05]: nav-config's new "Activate" group reuses 01-03's exact role_permissions-driven derivation pattern — any role with ANY incidents permission sees it, reconciling 02-01's seeded view-only vs full-access role split with the nav the shell renders
+- [Phase 02-05]: Seeded a second Keycloak identity (commander@epmp.local, incident_commander role, /epmp-incident-commanders group) for e2e sign-in, since admin@epmp.local's secops_admin role deliberately holds no incidents permissions (02-01's own seed decision)
+- [Phase 02-05]: Alert's warning tone stays non-dismissable-by-button for the duplicate-name 409 (Phase 1's PERSISTENT_TONES contract) — "does not block" is satisfied via confirm-and-resubmit + auto-clear-on-name-edit, not by adding a dismiss affordance that would contradict Alert's documented persistence rule
+- [Phase 02-06]: Added GET /api/v1/incidents/personnel (incidents:view gated) instead of reusing GET /api/v1/admin/users for the Command Role Modal's Combobox — incident_commander/eoc_director (the only roles holding incidents:edit) deliberately hold no admin:view permission per 02-01's seed, so reusing the admin endpoint would have required widening admin access to a role with no business there
+- [Phase 02-06]: ActivationModal's 422 NO_COMMANDER_ASSIGNED path deliberately skips the parent's onChanged() refetch callback — the activation-level display visibly stays unchanged because the client never re-fetches, not because of any extra client-side state check duplicating the server's own gate
+- [Phase 02-07]: Operating Picture's /operating-picture route added to main.tsx (not AppShell.tsx) — consistent with 02-05/02-06's established convention that main.tsx owns the nested route tree; AppShell.tsx is layout/chrome only
+- [Phase 02-07]: Status bar text and MapCanvas's offline prop are both derived from the identical backend status_bar.base_layer_source string (never independently tracked) — structurally impossible to show contradictory GIS-outage states
+- [Phase 02-07]: projectToPercent(lat, lng, bbox) colocated in the page file (not the design system) — a documented linear approximation standing in for a real MapLibre/Leaflet/ArcGIS JS integration's own screen-coordinate output, since no map-engine license/tile-server credential exists in this sandbox
+- [Phase 02-07]: Discovered (not caused by this plan) that commander@epmp.local's JIT-provisioned jurisdiction_scope is empty by design, and that operating-picture.ts's markers query (unlike the still-unscoped GET /api/v1/incidents list endpoint, T-02-03) correctly enforces it — fixed via a test-fixture-only grant in the new Playwright spec, not a production code change
+- [Phase 02-08]: KEYCLOAK_AUTHORITY changed from hardcoded sandbox-internal string to window.location.origin-derived, mirroring the file's own already-correct redirect_uri pattern
+- [Phase 02-08]: Vite Keycloak proxy entries use an explicit configure() forwarded-header hook, not http-proxy's xfwd:true -- xfwd:true unconditionally appends its own listening port to X-Forwarded-Port, corrupting Keycloak's computed issuer in a chained-proxy scenario (discovered during this plan's own reproduction, not assumed)
+- [Phase 02-08]: epmp-app's redirectUris widened to the host-less relative pattern /auth/callback, /auth/callback/* (not a literal preview-domain wildcard, which Keycloak 25.0 empirically rejected) -- validated against both a simulated external preview origin and direct sandbox access
 
 ### Pending Todos
 
@@ -117,6 +152,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-16T09:58:54.164Z
-Stopped at: Completed 01-15-PLAN.md — Phase 1 fully complete (all 15 plans)
+Last session: 2026-11-17T11:13:08.594Z
+Stopped at: Completed 02-08-PLAN.md
 Resume file: None

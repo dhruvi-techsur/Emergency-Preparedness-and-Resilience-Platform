@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import apiClientsRoutes from './api-clients.js';
 import recordAuthorityRoutes from './record-authority.js';
 import federationGrantsRoutes from './federation-grants.js';
+import { gisHealthRoutes } from './gis-adapter.js';
 
 /**
  * Mounts the integration-gateway module's F10 registry/governance endpoints
@@ -12,4 +13,5 @@ export default async function integrationGatewayRoutes(app: FastifyInstance) {
   await app.register(apiClientsRoutes);
   await app.register(recordAuthorityRoutes);
   await app.register(federationGrantsRoutes);
+  await app.register(gisHealthRoutes);
 }

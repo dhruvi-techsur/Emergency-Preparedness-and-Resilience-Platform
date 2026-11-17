@@ -32,6 +32,10 @@ import { IntegrationHealth } from './pages/admin/IntegrationHealth';
 import { ApiClients } from './pages/admin/ApiClients';
 import { FederationGrants } from './pages/admin/FederationGrants';
 import { RecordAuthority } from './pages/admin/RecordAuthority';
+import { IncidentList } from './pages/incidents/IncidentList';
+import { CreateIncident } from './pages/incidents/CreateIncident';
+import { IncidentWorkspace } from './pages/incidents/IncidentWorkspace';
+import { OperatingPicture } from './pages/operating-picture/OperatingPicture';
 
 const queryClient = new QueryClient();
 
@@ -63,6 +67,10 @@ root.render(
               <Route path="admin/api-clients" element={<ApiClients />} />
               <Route path="admin/federation-grants" element={<FederationGrants />} />
               <Route path="admin/record-authority" element={<RecordAuthority />} />
+              <Route path="incidents" element={<IncidentList />} />
+              <Route path="incidents/new" element={<CreateIncident />} />
+              <Route path="incidents/:id" element={<IncidentWorkspace />} />
+              <Route path="operating-picture" element={<OperatingPicture />} />
             </Route>
           </Routes>
         </RouteGuard>
