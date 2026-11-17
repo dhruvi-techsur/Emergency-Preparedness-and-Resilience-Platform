@@ -3,14 +3,14 @@ phase: 02
 gate_status: passed
 build_command: "rc=0; npm run build || rc=$?; (cd frontend/design-system && npm run build) || rc=$?; (cd frontend/app && npm run build) || rc=$?; exit $rc"
 test_command: "rc=0; npm test || rc=$?; (cd frontend/design-system && npm test) || rc=$?; exit $rc"
-last_updated: 2026-11-17T11:24:23Z
+last_updated: 2026-11-17T11:25:06Z
 tests_disabled_during_fixes: none
 shadowed_sources: 0
 review_blockers_open: 0
 boot_smoke: pass
 browser_suite: pass
-browser_headroom_mb: 8980
-browser_headroom_naive_mb: 5239
+browser_headroom_mb: 5174
+browser_headroom_naive_mb: 1726
 waves:
   - wave: 1
     build: pass
