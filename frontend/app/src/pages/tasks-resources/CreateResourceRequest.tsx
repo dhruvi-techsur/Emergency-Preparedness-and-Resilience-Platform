@@ -110,7 +110,16 @@ export function CreateResourceRequest(): JSX.Element {
         needed_by: neededBy,
         requesting_role: requestingRole,
       });
-      navigate(`/resource-requests/${response.id}`);
+      // 03-08 fix (Rule 1 - Bug): when launched from an Incident
+      // Workspace's Resources tab (routeIncidentId present), return to
+      // THAT incident's workspace so the embedded ResourceRequestList's
+      // own refetch shows the new request — mirroring CreateTask.tsx's
+      // already-correct `navigate(routeIncidentId ? '/incidents/{id}' :
+      // ...)` pattern. Previously this always navigated to the standalone
+      // /resource-requests/{id} detail page regardless of launch context,
+      // which broke the "same incident workspace, no full navigation"
+      // flow 03-08's own objective (and FRD's embedded-tab UX) requires.
+      navigate(routeIncidentId ? `/incidents/${routeIncidentId}` : `/resource-requests/${response.id}`);
     } catch (err) {
       if (err instanceof ApiRequestError && err.body.error_code === 'RESOURCE_REQUEST_QUANTITY_INVALID') {
         setFieldError(err.message);
