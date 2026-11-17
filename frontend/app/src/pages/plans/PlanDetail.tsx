@@ -13,6 +13,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { apiGet, ApiRequestError } from '../../lib/api-client';
 import { ReviewPlanModal } from './ReviewPlanModal';
+import { LinkTasksModal } from './LinkTasksModal';
 import './PlanDetail.css';
 
 type PlanType = 'EOP' | 'SOP' | 'Annex';
@@ -93,6 +94,7 @@ export function PlanDetail(): JSX.Element {
   const [historyOpen, setHistoryOpen] = React.useState(true);
   const [viewingVersion, setViewingVersion] = React.useState<PlanVersionHistoryEntry | null>(null);
   const [reviewModalOpen, setReviewModalOpen] = React.useState(false);
+  const [linkModalSectionId, setLinkModalSectionId] = React.useState<string | null>(null);
 
   const planQuery = useQuery({
     queryKey: ['plan', id],
@@ -188,6 +190,25 @@ export function PlanDetail(): JSX.Element {
                     {section.linked_task_templates.length} linked task
                     {section.linked_task_templates.length === 1 ? '' : 's'}
                   </p>
+                  {/* 03-08 fix (Rule 2 - Missing Critical): PlanEditor.tsx
+                      already wires LinkTasksModal, but ONLY the Draft
+                      editing flow had an entry point to it — the Reading
+                      View (this component) had none at all, even though
+                      link-tasks is explicitly status-unrestricted
+                      (plans.ts's own documented decision: task templates
+                      are section metadata, not plan content, so linking
+                      works on an Approved plan too). Without this button,
+                      a planning user could never link a task template to
+                      an ALREADY-APPROVED plan's section without
+                      re-opening the Draft editor, which this plan's own
+                      materialize-to-real-incident flow requires. */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setLinkModalSectionId(section.id)}
+                  >
+                    Link tasks
+                  </Button>
                 </li>
               ))}
             </ul>
@@ -282,6 +303,29 @@ export function PlanDetail(): JSX.Element {
         onClose={() => setReviewModalOpen(false)}
         onReviewed={() => void queryClient.invalidateQueries({ queryKey: ['plan', id] })}
       />
+
+      {/* 03-08 fix (Rule 2 - Missing Critical): this Reading View's own
+          Link Tasks entry point (see the Sections Card button above) —
+          reuses LinkTasksModal exactly as PlanEditor.tsx does. Linking
+          works regardless of plan.status (Draft/Review/Approved) per
+          plans.ts's link-tasks endpoint's own documented, deliberate
+          status-unrestricted design. onLinked refetches the real plan
+          detail (this view has no local section state to optimistically
+          patch, unlike PlanEditor's in-progress draft), so the newly
+          linked template's real id is reflected immediately. */}
+      {linkModalSectionId ? (
+        <LinkTasksModal
+          planId={plan.id}
+          sectionId={linkModalSectionId}
+          sectionHeading={
+            sortedSections.find((s) => s.id === linkModalSectionId)?.heading ?? 'this section'
+          }
+          existingTemplates={[]}
+          open={linkModalSectionId !== null}
+          onClose={() => setLinkModalSectionId(null)}
+          onLinked={() => void queryClient.invalidateQueries({ queryKey: ['plan', id] })}
+        />
+      ) : null}
     </div>
   );
 }
