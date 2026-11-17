@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import authOrgRoutes from './modules/auth-org/routes.js';
 import incidentOpsRoutes from './modules/incident-ops/routes.js';
+import planRoutes from './modules/plans/routes.js';
 import integrationGatewayRoutes from './modules/integration-gateway/routes.js';
 import webhookSubscriptionRoutes from './modules/integration-gateway/webhook-subscriptions.js';
 import openApiRoutes from './openapi/spec.js';
@@ -32,6 +33,9 @@ export function buildApp() {
 
   app.register(authOrgRoutes);
   app.register(incidentOpsRoutes);
+  // 03-03 F3 plans module — new module, mounted alongside the existing
+  // auth-org/incident-ops/integration-gateway registrations.
+  app.register(planRoutes);
   app.register(integrationGatewayRoutes);
   app.register(webhookSubscriptionRoutes);
   app.register(platformHealthRoutes);
