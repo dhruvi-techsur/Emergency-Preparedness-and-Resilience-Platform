@@ -771,6 +771,173 @@ async function main() {
     [[jurisdiction.id], jurisdiction.id],
   );
 
+  // UAT data-doctor fixture (Phase 5/6 UAT pass, field-mobile tests 1-2):
+  // two tasks actually OWNED by field-responder@epmp.local, so Field
+  // Home (/field) and My Tasks (/field/tasks) show real rows instead of
+  // their EmptyState on a fresh UAT pass — tasks.ts's `GET
+  // /api/v1/tasks?owner=<id>` filter (both screens' real query) is an
+  // exact owner_id match, so these MUST be owned by fieldResponderUser,
+  // not merely visible through jurisdiction scope like the
+  // UAT-OVERDUE/commander-owned fixture above.
+  //
+  // One 'Open' task (so MyTasksField.tsx's nextStatusFor() shows the
+  // "Start" one-tap button — test 2's first tap target) and one
+  // 'In progress' task due soon (so the "Mark done" one-tap button is
+  // ALSO reachable without the tester having to tap through the first
+  // task first, and FieldHome.tsx's "near-due" badge state has a real
+  // row to render). Natural key (title, owner_id), same pattern as the
+  // UAT-OVERDUE fixture.
+  const uatFieldResponderOpenTask = await findOrInsert(
+    'tasks',
+    ['title', 'owner_id'],
+    ['UAT-FIELD-OPEN Check shelter generator fuel', fieldResponderUser.id],
+    [
+      'title',
+      'description',
+      'status',
+      'owner_id',
+      'incident_id',
+      'due_at',
+      'requires_approval',
+      'created_by',
+    ],
+    [
+      'UAT-FIELD-OPEN Check shelter generator fuel',
+      'Walk the shelter perimeter and confirm backup generator fuel levels.',
+      'Open',
+      fieldResponderUser.id,
+      incidentIdsByName['UAT-ASSIGN-ROLE Default Agency Flood'],
+      new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(), // due in 2h
+      false,
+      commanderUser.id,
+    ],
+  );
+  record('tasks', uatFieldResponderOpenTask);
+  if (uatFieldResponderOpenTask.inserted) {
+    await pool.query(
+      `INSERT INTO task_status_history (task_id, from_status, to_status, changed_by)
+       VALUES ($1, NULL, 'Open', $2)`,
+      [uatFieldResponderOpenTask.id, commanderUser.id],
+    );
+  }
+
+  const uatFieldResponderInProgressTask = await findOrInsert(
+    'tasks',
+    ['title', 'owner_id'],
+    ['UAT-FIELD-INPROGRESS Report road hazard status', fieldResponderUser.id],
+    [
+      'title',
+      'description',
+      'status',
+      'owner_id',
+      'incident_id',
+      'due_at',
+      'requires_approval',
+      'created_by',
+    ],
+    [
+      'UAT-FIELD-INPROGRESS Report road hazard status',
+      'Confirm whether the Main St debris hazard has been cleared.',
+      'In progress',
+      fieldResponderUser.id,
+      incidentIdsByName['UAT-ASSIGN-ROLE Default Agency Flood'],
+      new Date(Date.now() + 30 * 60 * 1000).toISOString(), // due in 30 min (near-due)
+      false,
+      commanderUser.id,
+    ],
+  );
+  record('tasks', uatFieldResponderInProgressTask);
+  if (uatFieldResponderInProgressTask.inserted) {
+    await pool.query(
+      `INSERT INTO task_status_history (task_id, from_status, to_status, changed_by)
+       VALUES ($1, NULL, 'Open', $2)`,
+      [uatFieldResponderInProgressTask.id, commanderUser.id],
+    );
+    await pool.query(
+      `INSERT INTO task_status_history (task_id, from_status, to_status, changed_by)
+       VALUES ($1, 'Open', 'In progress', $2)`,
+      [uatFieldResponderInProgressTask.id, fieldResponderUser.id],
+    );
+  }
+
+  // UAT data-doctor fixture (Phase 5/6 UAT pass, field-mobile test 6): a
+  // real UNRESOLVED sync_conflicts row reachable at a real
+  // /field/conflicts/:id URL, produced through the exact same code path
+  // field-reports.test.ts's own "detects a conflict" integration test and
+  // field-mobile-sync-conflict.spec.ts's e2e setup use — submit a field
+  // report via the sync-batch route whose captured_at PREDATES the
+  // anchor incident's updated_at, so field-reports.ts's own
+  // conflict-detection rule (incident.updated_at > report.captured_at)
+  // fires and writes BOTH versions itself. This is NOT a hand-inserted
+  // sync_conflicts row — running this through findOrInsert's generic
+  // helper would bypass the real detection logic, so this block instead
+  // checks for an existing row by client_report_id (field_reports'
+  // natural idempotency key) and only drives the real route handlers'
+  // SQL when absent, mirroring exactly what the route itself does.
+  const uatConflictClientReportId = 'uat-sync-conflict-field-responder-seed';
+  const existingUatConflictReport = await pool.query<{ id: string; sync_status: string }>(
+    `SELECT id, sync_status FROM field_reports WHERE client_report_id = $1`,
+    [uatConflictClientReportId],
+  );
+  if (existingUatConflictReport.rows.length === 0) {
+    const uatConflictIncidentId = incidentIdsByName['UAT-ASSIGN-ROLE Default Agency Flood'];
+
+    // Bump the anchor incident's updated_at to NOW — the real EOC-side
+    // change this conflict represents (identical mechanism
+    // field-reports.test.ts's own sync-batch conflict test and
+    // field-mobile-sync-conflict.spec.ts's e2e setup use).
+    await pool.query(`UPDATE incidents SET updated_at = now() WHERE id = $1`, [uatConflictIncidentId]);
+
+    const incidentRow = await pool.query<{ updated_at: string; name: string }>(
+      `SELECT updated_at, name FROM incidents WHERE id = $1`,
+      [uatConflictIncidentId],
+    );
+    const incident = incidentRow.rows[0];
+
+    const capturedAt = new Date(Date.now() - 5 * 60 * 1000).toISOString(); // 5 min before the bump above
+    const reportPayload = {
+      client_report_id: uatConflictClientReportId,
+      incident_id: uatConflictIncidentId,
+      observation_type: 'Damage assessment',
+      description: 'UAT-SYNC-CONFLICT Roof damage observed at shelter site',
+      captured_at: capturedAt,
+    };
+
+    // Same two-step insert field-reports.ts's sync-batch conflict branch
+    // performs: field_reports row first (sync_status='conflict'), then
+    // the sync_conflicts row referencing it, both versions preserved
+    // exactly as the real route would have written them.
+    const insertedConflictReport = await pool.query<{ id: string }>(
+      `INSERT INTO field_reports
+         (client_report_id, incident_id, observation_type, description, submitted_by, captured_at, sync_status)
+       VALUES ($1,$2,$3,$4,$5,$6,'conflict')
+       RETURNING id`,
+      [
+        reportPayload.client_report_id,
+        reportPayload.incident_id,
+        reportPayload.observation_type,
+        reportPayload.description,
+        fieldResponderUser.id,
+        reportPayload.captured_at,
+      ],
+    );
+
+    const insertedConflict = await pool.query<{ id: string }>(
+      `INSERT INTO sync_conflicts (entity_type, entity_id, field_version, eoc_version)
+       VALUES ('field_report', $1, $2, $3)
+       RETURNING id`,
+      [
+        insertedConflictReport.rows[0].id,
+        JSON.stringify(reportPayload),
+        JSON.stringify({ incident_updated_at: incident.updated_at, incident_name: incident.name }),
+      ],
+    );
+    record('field_reports', { id: insertedConflictReport.rows[0].id, inserted: true });
+    record('sync_conflicts', { id: insertedConflict.rows[0].id, inserted: true });
+  } else {
+    record('field_reports', { id: existingUatConflictReport.rows[0].id, inserted: false });
+  }
+
   // UAT data-doctor fixture (Phase 3 UAT re-run): at least one Overdue
   // task, reachable via the Task List's DEFAULT view (no filter applied,
   // page 1, ORDER BY due_at ASC per tasks.ts's list route) for every role
