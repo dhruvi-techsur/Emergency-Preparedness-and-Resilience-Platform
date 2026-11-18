@@ -117,7 +117,7 @@ Plans:
 
 ### Phase 4: Notifications & Reporting/Learning
 **Goal**: Communications staff can send accountable, approval-gated notifications with tracked delivery and acknowledgment, and planning staff can turn incident activity into ICS output, SITREPs, and after-action reports — closing the preparedness loop so every incident leaves a reusable evidence trail.
-**Status**: Failed
+**Status**: In progress
 **Depends on**: Phase 2, Phase 3
 **Requirements**: F5, F7
 **Success Criteria** (what must be TRUE):
@@ -188,6 +188,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 1. Platform Foundation & Deployable Shell | 0/TBD | Complete | 2026-11-16 |
 | 2. Incident Command & Operating Picture | 7/7 | Complete | 2026-11-17 |
 | 3. Plans, Tasks & Resource Requests | 9/9 | Complete | 2026-11-18 |
-| 4. Notifications & Reporting/Learning | 0/7 | Failed | - |
+| 4. Notifications & Reporting/Learning | 0/7 | In progress | - |
 | 5. Mobile Field Operations | 0/TBD | Not started | - |
 | 6. Persona Dashboards & AI Assistance | 0/10 | Not started | - |
