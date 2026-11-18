@@ -425,13 +425,30 @@ export function IncidentWorkspace(): JSX.Element {
                     // incident.status==='Closed' check as a page-level
                     // guard (never rendering its wizard otherwise). This
                     // disables the button proactively here so the failure
-                    // is visible BEFORE navigation, not only after.
+                    // is visible BEFORE navigation, not only after. The
+                    // `title` attribute (04-08 gap closure) reuses
+                    // AarGenerator.tsx's own EmptyState message text
+                    // verbatim for hover/screen-reader discovery — no
+                    // `Tooltip` component exists yet (SideNav.tsx's own
+                    // documented interim pattern), matching that file's
+                    // precedent of using the native `title` attribute.
                     disabled={incident.status !== 'Closed'}
+                    title="Close this incident before generating its after-action report."
                     onClick={() => navigate(`/incidents/${incident.id}/aar/new`)}
                   >
                     Generate AAR
                   </Button>
                 </div>
+                {/* A `title` tooltip alone is not reliably discoverable
+                    (hover-only, unavailable on touch) — this always-visible
+                    caption (04-08 gap closure) gives every user, not just
+                    mouse/screen-reader users, the same explanation with no
+                    interaction required. */}
+                {incident.status !== 'Closed' ? (
+                  <p className="caption">
+                    Close this incident to generate its after-action report.
+                  </p>
+                ) : null}
               </Card>
             ) : null}
           </div>
