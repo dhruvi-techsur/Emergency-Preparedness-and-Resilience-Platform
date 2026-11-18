@@ -2,10 +2,9 @@
 pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Plan 04-08 (Notifications landing / deep-link return-path / AAR button explanation gap closure) closed UAT gap refs 2, 3, and 5 — all 9 plans in Phase 4 (7 original + 04-08 + 04-09 gap closures) are now complete.
-stopped_at: Completed 04-08-PLAN.md
-last_updated: "2026-11-18T12:53:10Z"
-last_activity: 2026-11-18 — Plan 04-08 complete (see 04-08-SUMMARY.md for full detail), run in parallel with 04-09. New /notifications landing page (NotificationsLanding.tsx) with its own primary Compose-notification action, satisfying the UX mockup's two-reach-path OR-requirement alongside 04-07's Incident Workspace action; SideNav's 'Notification groups' item repointed/renamed to 'Notifications'. oidc-config.ts's signIn(returnPath?) now forwards the pre-redirect path via oidc-client-ts's own `state` param; RouteGuard forwards location.pathname+search; SignInCallback reads oidcUser.state back (type-guarded) and navigates there instead of the old hardcoded '/' — closing the fresh-tab deep-link-drops-to-home gap, proven by a new Playwright spec using a same-browser-context second page() (not browser.newContext(), which would test the wrong thing). IncidentWorkspace's disabled "Generate AAR" button now carries both a title attribute and an always-visible caption explaining the Closed-incident requirement. Full Playwright suite (76 tests) green with zero regression; tsc --noEmit clean on both frontend/app and backend; full 3-workspace build green; backend (70) and design-system (51) unit suites green.
+status: planning
+last_updated: "2026-11-18T14:20:37.543Z"
+last_activity: "2026-11-18 — Phase 4 complete"
 progress:
   total_phases: 6
   completed_phases: 4
