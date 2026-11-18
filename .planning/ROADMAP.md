@@ -27,7 +27,7 @@ capabilities that reach across (rather than own) the rest of the platform.
 - [x] **Phase 1: Platform Foundation & Deployable Shell** - SSO/RBAC/audit, the API/event-bus backbone, and the application shell, running as a real deployed service (completed 2026-11-16)
 - [x] **Phase 2: Incident Command & Operating Picture** - Incident/ICS activation and command, backed by a shared, GIS-grounded operating picture (completed 2026-11-17)
 - [x] **Phase 3: Plans, Tasks & Resource Requests** - Versioned plan/SOP repository linked to a full task and resource-request lifecycle (completed 2026-11-18)
-- [ ] **Phase 4: Notifications & Reporting/Learning** - Accountable, approval-gated notifications and ICS/SITREP/AAR reporting that closes the preparedness loop
+- [x] **Phase 4: Notifications & Reporting/Learning** - Accountable, approval-gated notifications and ICS/SITREP/AAR reporting that closes the preparedness loop (completed 2026-11-18)
 - [ ] **Phase 5: Mobile Field Operations** - Offline-first, installable field-mobile app with queued submissions and reconciliation
 - [ ] **Phase 6: Persona Dashboards & AI Assistance** - Role-scoped dashboards for every persona plus governed, human-approved AI drafting and signal triage
 
@@ -191,6 +191,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 1. Platform Foundation & Deployable Shell | 0/TBD | Complete | 2026-11-16 |
 | 2. Incident Command & Operating Picture | 7/7 | Complete | 2026-11-17 |
 | 3. Plans, Tasks & Resource Requests | 9/9 | Complete | 2026-11-18 |
-| 4. Notifications & Reporting/Learning | 7/7 | Passed | - |
+| 4. Notifications & Reporting/Learning | 7/7 | Complete | 2026-11-18 |
 | 5. Mobile Field Operations | 0/TBD | Not started | - |
 | 6. Persona Dashboards & AI Assistance | 0/10 | Not started | - |
