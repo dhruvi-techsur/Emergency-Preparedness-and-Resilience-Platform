@@ -3,46 +3,80 @@ phase: 4
 status: clean
 blockers: 0
 warnings: 0
-files_reviewed: 4
+files_reviewed: 12
 files_reviewed_list:
-  - frontend/app/src/pages/reporting/EvidenceLogView.tsx
-  - frontend/app/src/lib/api-client.ts
-  - backend/src/modules/comms-reporting/reporting.ts
-  - backend/src/modules/comms-reporting/reporting.test.ts
-reviewed_at: 2026-11-18T08:05:00Z
-iteration: 2
+  - frontend/app/src/pages/notifications/NotificationsLanding.tsx
+  - frontend/app/src/main.tsx
+  - backend/src/modules/auth-org/routes.ts
+  - frontend/app/src/auth/oidc-config.ts
+  - frontend/app/src/auth/RouteGuard.tsx
+  - frontend/app/src/pages/SignInCallback.tsx
+  - frontend/app/src/pages/incidents/IncidentWorkspace.tsx
+  - frontend/app/e2e/notifications-compose.spec.ts
+  - frontend/app/e2e/incident-workspace.spec.ts
+  - frontend/app/e2e/auth-deep-link-return-path.spec.ts
+  - backend/src/modules/auth-org/rbac.ts
+  - backend/src/modules/auth-org/rbac.test.ts
+reviewed_at: 2026-11-18T13:10:00Z
+iteration: 1
 ---
 
-# Phase 4 Code Review (re-review, iteration 2)
+# Phase 4 Code Review (04-08 + 04-09 gap-closure diff)
 
-## Verification of prior findings
+Scope: this iteration reviews ONLY the files touched by 04-08 (notifications landing / deep-link return-path / AAR-button explanation) and 04-09 (RBAC PERMISSION_DENIED error-code split), per the gap-closure instructions. 04-01..04-07 were already reviewed/fixed (see prior iteration-2 content, superseded by this scoped pass) and are out of scope here. The 3 HIGH-severity security fixes (jurisdiction-scope gates, evidence-log UNION scoping, approver_id identity check — commits 1623fd4/098d2d6/1ef89f4/6e8f20b) predate 04-08/04-09, were independently security-audited, and are likewise out of scope.
 
-### B1 — Evidence Log CSV export used `window.location.href` (dropped Bearer auth header) — VERIFIED FIXED
-- **Fix commit:** 210c733
-- **File:** `frontend/app/src/lib/api-client.ts:72-90`, `frontend/app/src/pages/reporting/EvidenceLogView.tsx:155-168,217`
-- **Verification:** Read both files in full. `apiGetBlob()` is a new exported function that calls `fetch(path, { headers: { ...authHeaders() } })` — identical header-attachment mechanism to every other `apiGet`/`apiPost`/`apiPatch` call in this file, so the `Authorization: Bearer <token>` header is now actually sent. It correctly replicates `handleResponse`'s 401 handling (clear session, redirect to `/`, throw `ApiRequestError`) and falls through to `res.blob()` on success rather than `res.json()`, which is correct for a CSV body. `EvidenceLogView.tsx`'s `handleExportCsv` now calls `apiGetBlob(...)`, builds an object URL, and triggers a synthetic `<a download>` click — the exact pattern `AarGenerator.tsx`'s pre-existing `handleExportTimeline` uses. The button's `onClick` is `() => void handleExportCsv()`, correctly fire-and-forgetting the async handler without an unhandled-rejection risk (errors are caught inside `handleExportCsv`'s own try/catch and surfaced via `exportError` state, which the JSX renders as an `Alert tone="danger"`). `tsc --noEmit` on the frontend project is clean. No regression: the button still passes the same `queryParams` querystring as before, and the backend route (`evidence-log.ts:189-224`) is unchanged, still gated by `requirePermission('reporting','view')` — now actually satisfiable since the Bearer header is present.
+## Contract-scan verification
 
-### W1 — AAR findings re-POST duplicated rows instead of replacing them — VERIFIED FIXED
-- **Fix commit:** 57f7d2a
-- **File:** `backend/src/modules/comms-reporting/reporting.ts:436-444`
-- **Verification:** Read the route in full (lines 376-456). A `DELETE FROM aar_findings WHERE aar_id = $1` was inserted immediately after the `aars` row upsert succeeds (after the `DOCUMENT_IMMUTABLE` guard, so a re-POST against an already-Finalized AAR never reaches the DELETE) and immediately before the per-finding `INSERT` loop. This correctly makes every re-POST (first-ever or repeat) delete-then-reinsert, matching the route's own "refreshes the snapshot" doc comment and `AarGenerator.tsx`'s `handleFinalize()` call pattern (re-POST findings, then finalize). Checked for FK fallout: `aar_findings.id` has no other table referencing it (grepped all migrations for `REFERENCES aar_findings` — zero matches), so the DELETE is safe with no orphan-reference risk. Checked for a transaction-atomicity regression: both the DELETE and the subsequent INSERT loop use the same non-transactional `query()` helper the rest of this route already uses (no `BEGIN`/`COMMIT` anywhere in this file pre- or post-fix), so this fix introduces no new partial-failure window beyond what already existed in the original insert-loop (a mid-loop failure after the DELETE would now leave the findings table emptied rather than appended-to, which is a strict improvement, not a new risk). `reporting.test.ts`'s existing 6 tests all still pass conceptually (the DELETE is a no-op on first POST since there's nothing to delete yet, so the single-POST-per-test coverage path is unaffected) — confirmed by reading each test; none exercises two POSTs with non-empty `findings` on the same incident, but the fix itself is correct and `tsc --noEmit` on the backend project is clean.
+The scanner's one `c-gap` finding is a **confirmed false positive**, independently re-verified:
 
-### W2 — Evidence Log action_type dropdown missing `user_suspend`/`user_reactivate` — VERIFIED FIXED
-- **Fix commit:** 667ee69
-- **File:** `frontend/app/src/pages/reporting/EvidenceLogView.tsx:54-60`
-- **Verification:** Read the diff and the surrounding `ACTION_TYPE_OPTIONS` array. `{ value: 'user_suspend', label: 'User suspended' }` and `{ value: 'user_reactivate', label: 'User reactivated' }` were added alongside the existing `user_edit` entry. Confirmed against `backend/src/modules/auth-org/admin-users.ts:195`'s actual action-string computation (`statusChanged ? (status === 'Suspended' ? 'user_suspend' : 'user_reactivate') : 'user_edit'`) — the three dropdown values now exactly cover all three action strings that route can write. Confirmed the backend's `action_type` filter (`evidence-log.ts:65-67`) is a plain parameterized equality match against the free-text column, so no backend change was needed and none was made. No regression: option values/labels are unique, no duplicate `value` keys introduced, `tsc --noEmit` clean.
+- `c-gap api frontend/app/src/pages/SignInCallback.tsx:65 GET /api/v1/auth/sso/callback — no matching backend route declaration`
+- Read `SignInCallback.tsx:65-69` directly: `fetch('/api/v1/auth/sso/callback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id_token: idToken }) })` — the `method: 'POST'` is explicit in the options object; the scanner's static parser evidently didn't parse the `method` key out of the object literal and defaulted to GET.
+- Read `backend/src/modules/auth-org/routes.ts:71`: `app.post<{ Body: { id_token: string } }>('/api/v1/auth/sso/callback', async (req, reply) => {...})` — exact path, POST method, matching `{ id_token }` body shape. This route (and `routes.test.ts:160-161`'s coverage of it) predates Phase 4 entirely (Phase 1, 01-10).
+- `SignInCallback.tsx` was touched by 04-08 only to add the `oidcUser.state` return-path read-back (lines 79-84) — the `fetch('/api/v1/auth/sso/callback', ...)` call itself (lines 65-69) is unchanged by this diff, confirmed via `git show 0ce43dd -- frontend/app/src/pages/SignInCallback.tsx` (the diff hunk only touches the post-exchange navigate logic, not the fetch call).
 
-## Regression scan on fixer-touched files
+Verdict: not a real gap. Zero other c-gaps were reported.
 
-- `api-client.ts`: the new `apiGetBlob` function is additive only — no existing exported function (`apiGet`, `apiPost`, `apiPatch`, `handleResponse`, `authHeaders`) was modified. Zero risk of regressing any other call site in the app that already uses this file (confirmed via `grep -rn "api-client"` — only `EvidenceLogView.tsx` imports the new symbol).
-- `EvidenceLogView.tsx`: the only other change beyond the CSV button and dropdown is the new `exportError` state + `Alert` render block, both net-new and additive; no existing query, filter, or table-rendering logic was touched.
-- `reporting.ts`: the DELETE is a single new line inserted at a point that cannot be reached before the existing 404/409/422/403 guards all pass — none of those guard orderings were altered, confirmed by re-reading lines 388-444 end to end.
+## BLOCKERs
+
+None.
+
+## WARNINGs
+
+None.
+
+## Detailed verification notes
+
+### 04-08 Task 1 — Notifications landing page + SideNav repoint
+- `NotificationsLanding.tsx` (new, 47 lines): exports `NotificationsLanding()`, composed from `PageHeader`/`Card`/`Button` exactly per the design-system's documented contracts (`PageHeader.actions` is `React.ReactNode[]` with primary-last convention — satisfied; `Card.actions`/`title` props used correctly). `navigate('/notifications/compose')` carries no `incident=` param, matching the gap's reproduction requirement.
+- `main.tsx`: `<Route path="notifications" element={<NotificationsLanding />} />` registered before its more-specific siblings (`groups`/`templates`/`compose`/`:id/delivery`) — react-router path matching has no ambiguity here regardless of order; import added correctly alongside the other notification page imports.
+- `routes.ts` nav-config: `hasNotifications`-gated Coordinate-group item repointed from `/notifications/groups` to `/notifications`, relabeled `'Notification groups'` → `'Notifications'`, `id`/`icon` left unchanged as instructed. `'Message templates'` sub-item is untouched, still present, still pointing at `/notifications/templates`. No duplicate `'Notifications'` label exists elsewhere in the nav-config or AppShell to collide with the new Playwright `getByRole('link', { name: 'Notifications' })` selector (grepped for collisions — none).
+- `notifications-compose.spec.ts`: new standalone `test()` outside the `describe.serial` block (correct — needs no shared fixture state), asserts URL `/notifications` then `/notifications/compose` with `not.toContain('incident=')` — exact gap reproduction.
+- Cross-file seam: `SideNav`'s `href`-driven `<a>` tags (confirmed in `SideNav.tsx:155-165`) render real anchors, so `getByRole('link', ...)` resolves correctly against the repointed nav item. OK.
+
+### 04-08 Task 2 — Deep-link return-path via OIDC `state`
+- `oidc-config.ts`: `signIn(returnPath?: string): Promise<void>` forwards `userManager.signinRedirect(returnPath ? { state: returnPath } : undefined)`. Confirmed against the vendored `oidc-client-ts` type declarations (`node_modules/oidc-client-ts/dist/types/oidc-client-ts.d.ts`): `signinRedirect(args?: SigninRedirectArgs)` accepts `undefined`; `ExtraSigninRequestArgs.state?: unknown` (line 243/109); `User.state?: unknown` (line 169, "custom state data set during the initial signin request") — matches the plan's claimed API surface exactly.
+- `RouteGuard.tsx`: unauthenticated-branch effect now calls `signIn(location.pathname + location.search)` — `location` already in scope via the file's existing `useLocation()` call. Sole caller of `signIn()` in the whole frontend (grepped) — no other call site needed updating.
+- `SignInCallback.tsx`: reads `oidcUser.state` and type-guards it (`typeof state === 'string' && state.startsWith('/') && state !== '/auth/callback'`) before passing to `navigate(returnPath, { replace: true })`, falling back to `'/'` otherwise — closes the open-redirect vector (absolute URLs fall through) and the self-redirect-loop edge case (`/auth/callback` explicitly excluded). The fetch to `/api/v1/auth/sso/callback` immediately above this logic is untouched (see contract-scan verification above).
+- `auth-deep-link-return-path.spec.ts`: uses `page.context().newPage()` (shared cookies, independent `sessionStorage`) — not `browser.newContext()` — matching the documented reproduction mechanism. Single navigation to the deep link with `waitUntil: 'commit'` avoids the double-redirect race the plan's own SUMMARY documents as an auto-fixed issue during execution; this is a sound fix, not a residual bug.
+- `tsc --noEmit` clean on both `frontend/app` and `backend` for this diff.
+
+### 04-08 Task 3 — AAR button explanation
+- `IncidentWorkspace.tsx`: `title="Close this incident before generating its after-action report."` added to the disabled Generate-AAR `Button` (confirmed `Button` spreads `...rest` including `title` onto the native `<button>`, per `Button.tsx`); an always-visible `<p className="caption">Close this incident to generate its after-action report.</p>` renders conditionally on `incident.status !== 'Closed'`, directly below the button row. Matches `AarGenerator.tsx`'s own EmptyState wording (near-verbatim, singular/plural phrasing difference between the two messages is a non-functional wording choice, not a defect). `incident-workspace.spec.ts`'s new test 6 asserts both the `title` attribute and the visible caption.
+
+### 04-09 — RBAC PERMISSION_DENIED
+- `rbac.ts`: new `PERMISSION_DENIED` constant; `requirePermission()`'s single `if (!allowed)` branch (line 76-78) returns it instead of `ROLE_UNRESOLVED`. `ROLE_UNRESOLVED`'s constant definition and its one real call site (`routes.ts:85`, inside the SSO-callback's `RoleUnresolvedError` catch) are untouched — grepped the entire backend for every `ROLE_UNRESOLVED` reference; confirmed no other production call site existed that would now silently receive the wrong constant.
+- `notifications.test.ts`'s one pre-existing assertion of the old behavior (`eoc_director` send-without-`approve` case) was updated to `PERMISSION_DENIED` with an accurate adjacent comment. Grepped every other backend `.test.ts` file asserting a `403` status for an `error_code` expectation (`plans.test.ts` `SELF_APPROVAL_BLOCKED`, `admin.test.ts` `AUDIT_LOG_IMMUTABLE`/`SSO_CONFIG_INVALID`, `reporting.test.ts` `DOCUMENT_IMMUTABLE`/`EVIDENCE_LOG_IMMUTABLE`) — none of these originate from `requirePermission()`'s denial branch (they're route-handler-level business-rule 403s thrown after the RBAC preHandler already passed), so none were silently broken by this rename.
+- `rbac.test.ts` (new, 156 lines): sets up 3 roles (view+create-only, zero-grant, full-edit) against a bare test route gated by the real `requirePermission('reporting','edit')` preHandler, synced to real OPA via `syncRolePermissionsToOpa` (signature/usage matches every other test file's established pattern). 3 assertions: resolved-but-missing-one-action → `PERMISSION_DENIED` with accurate wording; zero-grant-on-feature → also `PERMISSION_DENIED` (proving the distinction is action-level, not feature-presence-level); positive control → not `PERMISSION_DENIED`. `mintSessionToken`'s call signature matches its existing usage across `admin.test.ts`/`routes.test.ts`.
+- `tsc -p tsconfig.json --noEmit` clean on backend for this diff.
 
 ## Cross-file seams checked
+- `NotificationsLanding` export (`NotificationsLanding.tsx`) → `main.tsx`'s route registration: OK — exact named import, exact route path.
+- `routes.ts`'s repointed `href: '/notifications'` nav item → `main.tsx`'s registered `/notifications` route: OK — path match confirmed.
+- `signIn(returnPath?)` (`oidc-config.ts`) → sole caller `RouteGuard.tsx`'s `signIn(location.pathname + location.search)`: OK — signature matches, no other call sites to break.
+- `oidcUser.state` round-trip: `RouteGuard` sets it via `signIn()` → oidc-client-ts's `ExtraSigninRequestArgs.state` → Keycloak echoes it back → `SignInCallback` reads `User.state`: OK, confirmed against vendored type declarations.
+- `POST /api/v1/auth/sso/callback` (frontend `SignInCallback.tsx:65`) → backend route declaration (`routes.ts:71`): OK — contract-scan's GET-labeled false positive refuted (method is POST, set via the fetch options object the scanner's parser missed).
+- `requirePermission()`'s new `PERMISSION_DENIED` (`rbac.ts`) → test assertions across the backend suite: OK — the one real pre-existing dependent assertion (`notifications.test.ts`) was updated; no other test asserts `ROLE_UNRESOLVED` from an RBAC-preHandler-driven 403.
+- `ROLE_UNRESOLVED`'s one remaining call site (`routes.ts`'s SSO-callback catch block) → unaffected by this rename: OK, confirmed untouched.
+- `disabled={incident.status !== 'Closed'}` gate (`IncidentWorkspace.tsx`) ↔ `AarGenerator.tsx`'s own identical page-level guard: OK — consistent wording, consistent condition, no drift.
 
-- `apiGetBlob` export (`api-client.ts`) → sole consumer `EvidenceLogView.tsx`'s `handleExportCsv`: OK — signature (`path: string) => Promise<Blob>`) matches the call site exactly.
-- `DELETE FROM aar_findings` (`reporting.ts:444`) → `aar_findings` schema's lack of any downstream FK dependents: OK — confirmed via migration grep, no cascading-delete risk.
-- `ACTION_TYPE_OPTIONS` values (`EvidenceLogView.tsx`) → `admin-users.ts`'s actual `action` string computation: OK — all three status-edit action strings now represented.
-- All other cross-file seams from iteration 1 (routes↔callers, types↔usages, exports↔imports across the full Phase 4 diff) were already verified clean in iteration 1 and are unaffected by this fix pass — not re-derived here per re-review scope.
-
-All three iteration-1 findings are genuinely resolved with no fix-introduced regressions. Phase 4 is clean.
+Both gap-closure plans' production code and tests are internally consistent, consistent with each other, consistent with the surrounding (already-reviewed) codebase, and introduce no regressions. Phase 4 remains clean.
