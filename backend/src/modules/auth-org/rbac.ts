@@ -29,6 +29,19 @@ const ROLE_UNRESOLVED = {
   message: "Your account isn't assigned a role yet. Contact your administrator.",
 } as const;
 
+// Distinct from ROLE_UNRESOLVED above: this is for a user whose role DID
+// resolve (users.role_id is NOT NULL REFERENCES roles(id) — always true once
+// a users row exists at all) but who simply lacks the specific feature/action
+// grant being checked. ROLE_UNRESOLVED's "isn't assigned a role yet" wording
+// is accurate ONLY for the genuinely-unresolved-role case, which can occur
+// solely during SSO JIT provisioning (sso.ts's RoleUnresolvedError, caught in
+// routes.ts's SSO callback) — never here, since this preHandler only runs
+// after a role_id has already been successfully read from the DB.
+const PERMISSION_DENIED = {
+  error_code: 'PERMISSION_DENIED',
+  message: "Your role doesn't include this action. Contact your administrator if you need access.",
+} as const;
+
 /**
  * Fastify preHandler factory enforcing RBAC for a given feature/action pair.
  * Re-fetches `users.status` from the database on EVERY request — this is
@@ -61,7 +74,7 @@ export function requirePermission(feature: string, action: string): preHandlerHo
 
     const allowed = await checkPermission({ role_id: user.role_id, feature, action });
     if (!allowed) {
-      return reply.code(403).send(ROLE_UNRESOLVED);
+      return reply.code(403).send(PERMISSION_DENIED);
     }
 
     req.epmpUser = { id: claims.sub, role_id: user.role_id, jurisdiction_scope: user.jurisdiction_scope };

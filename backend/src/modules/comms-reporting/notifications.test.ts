@@ -416,7 +416,9 @@ describe('04-04: seeded role_permissions grants authorize/reject real requests e
     // runs — since eoc_director's seeded grant has no 'approve' action, OPA
     // denies at the RBAC layer and the caller never reaches the handler's
     // APPROVER_MISMATCH business-logic check at all. The resulting 403 (with
-    // rbac.ts's generic ROLE_UNRESOLVED error_code, not APPROVER_MISMATCH) is
+    // rbac.ts's PERMISSION_DENIED error_code — a resolved role simply lacking
+    // this one action, NOT a role-resolution failure, so ROLE_UNRESOLVED
+    // would be the wrong/misleading response here — not APPROVER_MISMATCH) is
     // the correct, stronger proof that the exclusion is real: a role missing
     // 'approve' cannot even START a send attempt as itself, regardless of
     // what approver_id it asserts.
@@ -425,7 +427,7 @@ describe('04-04: seeded role_permissions grants authorize/reject real requests e
       .set('Authorization', `Bearer ${eocDirectorToken}`)
       .send({ approver_id: eocDirectorUserId, confirmed: true });
     expect(sendRes.status).toBe(403);
-    expect(sendRes.body.error_code).toBe('ROLE_UNRESOLVED');
+    expect(sendRes.body.error_code).toBe('PERMISSION_DENIED');
 
     const afterRejected = await query<{ approved_by: string | null; sent_at: string | null }>(
       `SELECT approved_by, sent_at FROM notifications WHERE id = $1`,
