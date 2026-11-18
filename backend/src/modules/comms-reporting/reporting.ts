@@ -435,6 +435,14 @@ export default async function reportingRoutes(app: FastifyInstance) {
         return reply.code(403).send(DOCUMENT_IMMUTABLE);
       }
 
+      // This route's own doc comment promises re-POSTs against an
+      // existing Draft AAR "refresh the snapshot" rather than append —
+      // true for the aars row's ON CONFLICT upsert above, so aar_findings
+      // must match: clear any prior rows for this AAR before reinserting
+      // the current findingsList, otherwise a retried/re-submitted POST
+      // would duplicate every already-stored finding.
+      await query(`DELETE FROM aar_findings WHERE aar_id = $1`, [aar.id]);
+
       for (const finding of findingsList) {
         await query(
           `INSERT INTO aar_findings (aar_id, finding_text, category, corrective_action, owner_id, due_date)
