@@ -2,15 +2,15 @@
 pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Plan 05-02 shipped the client-side half of F6 — SyncStatus design-system component, IndexedDB-backed offline-queue library with queue-first writes and auto-sync-on-reconnect, and PWA manifest/service-worker scaffolding for home-screen installability.
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-11-18T14:32:54.710Z"
-last_activity: 2026-11-18 — Plan 05-02 complete (see 05-02-SUMMARY.md for full detail), run in parallel with 05-01. New SyncStatus product-pattern component (icon+word+color for online/syncing/offline/conflict, exported from window.EPMP) and frontend/app/src/lib/offline-queue.ts (enqueueFieldReport/getQueueSnapshot/subscribeToQueue/syncQueueNow) give 05-03/05-04's field-mobile screens both reusable primitives they need, independently proven correct before any screen exists. vite-plugin-pwa now emits dist/manifest.webmanifest + dist/sw.js on build. Design-system suite (59 tests, +8 new) and frontend/app's new offline-queue suite (5 tests against fake-indexeddb) both green; tsc --noEmit clean in both workspaces; design-system + app builds both clean.
+status: Plan 05-05 closed the final F6 gap — idempotent field_reports role_permissions grants and a real Keycloak-seeded field_responder identity, proven end-to-end through OPA with 3 new integration tests, so 05-03/05-04's field-mobile screens can sign in as a real seeded user from the start.
+stopped_at: Completed 05-05-PLAN.md
+last_updated: "2026-11-18T14:41:46.775Z"
+last_activity: "2026-11-18 — Plan 05-05 complete (see 05-05-SUMMARY.md for full detail), run after 05-01/05-02. Extended backend/scripts/seed.ts with idempotent field_reports grants (field_responder: view/create/resolve; incident_commander/eoc_director: view/resolve; planning_logistics_chief: view), added a fourth seeded Keycloak group/user (epmp-field-responders / field-responder@epmp.local) to epmp-realm.json, and added the canonical signInAsFieldResponder Playwright helper to sign-in.ts for 05-03/05-04 to import. 3 new integration tests prove the seeded grants authorize real requests end-to-end through OPA. Full backend suite (15 files, 77 tests) green with zero regression; tsc --noEmit clean in both backend and frontend/app; both builds clean."
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 57
-  completed_plans: 44
+  completed_plans: 45
   percent: 67
 ---
 
@@ -21,14 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 5 — Mobile Field Operations — IN PROGRESS. Plan 05-01 (backend data layer + API) complete. Plan 05-02 (SyncStatus component + offline-queue library + PWA scaffolding) complete, run in parallel with 05-01. 05-03/05-04/05-05 remain.
+**Current focus:** Phase 5 — Mobile Field Operations — IN PROGRESS. Plan 05-01 (backend data layer + API) complete. Plan 05-02 (SyncStatus component + offline-queue library + PWA scaffolding) complete, run in parallel with 05-01. Plan 05-05 (field_reports RBAC seed + real field-responder Keycloak identity) complete. 05-03/05-04 remain.
 
 ## Current Position
 
 Phase: 5 of 6 (Mobile Field Operations) — IN PROGRESS
-Plan: 2 of 5 complete in current phase (05-01, 05-02 done, run in parallel this session; 05-03/05-04/05-05 pending)
-Status: Plan 05-02 shipped the client-side half of F6 — SyncStatus design-system component, IndexedDB-backed offline-queue library with queue-first writes and auto-sync-on-reconnect, and PWA manifest/service-worker scaffolding for home-screen installability.
-Last activity: 2026-11-18 — Plan 05-02 complete (see 05-02-SUMMARY.md for full detail), run in parallel with 05-01. New SyncStatus product-pattern component (icon+word+color for online/syncing/offline/conflict, exported from window.EPMP) and frontend/app/src/lib/offline-queue.ts (enqueueFieldReport/getQueueSnapshot/subscribeToQueue/syncQueueNow) give 05-03/05-04's field-mobile screens both reusable primitives they need, independently proven correct before any screen exists. vite-plugin-pwa now emits dist/manifest.webmanifest + dist/sw.js on build. Design-system suite (59 tests, +8 new) and frontend/app's new offline-queue suite (5 tests against fake-indexeddb) both green; tsc --noEmit clean in both workspaces; design-system + app builds both clean.
+Plan: 3 of 5 complete in current phase (05-01, 05-02, 05-05 done; 05-03/05-04 pending, wave 3/4)
+Status: Plan 05-05 closed the final F6 gap — idempotent field_reports role_permissions grants and a real Keycloak-seeded field_responder identity, proven end-to-end through OPA with 3 new integration tests, so 05-03/05-04's field-mobile screens can sign in as a real seeded user from the start.
+Last activity: 2026-11-18 — Plan 05-05 complete (see 05-05-SUMMARY.md for full detail), run after 05-01/05-02. Extended backend/scripts/seed.ts with idempotent field_reports grants (field_responder: view/create/resolve; incident_commander/eoc_director: view/resolve; planning_logistics_chief: view), added a fourth seeded Keycloak group/user (epmp-field-responders / field-responder@epmp.local) to epmp-realm.json, and added the canonical signInAsFieldResponder Playwright helper to sign-in.ts for 05-03/05-04 to import. 3 new integration tests prove the seeded grants authorize real requests end-to-end through OPA. Full backend suite (15 files, 77 tests) green with zero regression; tsc --noEmit clean in both backend and frontend/app; both builds clean.
+
+Plan 05-02 (prior): shipped the client-side half of F6 — SyncStatus design-system component, IndexedDB-backed offline-queue library with queue-first writes and auto-sync-on-reconnect, and PWA manifest/service-worker scaffolding for home-screen installability. New SyncStatus product-pattern component (icon+word+color for online/syncing/offline/conflict, exported from window.EPMP) and frontend/app/src/lib/offline-queue.ts (enqueueFieldReport/getQueueSnapshot/subscribeToQueue/syncQueueNow) give 05-03/05-04's field-mobile screens both reusable primitives they need. Design-system suite (59 tests, +8 new) and frontend/app's new offline-queue suite (5 tests against fake-indexeddb) both green.
 
 Plan 05-01 (prior, backend): shipped the F6 backend data layer and API surface — field_reports/field_report_photos/sync_conflicts tables plus idempotent-submit/ordered-batch-sync/photo-upload/conflict-resolve endpoints, every incident-touching write wrapped in the shared withTimelineTransaction invariant. Integration test (4 cases) + full backend suite (15 files, 74 tests) green with zero regression; tsc --noEmit and backend build both clean.
 
@@ -97,6 +99,7 @@ Progress: [███████░░░] 67%
 | Phase 04 P08 | 35 min | 3 tasks | 10 files |
 | Phase 05 P01 | 8 min | 3 tasks | 7 files |
 | Phase 05-02 P02 | 35 min | 3 tasks | 12 files |
+| Phase 05 P05 | 25 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -217,6 +220,7 @@ Recent decisions affecting current work:
 - [Phase 05-01]: Photo bytes persist to backend/uploads/ (gitignored) as a local-disk stand-in for a real object-storage adapter (no MinIO/S3 configured this phase), read back exclusively through a same-origin GET route pair — documented as a drop-in replacement point for a future real adapter
 - [Phase 05-01]: sync-batch conflict detection covers entity_type='field_report' vs incidents.updated_at only; any other entity_type (e.g. a future F4 task-status sync-batch) is a documented extension point for a later plan
 - [Phase 05-02]: offline-queue.ts: a network-level sync-batch failure leaves every attempted item queue_status unchanged at 'pending' (never 'failed'), so it is retried on the next reconnect instead of silently abandoned
+- [Phase 05-05]: field_responder granted resolve (not just view/create) on field_reports — the mockup's Sync Conflict Resolution screen is reached from the field responder's own Queued Submissions View, so they resolve their own conflict on-device; incident_commander/eoc_director get view+resolve but NOT create
 
 ### Pending Todos
 
@@ -228,6 +232,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-18T14:32:47.083Z
-Stopped at: Completed 05-02-PLAN.md
+Last session: 2026-11-18T14:41:46.774Z
+Stopped at: Completed 05-05-PLAN.md
 Resume file: None
