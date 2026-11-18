@@ -3,14 +3,14 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-01-PLAN.md — comms-reporting Notifications module (recipient-groups/templates/compose/send/delivery-status + shared AI-governance guard) backend-complete, Phase 4 continues
-last_updated: "2026-11-18T05:32:30Z"
-last_activity: "2026-11-18 — Plan 04-01 complete (comms-reporting backend module, F5 Notifications half: recipient-group/message-template CRUD, 4-step compose flow with mandatory named-person approval-before-send, per-recipient delivery/acknowledgment tracking, and the shared assertAiOriginApproved AI-governance guard 04-02's reporting module will reuse unchanged per TechArch 01-components.md \u00a72.4. Migration 1700000000008_notifications-schema.js (renumbered from the plan's literal 1700000000007 — that number was already claimed by Phase 3's plans-schema.js) creates ai_drafts/recipient_groups/message_templates/notifications/notification_recipients/notification_delivery_status with every CHECK constraint (chk_audience_present, chk_send_requires_approval, chk_ai_origin_requires_approval). POST .../compose rejects no-audience composes with 422 NO_AUDIENCE_SELECTED before any write; POST .../send re-verifies approver identity server-side (403 APPROVER_MISMATCH on a client-asserted approver_id not matching the caller), runs the shared AI-origin guard (400 AIDRAFT_UNAPPROVED_WRITE_BLOCKED), and writes exactly one incident_timeline entry inside the same withTimelineTransaction as the approval UPDATE when incident-linked. GET .../delivery-status returns the exact DDL-enum per-recipient shape with computed ack_percentage. Minimal POST /api/v1/ai-drafts + approve/discard stub (no live AI gateway this phase) makes the governance invariant testable end-to-end. Two auto-fixed Rule 1 bugs found via this plan's own integration test (ai_drafts stub's JSONB sources literal embedded an invalid now() call inside a JSON string; test itself asserted the wrong caller identity for the approver-mismatch case) plus one Rule 3 migration-number collision. New notifications.test.ts (3 tests) + full backend suite (12 files, 58 tests) green; tsc --noEmit and npm run build both clean.)"
+stopped_at: Completed 04-02-PLAN.md
+last_updated: "2026-11-18T05:48:43.819Z"
+last_activity: 2026-11-18 — Plan 04-02 complete (comms-reporting backend module, F7 Reporting & Learning half — see Accumulated Context decisions below for full detail, and 04-02-SUMMARY.md for complete detail). SITREP generation auto-assembles Timeline/task-status/resource-request-status data from only incident_id; AAR generation is gated on incident closure and validates finding ownership atomically; finalized AARs and Approved SITREPs are immutable; the evidence log aggregates audit_log + incident_timeline with no edit/delete path for any role; the analytics endpoint never invents a KPI target. Reuses 04-01's assertAiOriginApproved guard unchanged. New reporting.test.ts (6 tests) + full backend suite (13 files, 64 tests) green; tsc --noEmit and npm run build both clean. One auto-fixed Rule 3 migration-number collision (1700000000008 -> 1700000000009), same pattern as 04-01's own.
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 55
-  completed_plans: 35
+  completed_plans: 36
   percent: 50
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 4 — Notifications, Reporting & Learning (IN PROGRESS) — comms-reporting Notifications backend shipped (04-01), Progress + chart components shipped (04-03), 04-02/04-04 next
+**Current focus:** Phase 4 — Notifications, Reporting & Learning (IN PROGRESS) — comms-reporting Notifications backend shipped (04-01), Progress + chart components shipped (04-03), Reporting & Learning backend shipped (04-02), 04-04/04-05/04-06/04-07 next
 
 ## Current Position
 
 Phase: 4 of 6 (Notifications, Reporting & Learning) — IN PROGRESS
-Plan: 2 of 7 complete in current phase (04-01 complete this session; 04-03 complete this session, run in parallel — 04-02/04-04/04-05/04-06/04-07 remain)
-Status: Executing — Plan 04-01 complete (comms-reporting Notifications module backend: compose/send/delivery-status API + shared AI-governance guard), 04-02 next (depends_on 04-01)
-Last activity: 2026-11-18 — Plan 04-01 complete (comms-reporting backend module, F5 Notifications half — see Accumulated Context decisions below for full detail). Plan 04-03 also complete this session (Progress + LineChart/BarChart/DonutChart design-system components, closing the design-system component gap this phase's screens need before 04-05/04-06 compose them. Progress: role=progressbar with aria-valuenow/min/max, showValue defaults true. LineChart: up to 6 series distinguished by color AND marker shape, dashed threshold lines, hidden data-table twin. BarChart: grouped/stacked bars, values always printed, pattern fills for print/grayscale. DonutChart: 2-5 segment ring with center total, always-visible list legend, dev-only console.warn past 5 segments. New data-viz.test.tsx (5 tests) proves all of the above; full design-system suite (51 tests, 6 files) green. Zero deviations.)
+Plan: 3 of 7 complete in current phase (04-01 and 04-03 complete prior session; 04-02 complete this session — 04-04/04-05/04-06/04-07 remain)
+Status: Executing — Plan 04-02 complete (comms-reporting Reporting & Learning module backend: SITREP/AAR auto-assembly, evidence log, analytics KPIs), 04-04 next
+Last activity: 2026-11-18 — Plan 04-02 complete (comms-reporting backend module, F7 Reporting & Learning half — see Accumulated Context decisions below for full detail, and 04-02-SUMMARY.md for complete detail). SITREP generation auto-assembles Timeline/task-status/resource-request-status data from only incident_id; AAR generation is gated on incident closure and validates finding ownership atomically; finalized AARs and Approved SITREPs are immutable; the evidence log aggregates audit_log + incident_timeline with no edit/delete path for any role; the analytics endpoint never invents a KPI target. Reuses 04-01's assertAiOriginApproved guard unchanged. New reporting.test.ts (6 tests) + full backend suite (13 files, 64 tests) green; tsc --noEmit and npm run build both clean. One auto-fixed Rule 3 migration-number collision (1700000000008 -> 1700000000009), same pattern as 04-01's own.
 
 Progress: [█████░░░░░] 50%
 
@@ -86,6 +86,7 @@ Progress: [█████░░░░░] 50%
 | Phase 03 P10 | 25 min | 3 tasks | 4 files |
 | Phase 04 P03 | 25 min | 3 tasks | 10 files |
 | Phase 04 P01 | 10 min | 3 tasks | 5 files |
+| Phase 04 P02 | 14 min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -181,6 +182,10 @@ Recent decisions affecting current work:
 - [Phase 04-01]: POST /api/v1/notifications/{id}/send's APPROVER_MISMATCH gate is enforced via caller-identity equality (body's approver_id must equal req.epmpUser.id), not a role-permission lookup on the asserted id — a caller cannot send on behalf of a DIFFERENT named person regardless of that person's own permissions, matching FRD's "enforced server-side, not just hidden client-side" rule
 - [Phase 04-01]: assertAiOriginApproved/AiOriginNotApprovedError exported from comms-reporting/notifications.ts as the ONE shared AI-governance guard — 04-02's reporting module imports it unchanged rather than reimplementing, per TechArch 01-components.md \u00a72.4 rule 3
 - [Phase 04-01]: Geography-type recipient groups structurally resolve to zero concrete notification_recipients at both list (member_count omitted) and compose time — documented Phase-6/F16-roster-sync-dependent scope boundary, no live roster-geo-match exists this phase
+- [Phase 04-02]: Migration renumbered to 1700000000009 (not plan's literal 1700000000008, already claimed by 04-01's notifications-schema.js)
+- [Phase 04-02]: AAR re-generation upserts in place against the Draft row (ON CONFLICT ... WHERE status != 'Finalized'), returning 403 DOCUMENT_IMMUTABLE on a Finalized conflict instead of silently no-op'ing
+- [Phase 04-02]: AAR decisions_log heuristic: EPMP-sourced Timeline rows with tone warning/danger OR title matching Activation changed to|assigned to|Incident closed are decision-tagged -- documented approximation since no literal is_decision column exists
+- [Phase 04-02]: Evidence log deliberately excludes null-actor_id incident_timeline rows (e.g. the Overdue sweep) since the Actor column has no person to render for those
 
 ### Pending Todos
 
@@ -192,6 +197,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-18T05:32:30Z
-Stopped at: Completed 04-01-PLAN.md — comms-reporting Notifications module (recipient-groups/templates/compose/send/delivery-status + shared AI-governance guard) backend-complete; 04-03 also complete this session; 04-02 next (depends_on 04-01)
+Last session: 2026-11-18T05:48:43.818Z
+Stopped at: Completed 04-02-PLAN.md
 Resume file: None
