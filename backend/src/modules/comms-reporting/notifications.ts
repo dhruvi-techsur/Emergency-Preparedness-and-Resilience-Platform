@@ -296,6 +296,16 @@ export default async function notificationsRoutes(app: FastifyInstance) {
           message: 'AI drafts must be approved by a signed-in person.',
         });
       }
+      // Identity re-check — mirrors the /send route's own
+      // effectiveApproverId !== req.epmpUser!.id guard (:468-469). The
+      // approver must be the signed-in caller, never a different
+      // client-asserted identity.
+      if (approver_id !== req.epmpUser!.id) {
+        return reply.code(403).send({
+          error_code: 'APPROVER_MISMATCH',
+          message: "You're not the designated approver for this channel. Route it to the correct approver.",
+        });
+      }
       const rows = await query<{ id: string; approved_by: string; approved_at: string }>(
         `UPDATE ai_drafts SET action='approve', approved_by=$1, approved_at=now(), edited_text=$2
          WHERE id=$3 RETURNING id, approved_by, approved_at`,
