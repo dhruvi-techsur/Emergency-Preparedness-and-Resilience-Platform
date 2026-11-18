@@ -366,13 +366,32 @@ export default async function authOrgRoutes(app: FastifyInstance) {
           : []),
         // Phase 5 (F6, 05-04): the field-mobile bottom bar's 4 fixed
         // destinations, per the mockup's Field Home screen layout
-        // (`[Tasks][Report][Map][Profile]`). "Tasks" maps to `/field`
-        // (the Field Home/landing screen) per the Navigation Map's own
-        // "Field Home ... Nav element: Bottom bar: 'Tasks' (landing)"
-        // entry, not to `/field/tasks` (My Tasks). "Profile" has no
-        // dedicated screen anywhere in this phase or prior phases — no
-        // F6 screen spec defines one — so it also routes to `/field`
-        // (Claude's discretion): the bottom-bar's `SideNavItem` shape
+        // (`[Tasks][Report][Map][Profile]`).
+        //
+        // review finding B3 (fixed): "Tasks" maps to `/field/tasks` (My
+        // Tasks, field view), NOT `/field` (Field Home) — re-reading the
+        // mockup's Navigation Map row-by-row: Field Home's own row reads
+        // "Reached from: App shell (sign-in default for PER-04) | Nav
+        // element: Bottom bar: 'Tasks' (landing)" — the "(landing)"
+        // qualifier there describes Field Home's OWN reach path (you
+        // land there once, straight out of sign-in, not via a nav tap),
+        // not a claim that the bottom bar's "Tasks" item points AT
+        // Field Home. My Tasks' own very next row is explicit and
+        // unqualified: "Reached from: Field Home bottom bar | Nav
+        // element: Bottom bar: 'Tasks'" — i.e. the bottom bar's "Tasks"
+        // item is My Tasks' (not Field Home's) reach path. Field Home
+        // itself has NO bottom-bar nav element at all (it's the sign-in
+        // landing screen you start on, the same way AppShell's admin
+        // nav doesn't need a nav item pointing at itself) — getting this
+        // backwards made `/field/tasks` a real, built, routed screen
+        // with zero nav reach, an orphan reachable only by typing the
+        // URL directly (the exact condition 05-04's own must-have truth
+        // rules out).
+        //
+        // "Profile" still has no dedicated screen anywhere in this phase
+        // or prior phases — no F6 screen spec defines one — so it
+        // continues to route to `/field` (Claude's discretion,
+        // unchanged by this fix): the bottom-bar's `SideNavItem` shape
         // requires an `href`, not an onClick handler, and the real
         // profile menu remains reachable via AppShell's own header
         // Avatar/profileMenuOpen toggle (visible at every breakpoint,
@@ -383,7 +402,7 @@ export default async function authOrgRoutes(app: FastifyInstance) {
               {
                 label: 'Field',
                 items: [
-                  { id: 'field-tasks', label: 'Tasks', icon: 'flag', href: '/field' },
+                  { id: 'field-tasks', label: 'Tasks', icon: 'flag', href: '/field/tasks' },
                   { id: 'field-report', label: 'Report', icon: 'send', href: '/field/report' },
                   { id: 'field-map-nav', label: 'Map', icon: 'map', href: '/field/map' },
                   { id: 'field-profile', label: 'Profile', icon: 'users', href: '/field' },
