@@ -1,5 +1,6 @@
 import { defineConfig, type ProxyOptions } from 'vite';
 import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 
 // EPMP app shell — Vite dev server config.
 //
@@ -49,7 +50,46 @@ const keycloakProxy: ProxyOptions = {
 };
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    // Minimum PWA scaffolding (manifest + service worker) that makes the
+    // app installable, per F6's "add to home screen" field-mobile
+    // requirement. Auto-injects <link rel="manifest"> and the SW
+    // registration script into index.html at build time — do NOT add a
+    // manifest <link> manually, it would conflict with this injection.
+    VitePWA({
+      registerType: 'autoUpdate',
+      manifest: {
+        name: 'EPMP Field Operations',
+        short_name: 'EPMP Field',
+        start_url: '/field',
+        display: 'standalone',
+        background_color: '#ffffff',
+        theme_color: '#1a1a1a',
+        icons: [
+          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+        ],
+      },
+      workbox: {
+        // Precache the app shell; runtime-cache API GETs so a field
+        // responder's already-visited screens (task list, field home)
+        // still render from cache if reopened offline before the
+        // offline-queue's own IndexedDB data is the thing actually being
+        // shown — this is a secondary, best-effort layer UNDER the
+        // offline-queue's own guarantee, not a replacement for it (the
+        // queue is what guarantees writes never fail; this cache is what
+        // keeps already-fetched READS available too).
+        runtimeCaching: [
+          {
+            urlPattern: /^\/api\/v1\/(tasks|me)/,
+            handler: 'NetworkFirst',
+            options: { cacheName: 'epmp-api-cache', networkTimeoutSeconds: 3 },
+          },
+        ],
+      },
+    }),
+  ],
   server: {
     host: '0.0.0.0',
     port: 5173,
