@@ -3,14 +3,14 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-05-PLAN.md
-last_updated: "2026-11-18T06:21:03.034Z"
-last_activity: 2026-11-18 — Plan 04-05 complete (Notifications frontend — see Accumulated Context decisions below for full detail, and 04-05-SUMMARY.md for complete detail). Four routable screens (RecipientGroups/MessageTemplates/ComposeNotification/DeliveryTracking) reachable from the shell's Coordinate SideNav group; Compose enforces its 4-step order with the exact FRD audience gate, never auto-populates from an AI draft without an explicit approved click, renders Step 3 fully read-only, and proactively permission-gates Approve-and-send via a new `permissions` field on GET /api/v1/me/nav-config. 8-test Playwright suite proves the complete compose-to-delivery flow including the cross-feature incident Timeline write. Shared files (AppShell.tsx/main.tsx/routes.ts) edited append-only alongside 04-06 (same wave, parallel) — no conflicts. Full backend suite (13 files, 67 tests) green; tsc --noEmit and all three workspace builds clean. 3 trivial auto-fixed deviations.
+stopped_at: Completed 04-06-PLAN.md
+last_updated: "2026-11-18T06:37:00.000Z"
+last_activity: 2026-11-18 — Plan 04-06 complete (Reporting & Learning frontend — see Accumulated Context decisions below for full detail, and 04-06-SUMMARY.md for complete detail). Four routable screens (SitrepGenerator/AarGenerator/EvidenceLogView/AnalyticsDashboard) reachable from a new "Improve" SideNav group; SITREP Generator auto-assembles its 3 read-only sections on mount with zero manual re-entry; AAR Generator never renders its wizard for a non-Closed incident (page-level guard, not a disabled button) and client-mirrors the finding-ownership gate; Evidence Log View is structurally edit/delete-free; Analytics Dashboard's Stat tiles cannot display an invented target since StatProps has no such field. 7-test Playwright suite proves the full lifecycle end-to-end, including 4 auto-fixed deviations discovered during its own verification (1 production bug — findingsError alert placement; 3 test-logic-only fixes — Keycloak SSO session carryover on identity switch, heading-text ambiguity vs hidden data-table captions, and a cross-test finding-persistence assumption). Shared files (main.tsx/routes.ts) edited append-only alongside 04-05 (same wave, parallel) — confirmed zero conflicts via git log showing 04-05's docs commit landing cleanly on top. Full backend suite (13 files, 67 tests) green; tsc --noEmit and all three workspace builds clean; app-shell.spec.ts re-verified green as a shared-file regression check.
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 55
-  completed_plans: 38
+  completed_plans: 40
   percent: 50
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 4 — Notifications, Reporting & Learning (IN PROGRESS) — comms-reporting Notifications backend shipped (04-01), Progress + chart components shipped (04-03), Reporting & Learning backend shipped (04-02), role-permission seed grants shipped (04-04), Notifications frontend screens shipped (04-05), 04-06/04-07 next
+**Current focus:** Phase 4 — Notifications, Reporting & Learning (IN PROGRESS) — comms-reporting Notifications backend shipped (04-01), Progress + chart components shipped (04-03), Reporting & Learning backend shipped (04-02), role-permission seed grants shipped (04-04), Notifications frontend screens shipped (04-05), Reporting & Learning frontend screens shipped (04-06), 04-07 next
 
 ## Current Position
 
 Phase: 4 of 6 (Notifications, Reporting & Learning) — IN PROGRESS
-Plan: 5 of 7 complete in current phase (04-01 and 04-03 complete prior session; 04-02 and 04-04 complete earlier this session; 04-05 complete this session — 04-06/04-07 remain)
-Status: Executing — Plan 04-05 complete (Notifications frontend screens: Recipient Groups, Message Templates, Compose Notification 4-step flow, Delivery & Acknowledgment Tracking — proven end-to-end via Playwright against the real compose stack), 04-06 next (parallel wave, already in progress)
-Last activity: 2026-11-18 — Plan 04-05 complete (Notifications frontend — see Accumulated Context decisions below for full detail, and 04-05-SUMMARY.md for complete detail). Four routable screens (RecipientGroups/MessageTemplates/ComposeNotification/DeliveryTracking) reachable from the shell's Coordinate SideNav group; Compose enforces its 4-step order with the exact FRD audience gate, never auto-populates from an AI draft without an explicit approved click, renders Step 3 fully read-only, and proactively permission-gates Approve-and-send via a new `permissions` field on GET /api/v1/me/nav-config. 8-test Playwright suite proves the complete compose-to-delivery flow including the cross-feature incident Timeline write. Shared files (AppShell.tsx/main.tsx/routes.ts) edited append-only alongside 04-06 (same wave, parallel) — no conflicts. Full backend suite (13 files, 67 tests) green; tsc --noEmit and all three workspace builds clean. 3 trivial auto-fixed deviations.
+Plan: 6 of 7 complete in current phase (04-01 and 04-03 complete prior session; 04-02 and 04-04 complete earlier this session; 04-05 and 04-06 complete this session, same parallel wave — 04-07 remains)
+Status: Executing — Plan 04-06 complete (Reporting & Learning frontend screens: SITREP Generator, AAR Generator, Evidence & Audit Log View, Analytics & Reporting Dashboard — proven end-to-end via Playwright against the real compose stack), 04-07 next
+Last activity: 2026-11-18 — Plan 04-06 complete (Reporting & Learning frontend — see Accumulated Context decisions below for full detail, and 04-06-SUMMARY.md for complete detail). Four routable screens (SitrepGenerator/AarGenerator/EvidenceLogView/AnalyticsDashboard) reachable from a new "Improve" SideNav group; SITREP Generator auto-assembles its 3 read-only sections on mount with zero manual re-entry; AAR Generator never renders its wizard for a non-Closed incident and client-mirrors the server's finding-ownership gate; Evidence Log View is structurally edit/delete-free; Analytics Dashboard's Stat tiles cannot display an invented target since the component has no such field. 7-test Playwright suite proves the full lifecycle end-to-end. Shared files (main.tsx/routes.ts) edited append-only alongside 04-05 (same wave, parallel) — confirmed zero conflicts. Full backend suite (13 files, 67 tests) green; tsc --noEmit and all three workspace builds clean. 4 auto-fixed deviations (1 production bug, 3 test-logic-only), all found and resolved during this plan's own verification before any commit claimed success.
 
 Progress: [█████░░░░░] 50%
 
@@ -36,9 +36,9 @@ Progress: [█████░░░░░] 50%
 
 **Velocity:**
 
-- Total plans completed: 35
-- Average duration: 23 min
-- Total execution time: 12.1 hours
+- Total plans completed: 36
+- Average duration: 24 min
+- Total execution time: 13.3 hours
 
 **By Phase:**
 
@@ -89,6 +89,7 @@ Progress: [█████░░░░░] 50%
 | Phase 04 P02 | 14 min | 3 tasks | 6 files |
 | Phase 04 P04 | 18 min | 2 tasks | 2 files |
 | Phase 04 P05 | 42 min | 3 tasks | 7 files |
+| Phase 04 P06 | 70 min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -191,6 +192,11 @@ Recent decisions affecting current work:
 - [Phase 04-04]: notifications 'approve' action-level granted ONLY to incident_commander (PER-02's PIO-merge per PERSONAS-EPMP.md) — the sole approve-and-send authority, matching F5's named-person-approval rule with one realistic seeded identity
 - [Phase 04-04]: reporting 'edit' action-level (gating SITREP/AAR finalize) granted ONLY to planning_logistics_chief — the FRD's named SITREP/AAR author role; incident_commander/eoc_director can trigger generation but not finalize, matching 03-07's no-single-role-holds-everything segregation pattern
 - [Phase 04-05]: Compose happens lazily at Step 4's danger-Modal confirm, not at Step-1 completion -- no partial notification rows for abandoned compose sessions; GET /api/v1/me/nav-config extended with a full feature->actions permissions map so Compose's Approve-and-send button can be proactively client-side gated without a second endpoint
+- [Phase 04-06]: AarGenerator's page-level closure gate checks incident.status BEFORE ever constructing the wizard's JSX tree (not a disabled/hidden wizard) — the EmptyState with the exact FRD message IS the entire render output for a non-Closed incident, matching the mockup's "action is absent/disabled" rule structurally
+- [Phase 04-06]: A new "Improve" SideNav group (Evidence log, Analytics) added independently of 04-05's same-wave "Coordinate" append — each plan's Task 3 only appends to the group/key it actually owns, so no collision was possible between the two parallel plans
+- [Phase 04-06]: AnalyticsDashboard's Stat tiles pass no `target` prop because `StatProps` has no such field at all — the never-invented-target rule is a structural property of the design-system component, not merely a data-layer promise from the backend
+- [Phase 04-06]: Evidence log's actor-filter Combobox derives options from its own already-fetched rows rather than GET /api/v1/admin/users — planning_logistics_chief (reporting:view) doesn't hold admin:view, so reusing that endpoint would 403 for this view's real audience
+- [Phase 04-06]: PDF export intentionally NOT offered as a UI choice in Evidence Log View — 04-02's format=pdf backend path is a documented guaranteed 500 EXPORT_FAILED; offering a guaranteed-failing option is worse than omitting it
 
 ### Pending Todos
 
@@ -202,6 +208,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-18T06:21:03.033Z
-Stopped at: Completed 04-05-PLAN.md
+Last session: 2026-11-18T06:37:00.000Z
+Stopped at: Completed 04-06-PLAN.md
 Resume file: None
