@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import authOrgRoutes from './modules/auth-org/routes.js';
 import incidentOpsRoutes from './modules/incident-ops/routes.js';
 import planRoutes from './modules/plans/routes.js';
+import commsReportingRoutes from './modules/comms-reporting/routes.js';
 import integrationGatewayRoutes from './modules/integration-gateway/routes.js';
 import webhookSubscriptionRoutes from './modules/integration-gateway/webhook-subscriptions.js';
 import openApiRoutes from './openapi/spec.js';
@@ -36,6 +37,11 @@ export function buildApp() {
   // 03-03 F3 plans module — new module, mounted alongside the existing
   // auth-org/incident-ops/integration-gateway registrations.
   app.register(planRoutes);
+  // 04-01 F5 comms-reporting module (notifications half) — new module,
+  // appended after plansRoutes per this phase's append-only convention.
+  // 04-02's reporting routes register inside this SAME plugin alongside
+  // notificationsRoutes, not as a separate server.ts registration.
+  app.register(commsReportingRoutes);
   app.register(integrationGatewayRoutes);
   app.register(webhookSubscriptionRoutes);
   app.register(platformHealthRoutes);
