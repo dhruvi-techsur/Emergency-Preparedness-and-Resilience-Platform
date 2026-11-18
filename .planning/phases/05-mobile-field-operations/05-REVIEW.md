@@ -1,106 +1,199 @@
 ---
 phase: 5
-status: issues_found
-blockers: 3
-warnings: 3
-files_reviewed: 33
+status: clean
+blockers: 0
+warnings: 0
+files_reviewed: 20
 files_reviewed_list:
-  - backend/keycloak/epmp-realm.json
-  - backend/migrations/1700000000010_field-operations-schema.js
-  - backend/package.json
   - backend/scripts/seed.ts
+  - backend/src/modules/auth-org/rbac.ts
   - backend/src/modules/auth-org/routes.ts
-  - backend/src/modules/incident-ops/field-reports.test.ts
+  - backend/src/modules/auth-org/opa-client.ts
   - backend/src/modules/incident-ops/field-reports.ts
-  - backend/src/modules/incident-ops/routes.ts
-  - backend/src/modules/incident-ops/sync-conflicts.ts
   - backend/src/modules/incident-ops/tasks.ts
-  - frontend/app/e2e/field-mobile-report.spec.ts
-  - frontend/app/e2e/field-mobile-sync-conflict.spec.ts
-  - frontend/app/e2e/helpers/sign-in.ts
-  - frontend/app/index.html
-  - frontend/app/package.json
-  - frontend/app/src/lib/api-client.ts
-  - frontend/app/src/lib/field-mobile-shell.tsx
-  - frontend/app/src/lib/offline-queue.test.ts
+  - backend/src/modules/incident-ops/sync-conflicts.ts
+  - backend/migrations/1700000000010_field-operations-schema.js
   - frontend/app/src/lib/offline-queue.ts
-  - frontend/app/src/main.tsx
-  - frontend/app/src/pages/SignInCallback.tsx
-  - frontend/app/src/pages/field-mobile/FieldHome.tsx
-  - frontend/app/src/pages/field-mobile/FieldMap.css
-  - frontend/app/src/pages/field-mobile/FieldMap.tsx
-  - frontend/app/src/pages/field-mobile/MyTasksField.tsx
+  - frontend/app/src/lib/offline-queue.test.ts
+  - frontend/app/src/lib/api-client.ts
   - frontend/app/src/pages/field-mobile/QueuedSubmissions.tsx
   - frontend/app/src/pages/field-mobile/ReportObservation.tsx
-  - frontend/app/src/pages/field-mobile/SyncConflictResolution.css
   - frontend/app/src/pages/field-mobile/SyncConflictResolution.tsx
-  - frontend/app/vite.config.ts
-  - frontend/app/vitest.config.ts
-  - frontend/design-system/src/foundations/Icon.tsx
-  - frontend/design-system/src/index.ts
-  - frontend/design-system/src/product-patterns/SyncStatus.tsx
-reviewed_at: 2026-11-18T15:49:01Z
-iteration: 1
+  - frontend/app/src/pages/field-mobile/FieldHome.tsx
+  - frontend/app/src/main.tsx
+  - frontend/app/e2e/app-shell.spec.ts
+  - frontend/app/e2e/field-mobile-report.spec.ts
+  - frontend/app/e2e/field-mobile-sync-conflict.spec.ts
+  - .planning/phases/05-mobile-field-operations/05-REVIEW.md
+reviewed_at: 2026-11-18T16:45:00Z
+iteration: 2
 ---
 
-# Phase 5 Code Review
+# Phase 5 Code Review (re-review)
+
+Re-review scope per instructions: verify each of iteration 1's 6 findings
+(B1, B2, B3, W1, W2, W3) against the current code (not the fixer's claims),
+check the 6 fix commits (`25f92ff`, `a3f0880`, `67bcb5c`, `6634781`,
+`6eda07c`, `5bc63c8`) and every file they touched, and trace dependents of
+each changed seam for regressions. `tsc --noEmit` run clean on both
+`backend/` and `frontend/app/`. `offline-queue.test.ts` (8/8),
+`field-reports.test.ts` (7/7), `tasks.test.ts` (5/5), and `routes.test.ts`
+(6/6) all re-run and pass.
+
+## Verification of iteration-1 findings
+
+### B1 (photo upload targets the wrong identifier) — CONFIRMED FIXED
+Read `backend/src/modules/incident-ops/field-reports.ts:304-345` (POST) and
+`:374-395` (GET) directly. Both routes now resolve `:id` via
+`SELECT id FROM field_reports WHERE id::text = $1 OR client_report_id = $1`
+before any INSERT/SELECT against `field_report_photos`. `client_report_id`
+is `VARCHAR(100) NOT NULL UNIQUE` (migration line 20) and `id` is the
+`UUID PRIMARY KEY` — the `id::text` cast correctly avoids the
+`uuid = character varying` operator error for non-UUID-shaped client ids
+while still matching when `$1` happens to be a real UUID. Since
+`client_report_id` carries a `UNIQUE` constraint and `id` is the PK, there
+is no ambiguity between the two branches of the `OR`.
+`ReportObservation.tsx` now `await`s `syncQueueNow()` before the upload
+call (closing the original fire-and-forget race) and the backend's
+id-or-client_report_id fallback is genuinely redundant-but-safe on top of
+that. `uploadFieldReportPhoto` in `api-client.ts` is unchanged and still
+passes `clientReportId` — correct, since the route now accepts it.
+`field-reports.test.ts` exercises this module end-to-end (7/7 passing).
+**Fixed, no regression.**
+
+### W3 (silent photo-upload failure) — CONFIRMED FIXED
+Read the full diff: `photoUploadError` state is set on catch, an
+`Alert tone="warning"` with the exact plan-specified copy and a "Retry the
+photo" action (`handleRetryPhoto`, re-targets via the stable
+`clientReportId` ref) renders. Navigation to `/field` is correctly
+deferred (`if (!photoFailed) navigate(...)`) so the Alert is actually
+visible before unmount. `Alert`'s `actions` prop exists in the design
+system (`frontend/design-system/src/feedback/Alert.tsx:34`) and is
+rendered (`:63`) — the `Button` passed as `actions` is a valid consumer.
+**Fixed, no regression.**
+
+### B2 (field_responder lacked a tasks `edit`/status grant) — CONFIRMED FIXED
+Read `rbac.ts` in full. `requirePermission(feature, action)` now simply
+delegates to `requireAnyPermission(feature, [action])` — behaviorally
+identical to the pre-fix single-action check for every one of the ~70
+other `requirePermission(...)` call sites across the backend (confirmed by
+grep across every module: `federation-grants.ts`, `resource-requests.ts`,
+`incidents.ts`, `plans.ts`, `admin-*.ts`, `evidence-log.ts`,
+`notifications.ts`, etc. — all still call the two-arg form, all resolve
+through the identical single-iteration loop). `tasks.ts`'s
+`PATCH /:id/status` now uses `requireAnyPermission('tasks', ['edit',
+'status'])`; `seed.ts` grants `field_responder` `['view','status']`
+(verified the diff: explicit idempotent UPDATE path, not just
+`findOrInsert`, so a previously-seeded `['view']`-only row is correctly
+widened on re-seed — matters because `findOrInsert`'s match key is
+`(role_id, feature)`, which would otherwise never fire on an existing row).
+`opa-client.ts`'s `syncRolePermissionsToOpa` pushes the `actions` array
+verbatim per feature with no hardcoded action enum to update elsewhere —
+no additional seam to break. `tasks.test.ts` (5/5) and
+`field-reports.test.ts` (7/7) both pass post-fix. **Fixed, no regression.**
+
+### B3 (My Tasks `/field/tasks` orphan screen) — CONFIRMED FIXED
+`routes.ts`'s `field-tasks` nav-config item's `href` changed from `/field`
+to `/field/tasks` (one-line diff, confirmed via `git show`). `main.tsx`'s
+route tree is untouched — `field` → `FieldHome`, `field/tasks` →
+`MyTasksField`, both still registered (confirmed by direct read of
+`main.tsx:172` and surrounding routes). Grepped `app-shell.spec.ts`,
+`field-mobile-report.spec.ts`, `field-mobile-sync-conflict.spec.ts` for any
+hardcoded assertion on the old `/field` href or any `page.goto`/
+`waitForURL` that would break from this change — none found; the only
+field-mobile-report spec URL assertion is `pathname === '/field'` for
+Field Home itself (still correct, unaffected). **Fixed, no regression.**
+
+### W1 (resolved sync conflicts never cleared local IndexedDB status) — CONFIRMED FIXED
+`resolveQueuedConflict(conflictId, resolution)` added to `offline-queue.ts`
+exactly mirrors the server's own branch in
+`sync-conflicts.ts:138-155` (`keep_mine` → `synced`, `keep_eoc` → `failed`)
+rather than collapsing to one state. Traced the `conflict_id` identifier
+through both sides: `field-reports.ts:229`'s sync-batch conflict branch
+sets `conflict_id: conflictRows[0].id` (i.e. `sync_conflicts.id`);
+`offline-queue.ts:355` stores that value as the local row's `conflict_id`;
+`SyncConflictResolution.tsx`'s route param `id` (`/field/conflicts/:id`)
+is the *same* `sync_conflicts.id` used in both `GET /sync-conflicts/:id`
+and `POST /sync-conflicts/:id/resolve`. `handleResolve` now calls
+`resolveQueuedConflict(id, resolution)` with that exact id after the POST
+succeeds — the identifiers line up correctly on both sides. The no-match
+branch (conflict seeded directly against the backend, not via this
+device's own queue) correctly no-ops rather than throwing.
+`offline-queue.test.ts` (8/8, including the 3 new cases) passes.
+**Fixed, no regression.**
+
+### W2 (queued task-status changes invisible in Queued Submissions) — CONFIRMED FIXED
+`getQueueSnapshot()` already computed `taskStatusItems` locally for the
+`queuedCount` aggregate pre-fix; the fix just adds it to the returned
+`QueueSnapshot` object (confirmed: `return { state, queuedCount, items,
+taskStatusItems }`). `QueuedSubmissions.tsx` renders it as a separate,
+read-only card list titled `"Task status: {new_status}"` exactly per
+05-04-PLAN.md's documented format, sharing the `STATUS_BADGE` lookup
+(confirmed `QueuedTaskStatusChange['queue_status']` type —
+`'pending'|'syncing'|'synced'|'failed'` — is a strict subset of
+`QueuedFieldReport['queue_status']`, so the shared `Record` lookup table
+is type-safe with no unsafe cast). `tsc --noEmit` clean on this file.
+**Fixed, no regression.**
+
+## Contract scan (re-run)
+
+```
+c-gap api frontend/app/src/pages/SignInCallback.tsx:65 GET /api/v1/auth/sso/callback — no matching backend route declaration
+c-adv api frontend/app/src/lib/api-client.ts:121 GET /api/v1/field-reports/${fieldReportId}/photos — dynamic path, could not match statically
+contracts: gaps=1 advisories=1 routes=46 api_routes=18 front_files=97 back_files=51
+```
+
+Identical output to iteration 1 — no new gaps introduced by any of the 6
+fixes. Both entries were already investigated and confirmed non-issues in
+iteration 1 (SignInCallback is a POST with `method:'POST'` set on a
+separate object-literal line the scanner's static parser can't see;
+`uploadFieldReportPhoto` is actually a POST whose dynamic path the scanner
+correctly flags as unresolvable — the real bug this pairing had, the
+client/server identifier mismatch, is B1 above, now fixed).
+
+## Regression check on changed seams
+
+- `requirePermission` ↔ all ~70 other call sites across
+  `incident-ops/*`, `integration-gateway/*`, `auth-org/*`,
+  `comms-reporting/*`, `plans/*` — grepped every usage; all still call the
+  2-arg form, which delegates to `requireAnyPermission(feature, [action])`
+  with identical single-iteration behavior. OK, no regression.
+- `tasks.ts`'s `/owner` route (separate `edit`-gated endpoint, adjacent to
+  the fixed `/status` route) — unchanged, still `requirePermission('tasks',
+  'edit')`, still correctly excludes `field_responder`. OK.
+- `offline-queue.ts`'s existing `items`-only consumers (FieldMap's
+  location-marker filter, `deleteQueuedItem`/retry handlers keyed on
+  `client_report_id`) — `taskStatusItems` was added as a genuinely separate
+  field, not a union widening of `items`, so none of these needed or
+  received changes. Confirmed by reading `QueueSnapshot`'s full shape and
+  every consumer of `.items`. OK.
+- `SyncConflictResolution.tsx` ↔ `offline-queue.ts`'s new
+  `resolveQueuedConflict` export — signature and identifier semantics
+  verified consistent (see W1 above). OK.
+- `QueuedSubmissions.tsx` ↔ `offline-queue.ts`'s new `taskStatusItems`
+  field and `QueuedTaskStatusChange` type — import, type, and badge-map
+  usage all consistent; `tsc --noEmit` clean. OK.
+- `routes.ts` nav-config `field-tasks` href change ↔ `main.tsx` route tree
+  ↔ e2e specs — traced all three; no stale assertions broken. OK.
+- `field-reports.ts`'s photo routes ↔ `api-client.ts`'s
+  `uploadFieldReportPhoto` — route accepts the identifier the frontend
+  already sends; no frontend change was needed or made. OK.
+- `seed.ts`'s widened `field_responder` tasks grant ↔ `opa-client.ts`'s
+  `syncRolePermissionsToOpa` — pushes `actions` verbatim per feature, no
+  hardcoded action enum elsewhere to go stale. OK.
 
 ## BLOCKERs
 
-### B1: Photo upload targets the wrong identifier — every photo upload 404s
-- **File:** `frontend/app/src/pages/field-mobile/ReportObservation.tsx:109` and `backend/src/modules/incident-ops/field-reports.ts:304-313`
-- **Category:** bug / integration
-- **Evidence:** `ReportObservation.tsx` calls `uploadFieldReportPhoto(clientReportId, photo)` where `clientReportId = crypto.randomUUID()` — the client-generated `client_report_id` value passed straight into `enqueueFieldReport`. The backend route is `POST /api/v1/field-reports/:id/photos` (`field-reports.ts:304-313`), which looks the row up with `SELECT id FROM field_reports WHERE id = $1` — i.e. it matches against the server-generated primary key `field_reports.id` (`gen_random_uuid()` per the migration, `1700000000010_field-operations-schema.js:20`), a completely different UUID from `client_report_id` (a separate `UNIQUE` column, migration line 21). `enqueueFieldReport` (`offline-queue.ts:138`) returns `void`, so `ReportObservation.tsx` never learns the server-assigned `id` at all — it has no way to construct a correct photo-upload URL even if it wanted to. The result: `POST /api/v1/field-reports/{client_report_id}/photos` always returns `404 FIELD_REPORT_NOT_FOUND` (the lookup at line 310 never matches), for both the online and later-synced cases. Every photo a field responder captures silently fails to upload — the catch block in `ReportObservation.tsx:108-114` swallows the error with no user-visible failure state at all (no "Photo didn't upload" Alert despite the plan explicitly calling for one — see 05-03-PLAN.md line 168's "render `Alert tone='warning'`... 'Photo didn't upload. The rest of your report synced. Retry the photo.'" — that Alert was never implemented in the shipped code, compounding the bug: not only does every photo upload fail, the failure is entirely invisible to the user).
-- **Fix direction:** Either (a) have `enqueueFieldReport`/the sync-batch reconciliation surface the server-assigned `field_reports.id` back to the caller (e.g. via the IndexedDB row, after a successful sync) so the photo upload can target the correct id once synced, or (b) add a server-side lookup-by-`client_report_id` variant of the photos route. Also add the user-visible "Photo didn't upload" warning Alert the plan specifies, since the failure is currently fully silent.
-- **Resolution:** fixed (25f92ff) — applied option (b): `POST`/`GET /api/v1/field-reports/:id/photos...` now resolve `:id` against `id::text = $1 OR client_report_id = $1` (cast needed to avoid a `uuid = varchar` operator error on non-UUID client ids). `ReportObservation.tsx` also now `await`s `syncQueueNow()` before the photo upload to close the fire-and-forget-sync race. Verified with a throwaway integration test (upload via client_report_id, via server id, and 404-for-neither all pass) plus the existing `field-reports.test.ts` suite (7/7 still passing).
-
-### B2: field_responder cannot actually use My Tasks' one-tap Start/Mark done — `tasks` `edit` permission was never granted
-- **File:** `backend/scripts/seed.ts:170-177`, `backend/src/modules/incident-ops/tasks.ts:417`, `frontend/app/src/pages/field-mobile/MyTasksField.tsx:83`
-- **Category:** bug / integration (RBAC)
-- **Evidence:** `MyTasksField.tsx`'s online path calls `apiPatch('/api/v1/tasks/${task.id}/status', { new_status })` (line 83), which hits `PATCH /api/v1/tasks/:id/status` gated by `requirePermission('tasks', 'edit')` (`tasks.ts:417`). `seed.ts` grants `field_responder` only `['view']` on the `tasks` feature (line 175: `[roleIds['field_responder'], 'tasks', ['view']]` — a pre-existing Phase 3 grant, never touched by this phase). Phase 5 never adds an `edit` grant for `field_responder` on `tasks`. Every tap of "Start"/"Mark done" by a real field_responder therefore gets `403 PERMISSION_DENIED` from the online branch; `MyTasksField.tsx:91-96`'s catch silently degrades this to the offline-queued path (`enqueueTaskStatusChange`), which then ALSO fails identically every time `syncQueueNow` later PATCHes `/api/v1/tasks/:id/status` (`offline-queue.ts:314`) — a 403 is caught by the per-item `catch` at `offline-queue.ts:318-327` and logged via `console.warn`, leaving the item `'pending'` forever. The net effect: a field responder can NEVER actually transition a task's status online or offline — the entire one-tap status-update feature (F6 S6.2, a named phase success criterion) is unreachable for the only role the phase built it for. No test (unit, integration, or Playwright) in this phase exercises this path with the real seeded `field_responder` role — 05-01/05-05's `field-reports.test.ts` only exercises `field_reports`/`sync-conflicts` permissions, and neither `field-mobile-report.spec.ts` nor `field-mobile-sync-conflict.spec.ts` taps a Start/Mark done button, which is why this was never caught in the phase's own test gates.
-- **Fix direction:** Grant `field_responder` an `edit` action on `tasks` scoped to status-transitions (or add a narrower action-level permission, e.g. `'tasks'/'status'`, consumed by `requirePermission('tasks', 'status')` on this one route) — the FRD's own self-granted design intent (My Tasks' one-tap status updates) requires it; the seed's current `view`-only grant contradicts the screen this very phase built.
-- **Resolution:** fixed (a3f0880) — applied the narrower-action option: added `requireAnyPermission()` (OR-semantics over `requirePermission`) and gated `PATCH /api/v1/tasks/:id/status` on EITHER `tasks:edit` (command/logistics roles, unchanged) OR a new `tasks:status` action. `seed.ts` now grants `field_responder` `{view,status}` on `tasks` — deliberately NOT `edit`, so owner-reassignment/task-editing remain denied. Verified: `npm run seed` run twice is idempotent (`role_permissions=0 inserted/34 already-present` both times); a throwaway integration test proved a seeded `field_responder` token can now PATCH status (200) while still being denied `PATCH .../owner` and `POST /api/v1/tasks` (403 both). Existing `tasks.test.ts` (5/5) and `field-reports.test.ts` (7/7) unaffected.
-
-### B3: My Tasks field view (`/field/tasks`) is an orphan screen — unreachable from any nav element
-- **File:** `frontend/app/src/main.tsx:172`, `backend/src/modules/auth-org/routes.ts:381-393`, `frontend/app/src/pages/field-mobile/FieldHome.tsx`
-- **Category:** bug / integration
-- **Evidence:** The UX mockup's own Navigation Map (`project_specs/UX-Mockup-EPMP.md:66`) documents `My Tasks (field view)` at `/field/tasks`, reached from "Field Home bottom bar" via the bottom bar's "Tasks" item. The phase's own 05-04-PLAN.md explicitly lists as a must-have truth: "every route is wired into the app's routing tree — no orphan screens reachable only by typing a URL." But the actual shipped `nav-config`'s field bottom-bar group (`routes.ts:381-393`) maps `{ id: 'field-tasks', label: 'Tasks', ..., href: '/field' }` — NOT `/field/tasks`. `/field` renders `FieldHome`, not `MyTasksField`. A grep across the entire frontend (`main.tsx`, every field-mobile screen, `FieldMobileShell`) confirms zero `navigate('/field/tasks')` calls and zero `<Link>`/href references to `/field/tasks` anywhere except the route declaration itself and its own file's doc-comment. `MyTasksField` is fully built, routed, and functional in isolation, but a real field responder using only the shipped bottom-nav/UI has no way to ever reach it — it is reachable only by typing the URL directly, which is the exact orphan-screen condition the phase's own must-have explicitly rules out.
-- **Fix direction:** Point the bottom-bar's "Tasks" item at `/field/tasks` (matching the mockup) while keeping Field Home as the post-sign-in landing route, or add an explicit link/button on Field Home navigating to My Tasks. Either way, add real nav reach to the screen.
-- **Resolution:** fixed (67bcb5c) — changed the `field-tasks` nav-config item's `href` from `/field` to `/field/tasks` in `routes.ts`. `main.tsx`'s route tree is untouched (`field` → `FieldHome`, `field/tasks` → `MyTasksField`, both unchanged) — Field Home remains reachable at exactly `/field` independent of this fix, confirmed by re-reading `main.tsx` post-fix and by the `signInAsFieldResponder` e2e helper's own explicit `page.goto('/field')` calls still passing. Verified with a throwaway integration test asserting `GET /api/v1/me/nav-config`'s `field-tasks` item now has `href:'/field/tasks'`, plus `routes.test.ts` (6/6), `app-shell.spec.ts` (4/4), and both field-mobile Playwright specs (3/3) all still passing.
+None.
 
 ## WARNINGs
 
-### W1: Sync Conflict Resolution never clears the local IndexedDB queue item's `'conflict'` status — SyncStatus can get stuck in `conflict` state permanently
-- **File:** `frontend/app/src/pages/field-mobile/SyncConflictResolution.tsx:90-101`, `frontend/app/src/lib/offline-queue.ts:171-173`
-- **Evidence:** `handleResolve` POSTs directly to `/api/v1/sync-conflicts/${id}/resolve` and, on success, only calls `navigate('/field/queued')` — it never writes back to the local `field_reports` IndexedDB store (no `db.put(STORE_NAME, ...)` call anywhere in this file, confirmed by grep). The original queue row stays `queue_status: 'conflict'` forever. `getQueueSnapshot()`'s state derivation (`offline-queue.ts:172`: `if (items.some(item => item.queue_status === 'conflict')) state = 'conflict'`) means `SyncStatus` (pinned at the top of every field-mobile screen) will show the `conflict` icon/color indefinitely after a conflict is resolved, even though the server-side resolution succeeded and `Queued Submissions` would (if it re-derived status) show it as resolved. This degrades (not breaks outright) the UX: the responder sees a stale "Conflict" indicator that never clears without a manual IndexedDB wipe or deleting the item via Queued Submissions' Delete action (which is gated to `pending`-only items, so it doesn't even apply here). Not a BLOCKER since the resolution itself is correctly committed server-side and visible via the Timeline/backend — but it is a real, user-visible "nothing is silently dropped" invariant leak the other direction (the local UI silently fails to reflect a known-resolved state).
-- **Fix direction:** On a successful resolve, update (or delete) the corresponding local `field_reports` IndexedDB row — e.g. set `queue_status` to `'synced'` or remove it — before navigating away, and call `notifySubscribers()`-equivalent so SyncStatus re-renders correctly.
-- **Resolution:** fixed (6634781) — added `resolveQueuedConflict(conflictId, resolution)` to `offline-queue.ts`: finds the local row by `conflict_id`, sets `queue_status` to `'synced'` (keep_mine) or `'failed'` (keep_eoc) — mirroring `sync-conflicts.ts`'s own server-side branch exactly rather than collapsing both outcomes to one state — and calls `notifySubscribers()`. `SyncConflictResolution.tsx`'s `handleResolve` now calls it after the POST succeeds. Covered by 3 new `offline-queue.test.ts` cases (keep_mine, keep_eoc, no-matching-row no-op) — all 8 tests in that file pass — plus the existing `field-mobile-sync-conflict.spec.ts` Playwright spec (2/2 still passing).
-
-### W2: Queued task-status changes are invisible in Queued Submissions View
-- **File:** `frontend/app/src/pages/field-mobile/QueuedSubmissions.tsx` (entire file), `frontend/app/src/lib/offline-queue.ts:43-55`
-- **Evidence:** `QueueSnapshot.items` is typed `QueuedFieldReport[]` only (`offline-queue.ts:54`) and `getQueueSnapshot()` never includes `tasks_status` rows in the returned `items` array (only in the aggregate `queuedCount`, line 167-169). `QueuedSubmissions.tsx` renders exclusively from `snapshot.items`. The 05-04-PLAN.md (line 117) explicitly calls for: "title derived from `observation_type` or `'Task status: {new_status}'` for `tasks_status` items (05-03's second object store)" — i.e. the plan itself documents that queued task-status changes should appear in this view. They never do. A field responder who queues a task status change offline sees the aggregate `SyncStatus` "N queued" count increment (queuedCount does include them), but Queued Submissions View — the one screen meant to show every queued item's individual status — never lists it, silently omitting an entire category of queued writes from the one screen whose entire purpose is "nothing is silently dropped, every item resolves visibly." Downgraded to WARNING (not BLOCKER) because the write itself is never lost (it still syncs correctly via `syncQueueNow`'s tasks_status branch) and the aggregate count is accurate — only the per-item visibility in this one screen is missing, and this gap is compounded/masked by B2 (field_responder can't actually complete this flow at all today).
-- **Fix direction:** Extend `QueueSnapshot`/`getQueueSnapshot()` to include `tasks_status` rows in a unified items list (or add a second list), and extend `QueuedSubmissions.tsx` to render them per the plan's own documented title format.
-- **Resolution:** fixed (6eda07c) — applied the second-list option: added `taskStatusItems: QueuedTaskStatusChange[]` to `QueueSnapshot`, populated by `getQueueSnapshot()` (the array was already computed locally for the `queuedCount` calc, just never returned). `QueuedSubmissions.tsx` now renders these as read-only Cards titled exactly `"Task status: {new_status}"` per 05-04-PLAN.md line 117, sharing the same `STATUS_BADGE` tone/word mapping as field_reports cards (no Delete/Retry actions, since a task-status retry is re-tapping the same button on My Tasks, not a Queued-Submissions action). Verified with a throwaway Playwright repro (writes a `tasks_status` row directly into the app's own IndexedDB, confirms it renders) and the existing `offline-queue.test.ts` suite (8/8 still passing) and `tsc --noEmit` (clean).
-
-### W3: Photo-upload failure is entirely silent to the user, contradicting the plan's own specified failure-state UX
-- **File:** `frontend/app/src/pages/field-mobile/ReportObservation.tsx:107-115`
-- **Evidence:** 05-03-PLAN.md (line 168) specifies: "On the photo-upload promise rejecting, catch and render `Alert tone='warning'` with the EXACT mockup message 'Photo didn't upload. The rest of your report synced. Retry the photo.'" The shipped code's catch block (lines 108-114) is empty except for a comment — no Alert is ever rendered, no component state is set, nothing visibly tells the responder their photo failed. Given B1 above means the photo upload ALWAYS fails, this means 100% of photo captures currently fail completely silently — the responder believes their photo was captured and submitted (the "✓ Captured" thumbnail confirmation remains visible) with no indication the backend never received it. Filed as a WARNING distinct from B1 because even after B1 is fixed, this missing user-facing failure state would still need to be added for the plan's own documented UX contract to hold.
-- **Fix direction:** Implement the warning Alert exactly as the plan specifies, surfaced on any `uploadFieldReportPhoto` rejection.
-- **Resolution:** fixed (25f92ff, same commit as B1 — same root-cause investigation per the fix-pass instructions) — `ReportObservation.tsx`'s catch block now sets `photoUploadError` and renders `Alert tone="warning"` with the exact mockup message plus a "Retry the photo" action button (`handleRetryPhoto`, re-targets the same already-synced report via its stable `client_report_id`). Navigation to `/field` is deferred when the photo upload fails so the Alert is actually visible before any unmount. Verified via `tsc --noEmit` (clean) and the `field-mobile-report.spec.ts` Playwright spec (1/1 still passing, online path unaffected since the photo upload now succeeds post-B1-fix).
+None.
 
 ## Cross-file seams checked
 
-- `c-gap` SignInCallback.tsx:65 `POST /api/v1/auth/sso/callback` ↔ `backend/src/modules/auth-org/routes.ts:71` — **confirmed false positive**: read both files directly; the route is a real `app.post<...>('/api/v1/auth/sso/callback', ...)` and the frontend fetch explicitly sets `method: 'POST'` (just on a separate line inside the options object, which the scanner's static parser couldn't see). SignInCallback.tsx was last functionally touched in Phase 1; this phase's one commit touching it was a non-functional docs/status commit. Not a Phase 5 regression — recorded as a non-issue.
-- `c-adv` api-client.ts:121 `GET /api/v1/field-reports/${fieldReportId}/photos` (dynamic) — verified: this is actually the `uploadFieldReportPhoto` helper issuing a `POST` (not GET) to `/api/v1/field-reports/${fieldReportId}/photos`, matching `field-reports.ts:304`'s `POST /api/v1/field-reports/:id/photos` route by path shape. The scanner's own GET/dynamic-path caveat is accurate (it could not resolve the interpolated path statically) — route/method genuinely match; see B1 above for the separate, real identifier-mismatch bug this pairing has (client/server disagree on WHICH id value goes in that slot, not whether the route exists).
-- `frontend/app/src/lib/api-client.ts:uploadFieldReportPhoto` ↔ `backend/.../field-reports.ts POST /:id/photos` — route/method match; **identifier semantics mismatch, see B1**.
-- `frontend/app/src/lib/offline-queue.ts:syncQueueNow` ↔ `backend/.../field-reports.ts POST /sync-batch` — request/response shapes match exactly (`reports[]` in, `results[]` with `client_report_id`/`status`/`conflict_id` out).
-- `frontend/app/src/pages/field-mobile/MyTasksField.tsx` ↔ `backend/.../tasks.ts PATCH /:id/status` — route/method/body shape (`{ new_status }`) match; **permission grant missing, see B2**.
-- `frontend/app/src/pages/field-mobile/SyncConflictResolution.tsx` ↔ `backend/.../sync-conflicts.ts GET /:id` + `POST /:id/resolve` — shapes match (`FieldVersion`/`EocVersion` interfaces mirror the exact JSONB shape `field-reports.ts`'s sync-batch conflict branch writes).
-- `frontend/app/src/pages/field-mobile/QueuedSubmissions.tsx` ↔ `offline-queue.ts` exports (`getQueueSnapshot`/`subscribeToQueue`/`deleteQueuedItem`) — exports present and used correctly; **tasks_status items never surfaced, see W2**.
-- `backend/scripts/seed.ts` field_reports grants ↔ `backend/src/modules/incident-ops/field-reports.ts`/`sync-conflicts.ts` `requirePermission` calls — verified match: field_responder view/create/resolve; incident_commander/eoc_director view/resolve; planning_logistics_chief view-only — all confirmed against the actual route-level `requirePermission('field_reports', ...)` calls, and proven end-to-end by `field-reports.test.ts`'s 3 new seeded-role integration tests (read and verified, not just trusted).
-- `main.tsx` route tree ↔ all 6 field-mobile screens — all 6 paths (`field`, `field/tasks`, `field/report`, `field/queued`, `field/conflicts/:id`, `field/map`) are registered; **`field/tasks` has no nav reach-path despite being registered, see B3**.
-- `backend/src/modules/auth-org/routes.ts` nav-config `hasFieldReports` bottom-bar group ↔ `frontend/.../AppShell.tsx`'s generic `navGroups.flatMap` bottom-bar rendering — confirmed AppShell needed no change (read directly); icon names (`flag`/`send`/`map`/`users`) all exist in `Icon.tsx`.
-- `frontend/design-system/src/product-patterns/SyncStatus.tsx`'s `ep-btn-spin` keyframe reuse ↔ `frontend/design-system/src/actions/Button.css` — keyframe confirmed present in Button.css, reuse is sound.
-- `offline-queue.test.ts`'s `DB_VERSION`-2 fix ↔ `offline-queue.ts`'s actual `DB_VERSION = 2` — confirmed consistent, no stale version mismatch.
-- `backend/keycloak/epmp-realm.json`'s new `epmp-field-responders` group/user ↔ `seed.ts`'s `group_to_role_mapping` entry ↔ `sign-in.ts`'s `signInAsFieldResponder` — all three consistently reference `field-responder@epmp.local` / `/epmp-field-responders`; no drift.
-- Migration renumbering (`1700000000010` vs. plan's literal `1700000000009`) ↔ Phase 4's existing `1700000000009_reporting-schema.js` — confirmed collision is real and the renumbering correctly avoids it.
+All seams from iteration 1 re-verified (see "Regression check on changed
+seams" above for the ones touched by the fix pass); no new seams
+introduced since no new routes/exports/types were added beyond
+`requireAnyPermission`, `resolveQueuedConflict`, and
+`QueueSnapshot.taskStatusItems`, all three traced to every consumer above.
