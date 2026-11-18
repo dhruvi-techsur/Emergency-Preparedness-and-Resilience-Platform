@@ -51,7 +51,13 @@ const ACTION_TYPE_OPTIONS: SelectOption[] = [
   { value: '', label: 'All actions' },
   { value: 'aar_finalized', label: 'AAR finalized' },
   { value: 'login', label: 'Login' },
+  // admin-users.ts only ever writes 'user_edit' when status did NOT
+  // change on that PATCH; a status-changing edit writes 'user_suspend' or
+  // 'user_reactivate' instead, never 'user_edit' — so those two need
+  // their own options or they'd be silently excluded by this filter.
   { value: 'user_edit', label: 'User edited' },
+  { value: 'user_suspend', label: 'User suspended' },
+  { value: 'user_reactivate', label: 'User reactivated' },
   { value: 'role_permission_edit', label: 'Role permission edit' },
 ];
 
