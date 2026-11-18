@@ -288,20 +288,23 @@ export default async function authOrgRoutes(app: FastifyInstance) {
                   ...(hasResourceRequests
                     ? [{ id: 'resource-requests', label: 'Resources', icon: 'truck', href: '/resource-requests' }]
                     : []),
-                  // 04-05: appends two Notifications sub-items (Groups,
-                  // Templates) to this SAME Coordinate group — Compose and
-                  // Delivery Tracking are reached from these screens'
-                  // own in-page actions (New notification / row click),
-                  // not separate top-level nav entries, per the mockup's
-                  // Navigation Map ("SideNav → Coordinate: 'Notifications'
-                  // → sub-tab 'Groups'/'Templates'").
+                  // 04-08 (gap closure): 'Notifications' now points at a
+                  // dedicated landing page (`NotificationsLanding.tsx`)
+                  // whose own primary action reaches Compose; 'Message
+                  // templates' remains its own direct sub-item. This
+                  // satisfies the UX mockup's Navigation Map
+                  // OR-requirement for Compose's two independent
+                  // reach-paths (landing page primary action / Incident
+                  // Workspace action, 04-07) — 04-05 had wired only the
+                  // Groups/Templates sub-screens here with no standalone
+                  // landing route at all.
                   ...(hasNotifications
                     ? [
                         {
                           id: 'notification-groups',
-                          label: 'Notification groups',
+                          label: 'Notifications',
                           icon: 'bell',
-                          href: '/notifications/groups',
+                          href: '/notifications',
                         },
                         {
                           id: 'message-templates',

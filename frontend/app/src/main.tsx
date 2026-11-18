@@ -45,6 +45,7 @@ import { TaskDetail } from './pages/tasks-resources/TaskDetail';
 import { ResourceRequestList } from './pages/tasks-resources/ResourceRequestList';
 import { CreateResourceRequest } from './pages/tasks-resources/CreateResourceRequest';
 import { ResourceRequestDetail } from './pages/tasks-resources/ResourceRequestDetail';
+import { NotificationsLanding } from './pages/notifications/NotificationsLanding';
 import { RecipientGroups } from './pages/notifications/RecipientGroups';
 import { MessageTemplates } from './pages/notifications/MessageTemplates';
 import { ComposeNotification } from './pages/notifications/ComposeNotification';
@@ -124,6 +125,18 @@ root.render(
                   scenario — 04-06 (same wave) appends its own `/reports/*`
                   routes independently, with no compile-time dependency
                   between the two route sets. */}
+              {/* 04-08 (gap closure): the bare `/notifications` landing
+                  page — the UX mockup's Navigation Map documents Compose's
+                  TWO reach-paths (this page's primary action / Incident
+                  Workspace's own action, 04-07) as an OR-requirement; this
+                  route is the half no prior plan wired. Registered BEFORE
+                  the more-specific `groups`/`templates`/`compose`/
+                  `:id/delivery` siblings below — react-router's path
+                  matching has no ambiguity between a bare segment and its
+                  more-specific siblings regardless of declaration order,
+                  but the landing page is kept first here to read as the
+                  "parent" of the group visually. */}
+              <Route path="notifications" element={<NotificationsLanding />} />
               <Route path="notifications/groups" element={<RecipientGroups />} />
               <Route path="notifications/templates" element={<MessageTemplates />} />
               <Route path="notifications/compose" element={<ComposeNotification />} />

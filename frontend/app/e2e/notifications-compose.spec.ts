@@ -2,6 +2,33 @@ import { test, expect, type Page } from '@playwright/test';
 import { signInAsIncidentCommander } from './helpers/sign-in';
 
 /**
+ * 04-08 (gap closure, UAT gap ref 2): the exact reproduction of "no reach-
+ * path to Compose Notification from the Notifications area itself when no
+ * incident is open" — the UX mockup's Navigation Map documents the landing
+ * page's own primary action as one of Compose's two independent
+ * OR-reach-paths (the other being the Incident Workspace's own action,
+ * 04-07), and no prior plan wired this half. Deliberately a standalone
+ * `test()` (not inside the `describe.serial` block below) since it needs
+ * no shared incident/group fixture state — just the SideNav + the new
+ * landing page's own primary action.
+ */
+test('Notifications landing page is reachable from the SideNav and its primary action reaches Compose with no incident context', async ({
+  page,
+}) => {
+  await signInAsIncidentCommander(page);
+  await page.goto('/');
+
+  await page.getByRole('link', { name: 'Notifications' }).click();
+  await page.waitForURL(/\/notifications$/, { timeout: 10_000 });
+  expect(page.url()).toMatch(/\/notifications$/);
+
+  await page.getByRole('button', { name: 'Compose notification' }).click();
+  await page.waitForURL(/\/notifications\/compose/, { timeout: 10_000 });
+  expect(page.url()).toContain('/notifications/compose');
+  expect(page.url()).not.toContain('incident=');
+});
+
+/**
  * Full-stack e2e coverage of 04-05's objective: the complete F5 4-step
  * compose-to-delivery flow — audience selection with its exact FRD
  * NO_AUDIENCE_SELECTED gate, the AI-draft approve-before-insert gate, the
