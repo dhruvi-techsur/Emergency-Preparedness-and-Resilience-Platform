@@ -771,6 +771,91 @@ async function main() {
   );
   record('plan_versions', uatUnlinkedPlanVersion);
 
+  // UAT data-doctor fixture (Phase 3 UAT re-run, tests "Resource Request
+  // Lifecycle (create -> approve/decline)" and "Resource Request Visible on
+  // Operating Picture"): a resource request already in 'Awaiting approval'
+  // on a real UAT incident that HAS a location, so:
+  //  - Test 4 (commander@epmp.local or eocdirector@epmp.local creates a
+  //    request; planner@epmp.local approves/declines it) has a request
+  //    already sitting in the exact state planner@epmp.local's
+  //    `resource_requests:approve` permission needs to act on, without a
+  //    human first having to drive the Create-Request form just to reach
+  //    it — and the human can still create an independent NEW request via
+  //    the UI to exercise the create half fresh, since this fixture is
+  //    additive, never a substitute for that flow.
+  //  - Test 5 (Operating Picture map) needs a resource_requests row whose
+  //    status is NOT Fulfilled/Declined (operating-picture.ts's WHERE
+  //    clause) and whose linked incident has a non-NULL `location` — the
+  //    UAT-ASSIGN-ROLE incident seeded above already satisfies both, so
+  //    reusing its id here (rather than minting a third incident) is the
+  //    minimal fixture that makes the triangle resource-marker visible.
+  //
+  // requested_by = commanderUser (incident_commander, which holds
+  // `resource_requests:create` per the grants above) — mirrors who a real
+  // UAT tester would be signed in as for Test 4's "create" half.
+  // requesting_role uses the free-text role-name convention
+  // CreateResourceRequest.tsx's own Select establishes (REQUESTING_ROLE_
+  // OPTIONS maps to role names, not display labels).
+  //
+  // Natural key: (description, incident_id) — resource_requests has no
+  // UNIQUE constraint of its own (same situation as jurisdictions/
+  // sso_config above), so this find-or-insert is scoped the same way,
+  // using the self-describing UAT-prefixed description as the identity.
+  const uatResourceRequestDescription = 'UAT-RESOURCE-REQUEST Portable generators for shelter';
+  const uatResourceRequest = await findOrInsert(
+    'resource_requests',
+    ['description', 'incident_id'],
+    [uatResourceRequestDescription, uatOverdueIncidentId],
+    [
+      'resource_type',
+      'description',
+      'quantity',
+      'status',
+      'incident_id',
+      'requesting_role',
+      'needed_by',
+      'requested_by',
+    ],
+    [
+      'Equipment',
+      uatResourceRequestDescription,
+      2,
+      'Awaiting approval',
+      uatOverdueIncidentId,
+      'incident_commander',
+      new Date(Date.now() + 86_400_000).toISOString(), // due 24h out, mirrors the app's own create-form test fixture convention
+      commanderUser.id,
+    ],
+  );
+  record('resource_requests', uatResourceRequest);
+  if (uatResourceRequest.inserted) {
+    // Mirrors the real POST /api/v1/resource-requests handler's own
+    // two-row history (NULL->Draft, Draft->Awaiting approval) and Timeline
+    // entry, so this fixture is schema-identical to one a human would have
+    // produced by hand through the UI — same "replicate the app's own
+    // invariants" rule this file follows for the UAT-OVERDUE task above.
+    await pool.query(
+      `INSERT INTO resource_request_status_history (resource_request_id, from_status, to_status, changed_by)
+       VALUES ($1, NULL, 'Draft', $2)`,
+      [uatResourceRequest.id, commanderUser.id],
+    );
+    await pool.query(
+      `INSERT INTO resource_request_status_history (resource_request_id, from_status, to_status, changed_by)
+       VALUES ($1, 'Draft', 'Awaiting approval', $2)`,
+      [uatResourceRequest.id, commanderUser.id],
+    );
+    await pool.query(
+      `INSERT INTO incident_timeline (incident_id, title, tone, actor_id, source, detail)
+       VALUES ($1, $2, 'brand', $3, 'EPMP', $4)`,
+      [
+        uatOverdueIncidentId,
+        `Resource request: Equipment (${uatResourceRequestDescription})`,
+        commanderUser.id,
+        JSON.stringify({ resource_request_id: uatResourceRequest.id, quantity: 2 }),
+      ],
+    );
+  }
+
   // record_authority_registry baseline rows (natural key: record_type, which IS unique)
   const authorityRows = [
     { record_type: 'user_identity', authoritative_system: 'EPMP' },
