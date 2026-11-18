@@ -283,6 +283,117 @@ async function main() {
   // the admin console, not plan authoring/review — intentional, not an
   // oversight.
 
+  // notifications feature (Phase 4, F5): PERSONAS-EPMP.md's PER-02 merge is
+  // explicit — "James represents both the Incident Commander... and the
+  // Public Information Officer function, the Command Staff role responsible
+  // for drafting and approving the incident's official public
+  // communications... wearing the PIO hat — approving the messages that go
+  // out to the public, partner agencies, and media." incident_commander
+  // (PER-02) is therefore the ONE role holding the `approve` action-level
+  // for notifications, matching F5's "named-person approval required before
+  // any external send" rule with a realistic seeded identity — no other
+  // role gets `approve` here, so the send route's approver-match gate is
+  // actually satisfiable end-to-end with exactly one seeded identity per
+  // role, mirroring 03-07's identical no-self-approval design for
+  // plans/resource_requests. eoc_director and planning_logistics_chief
+  // (PER-01/PER-03) can DRAFT/COMPOSE notifications (view/create) but the
+  // actual approve-and-send authority belongs specifically to PER-02's PIO
+  // function per PERSONAS-EPMP.md, not to command/planning staff generally.
+  // field_responder (PER-04) gets view-only — read-only situational
+  // awareness of notifications sent, consistent with F6's mobile scope.
+  const notificationsApproverRoles = ['incident_commander'] as const;
+  const notificationsDraftOnlyRoles = ['eoc_director', 'planning_logistics_chief'] as const;
+
+  for (const roleName of notificationsApproverRoles) {
+    const result = await findOrInsert(
+      'role_permissions',
+      ['role_id', 'feature'],
+      [roleIds[roleName], 'notifications'],
+      ['role_id', 'feature', 'actions'],
+      [roleIds[roleName], 'notifications', ['view', 'create', 'approve']],
+    );
+    record('role_permissions', result);
+  }
+
+  for (const roleName of notificationsDraftOnlyRoles) {
+    const result = await findOrInsert(
+      'role_permissions',
+      ['role_id', 'feature'],
+      [roleIds[roleName], 'notifications'],
+      ['role_id', 'feature', 'actions'],
+      [roleIds[roleName], 'notifications', ['view', 'create']],
+    );
+    record('role_permissions', result);
+  }
+
+  const notificationsViewOnlyPerm = await findOrInsert(
+    'role_permissions',
+    ['role_id', 'feature'],
+    [roleIds['field_responder'], 'notifications'],
+    ['role_id', 'feature', 'actions'],
+    [roleIds['field_responder'], 'notifications', ['view']],
+  );
+  record('role_permissions', notificationsViewOnlyPerm);
+
+  // secops_admin deliberately gets NO explicit 'notifications' grant, for
+  // the identical reason documented above for 'incidents'/'tasks'/'plans':
+  // blanket admin/platform access from the grants earlier in this file is
+  // scoped to the admin console, not incident-communications operations —
+  // intentional, not an oversight, same reasoning every prior phase
+  // documented for its own new feature-permission strings.
+
+  // reporting feature (Phase 4, F7): PERSONAS-EPMP.md's "PER-02 (Incident
+  // Commander) tasks the section chief to produce SITREPs/ICS forms" and
+  // the FRD's explicit "Planning staff (PER-03) generate a SITREP" process
+  // step both name planning_logistics_chief (PER-03) as the SITREP/AAR
+  // author role — it gets the full view/create/edit set, where `edit`
+  // gates both the SITREP finalize PATCH and the AAR finalize PATCH per
+  // reporting.ts's own requirePermission('reporting','edit') routes.
+  // incident_commander/eoc_director (PER-01/PER-02) can also TRIGGER
+  // SITREP/AAR generation (view/create) per the FRD's Reports-tab
+  // "Generate SITREP"/"Generate AAR" buttons being PageHeader-level actions
+  // on the Incident Workspace, not gated to PER-03 alone — but `edit`/
+  // finalize authority, including the AAR's finding-ownership and finalize
+  // action, belongs to PER-03 specifically, matching the no-single-role-
+  // holds-everything segregation pattern 03-07 established for plans'
+  // review/approve split. field_responder gets view-only.
+  const reportingAuthorRole = 'planning_logistics_chief' as const;
+  const reportingGenerateOnlyRoles = ['incident_commander', 'eoc_director'] as const;
+
+  const reportingAuthorPerm = await findOrInsert(
+    'role_permissions',
+    ['role_id', 'feature'],
+    [roleIds[reportingAuthorRole], 'reporting'],
+    ['role_id', 'feature', 'actions'],
+    [roleIds[reportingAuthorRole], 'reporting', ['view', 'create', 'edit']],
+  );
+  record('role_permissions', reportingAuthorPerm);
+
+  for (const roleName of reportingGenerateOnlyRoles) {
+    const result = await findOrInsert(
+      'role_permissions',
+      ['role_id', 'feature'],
+      [roleIds[roleName], 'reporting'],
+      ['role_id', 'feature', 'actions'],
+      [roleIds[roleName], 'reporting', ['view', 'create']],
+    );
+    record('role_permissions', result);
+  }
+
+  const reportingViewOnlyPerm = await findOrInsert(
+    'role_permissions',
+    ['role_id', 'feature'],
+    [roleIds['field_responder'], 'reporting'],
+    ['role_id', 'feature', 'actions'],
+    [roleIds['field_responder'], 'reporting', ['view']],
+  );
+  record('role_permissions', reportingViewOnlyPerm);
+
+  // secops_admin deliberately gets NO explicit 'reporting' grant, for the
+  // identical reason documented above for every other feature in this
+  // file: blanket admin/platform access is scoped to the admin console,
+  // not incident-reporting operations — intentional, not an oversight.
+
   // No explicit call to syncRolePermissionsToOpa here: unlike this plan's
   // earlier concern, OPA's data document is re-synced fresh from
   // role_permissions at every server.ts startup (see server.ts's `start()`),
