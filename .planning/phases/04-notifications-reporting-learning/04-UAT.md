@@ -1,9 +1,9 @@
 ---
-status: complete
+status: diagnosed
 phase: 04-notifications-reporting-learning
 source: [04-01-SUMMARY.md, 04-02-SUMMARY.md, 04-03-SUMMARY.md, 04-04-SUMMARY.md, 04-05-SUMMARY.md, 04-06-SUMMARY.md, 04-07-SUMMARY.md]
 started: 2026-11-18T09:29:54Z
-updated: 2026-11-18T10:55:00Z
+updated: 2026-11-18T10:58:55Z
 ---
 
 ## Current Test
@@ -186,15 +186,30 @@ Self-check: booted=200 preview=200 routes_ok=7/7 orphans=0 browser_urls=0g/0a st
 
 - truth: "A user can reach Compose Notification from the Notifications area itself (not only from an existing incident's workspace)"
   status: failed
-  reason: "User reported: No Compose Notification option in coordinate tab. The UX mockup's Navigation Map (project_specs/UX-Mockup-EPMP.md) names TWO reach-paths for /notifications/compose: 'Notifications landing primary action' OR 'Incident Workspace \"Compose notification\"'. 04-07 wired only the second (IncidentWorkspace.tsx:295's onClick navigate). 04-05's nav-config 'Coordinate' group (backend/src/modules/auth-org/routes.ts:280-324) adds only 'Notification groups' and 'Message templates' sub-items — no 'Compose' entry, and neither RecipientGroups.tsx nor MessageTemplates.tsx has a Compose button/link anywhere in their JSX (confirmed via grep, zero matches). There is also no standalone Notifications landing page route at all. So a user with no open incident in front of them — e.g. one proactively drafting a notification, or one on the Notification groups/Templates list pages — has no way to reach Compose Notification without directly typing /notifications/compose into the address bar."
+  reason: "User reported: No Compose Notification option in coordinate tab. The UX mockup's Navigation Map (project_specs/UX-Mockup-EPMP.md:63) names TWO independent reach-paths for /notifications/compose: 'Notifications landing primary action' OR 'Incident Workspace \"Compose notification\"' (documented as OR — both must exist). 04-07 wired only the second (IncidentWorkspace.tsx:295-297's onClick navigate). 04-05's nav-config 'Coordinate' group (backend/src/modules/auth-org/routes.ts:291-319) adds only 'Notification groups' and 'Message templates' sub-items — no 'Compose' entry — and its own comment (routes.ts:291-297) incorrectly asserts Compose is reached from these screens' own in-page actions, which is false: neither RecipientGroups.tsx nor MessageTemplates.tsx has a Compose button/link anywhere in their JSX (confirmed via direct file read, zero matches). There is also no standalone Notifications landing page route anywhere in main.tsx. So a user with no open incident in front of them has no way to reach Compose Notification without directly typing /notifications/compose into the address bar."
   severity: major
   test: 2
   source: user
-  confidence: hypothesis
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  confidence: proven
+  root_cause: "The mockup requires a dedicated 'Notifications landing' screen as Compose's primary non-incident entry point, which was never built — RecipientGroups.tsx and MessageTemplates.tsx are sub-tab editors, not a landing page, and 04-05's nav-config comment incorrectly treated them as satisfying this requirement."
+  artifacts:
+    - path: "project_specs/UX-Mockup-EPMP.md:63"
+      issue: "requires a 'Notifications landing primary action' reach-path to Compose Notification, independent of the Incident Workspace path"
+    - path: "backend/src/modules/auth-org/routes.ts:291-297"
+      issue: "comment incorrectly asserts Compose/Delivery-Tracking are reached via Groups/Templates in-page actions; no 'compose' nav item exists in the Coordinate group's items array"
+    - path: "frontend/app/src/main.tsx:127-130"
+      issue: "only four notification routes registered (groups, templates, compose, :id/delivery) — no landing route (e.g. /notifications) exists"
+    - path: "frontend/app/src/pages/notifications/RecipientGroups.tsx"
+      issue: "only a 'New group' button; zero Compose references"
+    - path: "frontend/app/src/pages/notifications/MessageTemplates.tsx"
+      issue: "only a 'New template' button; zero Compose references"
+  missing:
+    - "A Notifications landing page (new component + route, e.g. /notifications -> frontend/app/src/pages/notifications/NotificationsLanding.tsx)"
+    - "Route registration for that landing page in frontend/app/src/main.tsx alongside the existing notifications/* routes (~line 127)"
+    - "A primary-action 'Compose notification' button on that landing page navigating to /notifications/compose (no incident query param, since this path is not incident-scoped)"
+    - "A SideNav entry point to reach the landing page: either repoint the 'Notifications' parent label at the landing page (matching the mockup's literal 'SideNav -> Coordinate: \"Notifications\" -> sub-tab \"Groups\"/\"Templates\"' structure) or add a new sibling nav item in routes.ts's Coordinate group (~line 298) under the hasNotifications gate"
+    - "Update the stale/incorrect comment at routes.ts:291-297 once implemented"
+  debug_session: "general-agent investigation, 2026-11-18 (task ses_e11b26598ffeWyR0N92XN5HcsC)"
 
 - truth: "A signed-in user who opens a deep link (e.g. a notification's Delivery Tracking page) in a fresh browser tab/session lands on that page, not on the home page"
   status: failed
@@ -210,9 +225,12 @@ Self-check: booted=200 preview=200 routes_ok=7/7 orphans=0 browser_urls=0g/0a st
     - path: "frontend/app/src/auth/RouteGuard.tsx"
       issue: "the unauthenticated branch that triggers signIn() does not record location.pathname anywhere (e.g. sessionStorage, the OIDC state parameter) for SignInCallback to read back"
   missing:
-    - "Capture the deep-link path (e.g. location.pathname + search) before redirecting to Keycloak — either via oidc-client-ts's own `state` parameter on signinRedirect(), or a dedicated sessionStorage key written by RouteGuard just before calling signIn()"
-    - "SignInCallback.tsx reads that captured path back after a successful exchange and navigates there instead of the hardcoded '/'"
-  debug_session: ""
+    - "PREFERRED (Option A — oidc-client-ts's native `state`, the standard OAuth2/OIDC mechanism for exactly this): oidc-config.ts's signIn() (lines 34-36) accepts a returnPath param and forwards it as userManager.signinRedirect({ state: returnPath }) — confirmed supported via ExtraSigninRequestArgs in oidc-client-ts's own type declarations (node_modules/oidc-client-ts/dist/types/oidc-client-ts.d.ts:243)"
+    - "RouteGuard.tsx's unauthenticated-branch effect (~lines 130-134) calls signIn(location.pathname + location.search) instead of signIn() — location is already available via useLocation() at line 49"
+    - "SignInCallback.tsx's completeSignIn() (line 52) reads oidcUser.state back after the exchange (User.state is documented at oidc-client-ts.d.ts:1508 as 'custom state data set during the initial signin request') and navigates there (with a safe string type-guard, falling back to '/') instead of the hardcoded navigate('/', { replace: true }) at line 71"
+    - "FALLBACK (Option B, only if threading oidc-client-ts's state proves awkward): a small new sessionStorage-backed module mirroring session-storage.ts's existing getter/setter/clear pattern (setReturnPath/getAndClearReturnPath under a new epmp_return_path key), written by RouteGuard just before calling signIn() and read+cleared by SignInCallback.tsx instead of the hardcoded '/'"
+    - "Update the stale comment at SignInCallback.tsx:18 once implemented"
+  debug_session: "general-agent investigation, 2026-11-18 (task ses_e11b22fa5ffeUE6yYh7p67yxMV)"
 
 - truth: "When a signed-in user with a real, resolved role lacks the specific permission for an action, the error message reflects that (a permission problem), not a role-resolution problem"
   status: failed
