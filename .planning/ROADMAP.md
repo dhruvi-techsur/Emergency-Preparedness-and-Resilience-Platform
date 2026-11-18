@@ -92,7 +92,7 @@ Plans:
 
 ### Phase 3: Plans, Tasks & Resource Requests
 **Goal**: Planning staff can maintain a versioned, approved plan/SOP repository linked to generated tasks, and command/logistics staff can run tasks and resource requests through to closure — replacing manual spreadsheets and phone-based tracking.
-**Status**: In progress
+**Status**: Failed
 **Depends on**: Phase 2
 **Requirements**: F3, F4
 **Success Criteria** (what must be TRUE):
@@ -184,7 +184,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Platform Foundation & Deployable Shell | 0/TBD | Complete | 2026-11-16 |
 | 2. Incident Command & Operating Picture | 7/7 | Complete | 2026-11-17 |
-| 3. Plans, Tasks & Resource Requests | 0/9 | In progress | - |
+| 3. Plans, Tasks & Resource Requests | 0/9 | Failed | - |
 | 4. Notifications & Reporting/Learning | 0/7 | Not started | - |
 | 5. Mobile Field Operations | 0/TBD | Not started | - |
 | 6. Persona Dashboards & AI Assistance | 0/10 | Not started | - |
