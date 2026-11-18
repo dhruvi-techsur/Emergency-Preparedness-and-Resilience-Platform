@@ -213,6 +213,33 @@ export default async function authOrgRoutes(app: FastifyInstance) {
       const hasResourceRequests = permRows.some(
         (r) => r.feature === 'resource_requests' && r.actions.length > 0,
       );
+      // Phase 4 (F5, 04-05): any role holding ANY 'notifications' permission
+      // (04-04's seed grants view-only to field_responder, view+create to
+      // eoc_director/planning_logistics_chief, and the full view+create+
+      // approve set to incident_commander alone, per PER-02's PIO-merge
+      // approval authority) sees "Notifications" in the SAME "Coordinate"
+      // SideNav group 03-06 created — same role_permissions-driven
+      // derivation pattern as hasTasks/hasResourceRequests above. This
+      // plan's Task 3 appends to the EXISTING "Coordinate" group rather
+      // than creating a duplicate key, per this plan's own documented
+      // append-not-overwrite convention (shared with 04-06, same wave).
+      const hasNotifications = permRows.some(
+        (r) => r.feature === 'notifications' && r.actions.length > 0,
+      );
+      // Phase 4 (F7, 04-06): any role holding ANY 'reporting' permission
+      // (04-04's seed grants the full view/create/edit set to
+      // planning_logistics_chief, view+create to incident_commander/
+      // eoc_director, and view-only to field_responder) sees a NEW
+      // "Improve" SideNav group with "Evidence log" and "Analytics" items
+      // — per the UX mockup's Navigation Map
+      // (`SideNav → Improve: "Reports" → sub-tab "Analytics"`, and the
+      // Evidence Log living under its OWN F7-aggregate route per this
+      // plan's own documented distinction from 01-11's existing
+      // `/admin/audit-log`). This is a brand-new group key (not an
+      // append to an existing one), so no collision with 04-05 (same
+      // wave)'s "Coordinate" append is possible — each plan's Task 3
+      // appends only to the groups/keys it actually owns.
+      const hasReporting = permRows.some((r) => r.feature === 'reporting' && r.actions.length > 0);
 
       const nav_groups = [
         ...(hasPlans
@@ -250,7 +277,7 @@ export default async function authOrgRoutes(app: FastifyInstance) {
               },
             ]
           : []),
-        ...(hasTasks || hasResourceRequests
+        ...(hasTasks || hasResourceRequests || hasNotifications
           ? [
               {
                 label: 'Coordinate',
@@ -261,6 +288,65 @@ export default async function authOrgRoutes(app: FastifyInstance) {
                   ...(hasResourceRequests
                     ? [{ id: 'resource-requests', label: 'Resources', icon: 'truck', href: '/resource-requests' }]
                     : []),
+                  // 04-08 (gap closure): 'Notifications' now points at a
+                  // dedicated landing page (`NotificationsLanding.tsx`)
+                  // whose own primary action reaches Compose; 'Message
+                  // templates' remains its own direct sub-item. This
+                  // satisfies the UX mockup's Navigation Map
+                  // OR-requirement for Compose's two independent
+                  // reach-paths (landing page primary action / Incident
+                  // Workspace action, 04-07) — 04-05 had wired only the
+                  // Groups/Templates sub-screens here with no standalone
+                  // landing route at all.
+                  ...(hasNotifications
+                    ? [
+                        {
+                          id: 'notification-groups',
+                          label: 'Notifications',
+                          icon: 'bell',
+                          href: '/notifications',
+                        },
+                        {
+                          id: 'message-templates',
+                          label: 'Message templates',
+                          // 'file-text' is used by 01-03's pre-existing
+                          // ADMIN_NAV_ITEMS above but isn't actually a
+                          // member of the design system's ICON_NAMES set
+                          // (confirmed against Icon.tsx) — a pre-existing
+                          // gap out of this plan's scope to fix. Using
+                          // 'file' (a real icon) here avoids repeating
+                          // that same mismatch in a newly-added item.
+                          icon: 'file',
+                          href: '/notifications/templates',
+                        },
+                      ]
+                    : []),
+                ],
+              },
+            ]
+          : []),
+        // Phase 4 (F7, 04-06): new "Improve" group, independent of
+        // 04-05's "Coordinate" append above — SITREP/AAR generation is
+        // reached from the Incident Workspace's own Reports-tab actions
+        // (04-07 wires that entry point), not a top-level nav item, per
+        // the mockup's Navigation Map.
+        ...(hasReporting
+          ? [
+              {
+                label: 'Improve',
+                items: [
+                  {
+                    id: 'evidence-log',
+                    label: 'Evidence log',
+                    icon: 'file',
+                    href: '/reports/evidence-log',
+                  },
+                  {
+                    id: 'analytics',
+                    label: 'Analytics',
+                    icon: 'layers',
+                    href: '/reports/analytics',
+                  },
                 ],
               },
             ]
@@ -268,7 +354,20 @@ export default async function authOrgRoutes(app: FastifyInstance) {
         ...(hasAdmin ? [{ label: 'Admin', items: ADMIN_NAV_ITEMS }] : []),
       ];
 
-      return reply.code(200).send({ nav_groups });
+      // `permissions`: the signed-in user's full feature->actions map,
+      // piggybacked on this already-fetched role_permissions query. 04-05's
+      // ComposeNotification.tsx reads this (via the same react-query cache
+      // key this page's own AppShell.tsx query already populates) to
+      // proactively disable "Approve and send" for a non-approver BEFORE
+      // any API round-trip, rather than inventing a second dedicated
+      // endpoint for what is, functionally, the same role_permissions read
+      // this route already performs for nav derivation.
+      const permissions: Record<string, string[]> = {};
+      for (const row of permRows) {
+        permissions[row.feature] = row.actions;
+      }
+
+      return reply.code(200).send({ nav_groups, permissions });
     },
   );
 

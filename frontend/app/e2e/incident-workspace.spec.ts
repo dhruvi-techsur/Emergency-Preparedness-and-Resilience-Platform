@@ -190,4 +190,28 @@ test.describe.serial('Incident Workspace', () => {
     await page.getByRole('tab', { name: 'Timeline' }).click();
     await expect(page.getByText('Incident closed')).toBeVisible({ timeout: 10_000 });
   });
+
+  test('6. The disabled "Generate AAR" button on an Open incident shows a visible, always-rendered caption explaining why (04-08 gap closure)', async ({
+    page,
+  }) => {
+    await signInAsIncidentCommander(page);
+    await createIncidentViaUi(page, 'E2E Workspace AAR Gate');
+
+    await page.getByRole('tab', { name: 'Reports' }).click();
+
+    const generateAarButton = page.getByRole('button', { name: 'Generate AAR' });
+    await expect(generateAarButton).toBeDisabled();
+    await expect(generateAarButton).toHaveAttribute(
+      'title',
+      'Close this incident before generating its after-action report.',
+    );
+
+    // Always-visible (not hover-only) caption, discoverable with zero
+    // interaction — the gap's own stated resolution direction, since a
+    // `title` tooltip alone is not reliably discoverable (touch devices,
+    // no hover).
+    await expect(
+      page.getByText('Close this incident to generate its after-action report.'),
+    ).toBeVisible();
+  });
 });

@@ -129,8 +129,14 @@ export function RouteGuard({ children }: { children: React.ReactNode }): JSX.Ele
 
   React.useEffect(() => {
     if (state.status === 'unauthenticated') {
-      void signIn();
+      // Forward the exact path+query the user was trying to reach before
+      // the redirect (04-08 gap closure) — signIn() threads this through
+      // oidc-client-ts's own `state` param, and SignInCallback.tsx reads
+      // it back on the far side of the round-trip to navigate there
+      // instead of unconditionally landing on `/`.
+      void signIn(location.pathname + location.search);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.status]);
 
   // On /auth/callback, render `children` (the <Routes> tree, which matches

@@ -1,0 +1,94 @@
+/*
+ * LineChart (DATA VISUALIZATION) — token-only styling.
+ */
+
+.ep-linechart {
+  width: 100%;
+  font-family: var(--font-sans);
+}
+
+.ep-linechart__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0 0 var(--space-1) 0;
+}
+
+.ep-linechart__subtitle {
+  color: var(--ink-muted);
+  margin: 0 0 var(--space-3) 0;
+}
+
+.ep-linechart__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.ep-linechart__svg:focus {
+  outline: 2px solid var(--focus-ring, var(--brand));
+  outline-offset: 2px;
+}
+
+.ep-linechart__axis {
+  stroke: var(--ink-disabled);
+  stroke-width: 1;
+}
+
+.ep-linechart__threshold {
+  stroke: var(--ink-muted);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+
+.ep-linechart__threshold-label {
+  font-size: 10px;
+  fill: var(--ink-muted);
+}
+
+.ep-linechart__x-label {
+  font-size: 10px;
+  fill: var(--ink-muted);
+}
+
+.ep-linechart__guide {
+  stroke: var(--ink-muted);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+}
+
+.ep-linechart__readout-title {
+  font-size: 10px;
+  fill: var(--ink);
+  font-weight: 700;
+}
+
+.ep-linechart__readout {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.ep-linechart__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  list-style: none;
+  margin: var(--space-3) 0 0 0;
+  padding: 0;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.ep-linechart__legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ep-linechart__legend-item svg,
+.ep-linechart__legend-item rect,
+.ep-linechart__legend-item circle,
+.ep-linechart__legend-item polygon,
+.ep-linechart__legend-item path {
+  flex-shrink: 0;
+}

@@ -2,16 +2,16 @@
 pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-stopped_at: Completed 03-10-PLAN.md — Phase 3 gap closure done (UAT ref uat:1 closed), Phase 3 fully complete, ready for Phase 4 planning
-last_updated: "2026-11-17T21:48:37Z"
-last_activity: "2026-11-17 — Plan 03-10 complete (gap-closure plan closing UAT ref 'uat:1': the one remaining real UI entry point for POST /api/v1/plans/{id}/materialize-tasks, 03-03's already-hardened backend endpoint. New MaterializeTasksModal.tsx — incident Combobox + optional per-section checkbox narrowing filter, renders {created, skipped} results inline as success/warning Alerts with human skip-reason strings, never raw error codes. PlanDetail.tsx gained a 'Materialize tasks' PageHeader action, gated to plan.status === 'Approved' && at least one section with a linked template — structurally impossible to click into a 404/409. plan-to-task-materialization.spec.ts test 5 rewritten to drive the real button/modal (the phase's own e2e suite had pre-emptively documented this exact gap via a raw page.evaluate() fetch); the now-unused apiPostViaPage helper and its stale doc comments removed. plans.spec.ts gained one negative-gating assertion proving the button is absent on a Review-status, zero-template plan, closing the plan's last untested must_haves truth. Zero deviations. Full e2e suite (11 files, 51 tests) + full backend suite (11 files, 55 tests) green; all three builds (design-system, backend, frontend app) clean. Phase 3 (Plans, Tasks & Resource Requests) remains fully complete, now with its one open UAT gap closed.)"
+status: Plan 04-08 (Notifications landing / deep-link return-path / AAR button explanation gap closure) closed UAT gap refs 2, 3, and 5 — all 9 plans in Phase 4 (7 original + 04-08 + 04-09 gap closures) are now complete.
+stopped_at: Completed 04-08-PLAN.md
+last_updated: "2026-11-18T12:53:10Z"
+last_activity: 2026-11-18 — Plan 04-08 complete (see 04-08-SUMMARY.md for full detail), run in parallel with 04-09. New /notifications landing page (NotificationsLanding.tsx) with its own primary Compose-notification action, satisfying the UX mockup's two-reach-path OR-requirement alongside 04-07's Incident Workspace action; SideNav's 'Notification groups' item repointed/renamed to 'Notifications'. oidc-config.ts's signIn(returnPath?) now forwards the pre-redirect path via oidc-client-ts's own `state` param; RouteGuard forwards location.pathname+search; SignInCallback reads oidcUser.state back (type-guarded) and navigates there instead of the old hardcoded '/' — closing the fresh-tab deep-link-drops-to-home gap, proven by a new Playwright spec using a same-browser-context second page() (not browser.newContext(), which would test the wrong thing). IncidentWorkspace's disabled "Generate AAR" button now carries both a title attribute and an always-visible caption explaining the Closed-incident requirement. Full Playwright suite (76 tests) green with zero regression; tsc --noEmit clean on both frontend/app and backend; full 3-workspace build green; backend (70) and design-system (51) unit suites green.
 progress:
   total_phases: 6
-  completed_phases: 3
-  total_plans: 33
-  completed_plans: 33
-  percent: 50
+  completed_phases: 4
+  total_plans: 57
+  completed_plans: 42
+  percent: 67
 ---
 
 # Project State
@@ -21,24 +21,24 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 3 — Plans, Tasks & Resource Requests (COMPLETE, gap closure done) — ready for Phase 4 planning
+**Current focus:** Phase 4 — Notifications, Reporting & Learning — COMPLETE. All 9 plans shipped (7 original + 2 gap-closure plans, 04-08 and 04-09, run in parallel this session). UAT gap refs 2, 3, 4, and 5 all closed. Ready for Phase 5 planning.
 
 ## Current Position
 
-Phase: 3 of 6 (Plans, Tasks & Resource Requests) — COMPLETE
-Plan: 10 of 10 complete in current phase (03-01 through 03-09 original + 03-10 gap closure — ALL COMPLETE)
-Status: 03-10 complete (gap-closure plan closing UAT ref uat:1 — the "Materialize tasks" UI trigger) — Phase 3 fully done with its one open UAT gap closed, ready for Phase 4 planning
-Last activity: 2026-11-17 — Plan 03-10 complete (gap-closure plan closing UAT ref 'uat:1': the one remaining real UI entry point for POST /api/v1/plans/{id}/materialize-tasks, 03-03's already-hardened backend endpoint. New MaterializeTasksModal.tsx — incident Combobox + optional per-section checkbox narrowing filter, renders {created, skipped} results inline as success/warning Alerts with human skip-reason strings, never raw error codes. PlanDetail.tsx gained a 'Materialize tasks' PageHeader action, gated to plan.status === 'Approved' && at least one section with a linked template — structurally impossible to click into a 404/409. plan-to-task-materialization.spec.ts test 5 rewritten to drive the real button/modal; the now-unused apiPostViaPage helper and its stale doc comments removed. plans.spec.ts gained one negative-gating assertion proving the button is absent on a Review-status, zero-template plan. Zero deviations. Full e2e suite (11 files, 51 tests) + full backend suite (11 files, 55 tests) green; all three builds clean.)
+Phase: 4 of 6 (Notifications, Reporting & Learning) — COMPLETE (all 9 plans)
+Plan: 9 of 9 complete in current phase (04-01 through 04-07 original; 04-08 and 04-09 gap-closure plans, run in parallel this session)
+Status: Plan 04-08 (Notifications landing / deep-link return-path / AAR button explanation gap closure) closed UAT gap refs 2, 3, and 5. Combined with 04-09 (RBAC error-message accuracy, gap ref 4), every open UAT gap for Phase 4 is now closed.
+Last activity: 2026-11-18 — Plan 04-08 complete (see 04-08-SUMMARY.md for full detail), run in parallel with 04-09. New /notifications landing page gives Compose Notification a standalone reach-path (satisfying the UX mockup's OR-requirement alongside 04-07's Incident Workspace action); oidc-client-ts's own `state` param now threads a deep link's return path through the full sign-in redirect+callback round-trip (RouteGuard → oidc-config → SignInCallback), proven by a new Playwright spec using the correct same-browser-context-second-page isolation primitive; the disabled "Generate AAR" button now explains itself via both a title attribute and an always-visible caption. Full Playwright suite (76 tests), backend suite (70 tests), and design-system suite (51 tests) all green with zero regression; tsc --noEmit clean; full 3-workspace build green.
 
-Progress: [█████░░░░░] 50%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 33
-- Average duration: 23 min
-- Total execution time: 11.9 hours
+- Total plans completed: 36
+- Average duration: 24 min
+- Total execution time: 13.3 hours
 
 **By Phase:**
 
@@ -84,6 +84,15 @@ Progress: [█████░░░░░] 50%
 | Phase 03 P08 | 35 min | 2 tasks | 4 files |
 | Phase 03 P09 | 50 min | 2 tasks | 3 files |
 | Phase 03 P10 | 25 min | 3 tasks | 4 files |
+| Phase 04 P03 | 25 min | 3 tasks | 10 files |
+| Phase 04 P01 | 10 min | 3 tasks | 5 files |
+| Phase 04 P02 | 14 min | 3 tasks | 6 files |
+| Phase 04 P04 | 18 min | 2 tasks | 2 files |
+| Phase 04 P05 | 42 min | 3 tasks | 7 files |
+| Phase 04 P06 | 70 min | 3 tasks | 7 files |
+| Phase 04 P07 | 45 min | 2 tasks | 3 files |
+| Phase 04 P09 | 15 min | 2 tasks | 3 files |
+| Phase 04 P08 | 35 min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -173,6 +182,32 @@ Recent decisions affecting current work:
 - [Phase 03-09]: Resource-marker MapPopup renders directly from the thin marker object already in the polled markers array (no extra GET /api/v1/resource-requests/{id} fetch) — unlike the incident popup, which needs full detail (jurisdiction name, opened_at) the thin marker shape doesn't carry
 - [Phase 03-10]: Section checkboxes in MaterializeTasksModal are an opt-in NARROWING filter (default: all eligible sections' templates materialize), not a required per-section selection — matches the FRD's one-click framing and the backend's own optional section_ids param
 - [Phase 03-10]: Exactly one new entry point for materialize-tasks (the PlanDetail PageHeader action) — no second affordance on the sections list or version-history sidebar, since per-section "Link tasks" (03-08) is a separate authoring concern from materializing
+- [Phase 04-03]: LineChart's 6th-series marker shape (the spec names exactly 5: circle/square/triangle/diamond/cross) resolved as a ring with a contrasting center dot — visually distinct from series-1's filled circle even in grayscale/print
+- [Phase 04-03]: DonutChart's >5-segment caller-contract violation is a dev-only console.warn (gated on process.env.NODE_ENV), never a thrown error or silent truncation — all segments always render regardless of count
+- [Phase 04-01]: Notifications migration renumbered to 1700000000008 (the plan's literal 1700000000007 was already claimed by Phase 3's plans-schema.js) — preserves node-pg-migrate's numeric-ordering contract with zero behavioral difference from the plan's intent
+- [Phase 04-01]: POST /api/v1/notifications/{id}/send's APPROVER_MISMATCH gate is enforced via caller-identity equality (body's approver_id must equal req.epmpUser.id), not a role-permission lookup on the asserted id — a caller cannot send on behalf of a DIFFERENT named person regardless of that person's own permissions, matching FRD's "enforced server-side, not just hidden client-side" rule
+- [Phase 04-01]: assertAiOriginApproved/AiOriginNotApprovedError exported from comms-reporting/notifications.ts as the ONE shared AI-governance guard — 04-02's reporting module imports it unchanged rather than reimplementing, per TechArch 01-components.md \u00a72.4 rule 3
+- [Phase 04-01]: Geography-type recipient groups structurally resolve to zero concrete notification_recipients at both list (member_count omitted) and compose time — documented Phase-6/F16-roster-sync-dependent scope boundary, no live roster-geo-match exists this phase
+- [Phase 04-02]: Migration renumbered to 1700000000009 (not plan's literal 1700000000008, already claimed by 04-01's notifications-schema.js)
+- [Phase 04-02]: AAR re-generation upserts in place against the Draft row (ON CONFLICT ... WHERE status != 'Finalized'), returning 403 DOCUMENT_IMMUTABLE on a Finalized conflict instead of silently no-op'ing
+- [Phase 04-02]: AAR decisions_log heuristic: EPMP-sourced Timeline rows with tone warning/danger OR title matching Activation changed to|assigned to|Incident closed are decision-tagged -- documented approximation since no literal is_decision column exists
+- [Phase 04-02]: Evidence log deliberately excludes null-actor_id incident_timeline rows (e.g. the Overdue sweep) since the Actor column has no person to render for those
+- [Phase 04-04]: notifications 'approve' action-level granted ONLY to incident_commander (PER-02's PIO-merge per PERSONAS-EPMP.md) — the sole approve-and-send authority, matching F5's named-person-approval rule with one realistic seeded identity
+- [Phase 04-04]: reporting 'edit' action-level (gating SITREP/AAR finalize) granted ONLY to planning_logistics_chief — the FRD's named SITREP/AAR author role; incident_commander/eoc_director can trigger generation but not finalize, matching 03-07's no-single-role-holds-everything segregation pattern
+- [Phase 04-05]: Compose happens lazily at Step 4's danger-Modal confirm, not at Step-1 completion -- no partial notification rows for abandoned compose sessions; GET /api/v1/me/nav-config extended with a full feature->actions permissions map so Compose's Approve-and-send button can be proactively client-side gated without a second endpoint
+- [Phase 04-06]: AarGenerator's page-level closure gate checks incident.status BEFORE ever constructing the wizard's JSX tree (not a disabled/hidden wizard) — the EmptyState with the exact FRD message IS the entire render output for a non-Closed incident, matching the mockup's "action is absent/disabled" rule structurally
+- [Phase 04-06]: A new "Improve" SideNav group (Evidence log, Analytics) added independently of 04-05's same-wave "Coordinate" append — each plan's Task 3 only appends to the group/key it actually owns, so no collision was possible between the two parallel plans
+- [Phase 04-06]: AnalyticsDashboard's Stat tiles pass no `target` prop because `StatProps` has no such field at all — the never-invented-target rule is a structural property of the design-system component, not merely a data-layer promise from the backend
+- [Phase 04-06]: Evidence log's actor-filter Combobox derives options from its own already-fetched rows rather than GET /api/v1/admin/users — planning_logistics_chief (reporting:view) doesn't hold admin:view, so reusing that endpoint would 403 for this view's real audience
+- [Phase 04-06]: PDF export intentionally NOT offered as a UI choice in Evidence Log View — 04-02's format=pdf backend path is a documented guaranteed 500 EXPORT_FAILED; offering a guaranteed-failing option is worse than omitting it
+- [Phase 04-07]: Reports tab's generated-document list reads GET /api/v1/evidence-log?action_type=aar_finalized (client-narrowed by detail.incident_id) rather than a new backend endpoint — 04-02 exposes no "list all reports for this incident" GET, and SITREPs have no equivalent audit-visible write to recover from at all; documented as an honest Phase-4 scope limitation since this tab is not this plan's primary proof target
+- [Phase 04-07]: Fixed a real pre-existing bug in evidence-log.ts: action_type/record_type filters referenced their own SELECT-list output alias (`action`) in the incident_timeline half of the UNION's WHERE clause, which Postgres cannot resolve (it.title is the real column, not a column literally named action) — every such filtered request was silently 500ing, surfaced client-side as a generic "Could not load the evidence log" error
+- [Phase 04-07]: incident-to-evidence-trail.spec.ts uses TWO identities (incident_commander, planning_logistics_chief), not a single-identity shortcut — reporting:edit (gating SITREP save-as-draft and AAR finalize) is held only by planning_logistics_chief per 04-04's seed, discovered when the spec's own first single-identity draft produced false-positive passing assertions
+- [Phase 04-09]: requirePermission()'s checkPermission()-false branch now returns a new PERMISSION_DENIED error_code/message, not ROLE_UNRESOLVED — ROLE_UNRESOLVED stays reserved exclusively for the SSO callback's genuine role-resolution-failure path, since users.role_id is NOT NULL REFERENCES roles(id) and can never be unresolved once a users row exists at all; a resolved role lacking an action gets the SAME PERMISSION_DENIED response whether it holds zero or some-but-not-this grants on the feature
+- [Phase 04-08]: signIn(returnPath?) forwards the pre-redirect deep-link path via oidc-client-ts's own ExtraSigninRequestArgs.state param (read back off User.state on the callback) rather than a custom sessionStorage/localStorage return-path mechanism — the library already carries state through the full authorization-code redirect+callback round-trip with no extra storage key or threat surface
+- [Phase 04-08]: SignInCallback's state type-guard requires a non-empty string starting with '/' AND explicitly rejects '/auth/callback' itself, not just non-string values — closes both the open-redirect vector (any absolute URL falls through to the existing '/' fallback) and a pathological self-redirect loop
+- [Phase 04-08]: AAR button explanation ships BOTH a title attribute (hover/screen-reader, matching SideNav.tsx's own interim no-Tooltip-yet pattern) AND an always-visible caption — a title-only tooltip is not reliably discoverable on touch devices or without hover
+- [Phase 04-08]: auth-deep-link-return-path.spec.ts uses page.context().newPage() (a second page in the SAME browser context, sharing cookies but with independent sessionStorage) to reproduce the gap, NOT browser.newContext() (a separate cookie jar that would hit a real Keycloak login form instead of the silent SSO round-trip the gap is actually about) — and issues a SINGLE navigation directly to the deep link rather than a preliminary visit to '/' first, since '/' is itself unauthenticated and would kick off a second, racing OIDC round-trip with the wrong return path
 
 ### Pending Todos
 
@@ -184,6 +219,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-17T21:48:37Z
-Stopped at: Completed 03-10-PLAN.md — Phase 3 gap closure done (UAT ref uat:1 closed), Phase 3 fully complete, ready for Phase 4 planning
+Last session: 2026-11-18T12:54:19.562Z
+Stopped at: Completed 04-08-PLAN.md
 Resume file: None

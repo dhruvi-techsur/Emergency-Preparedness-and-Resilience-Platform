@@ -1,0 +1,66 @@
+/*
+ * BarChart (DATA VISUALIZATION) — token-only styling.
+ */
+
+.ep-barchart {
+  width: 100%;
+  font-family: var(--font-sans);
+}
+
+.ep-barchart__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0 0 var(--space-1) 0;
+}
+
+.ep-barchart__subtitle {
+  color: var(--ink-muted);
+  margin: 0 0 var(--space-3) 0;
+}
+
+.ep-barchart__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.ep-barchart__axis {
+  stroke: var(--ink-disabled);
+  stroke-width: 1;
+}
+
+.ep-barchart__value {
+  font-size: 10px;
+  fill: var(--ink);
+  font-weight: 700;
+}
+
+.ep-barchart__category-label {
+  font-size: 10px;
+  fill: var(--ink-muted);
+}
+
+.ep-barchart__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  list-style: none;
+  margin: var(--space-3) 0 0 0;
+  padding: 0;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.ep-barchart__legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ep-barchart__legend-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}

@@ -45,6 +45,15 @@ import { TaskDetail } from './pages/tasks-resources/TaskDetail';
 import { ResourceRequestList } from './pages/tasks-resources/ResourceRequestList';
 import { CreateResourceRequest } from './pages/tasks-resources/CreateResourceRequest';
 import { ResourceRequestDetail } from './pages/tasks-resources/ResourceRequestDetail';
+import { NotificationsLanding } from './pages/notifications/NotificationsLanding';
+import { RecipientGroups } from './pages/notifications/RecipientGroups';
+import { MessageTemplates } from './pages/notifications/MessageTemplates';
+import { ComposeNotification } from './pages/notifications/ComposeNotification';
+import { DeliveryTracking } from './pages/notifications/DeliveryTracking';
+import { SitrepGenerator } from './pages/reporting/SitrepGenerator';
+import { AarGenerator } from './pages/reporting/AarGenerator';
+import { EvidenceLogView } from './pages/reporting/EvidenceLogView';
+import { AnalyticsDashboard } from './pages/reporting/AnalyticsDashboard';
 
 const queryClient = new QueryClient();
 
@@ -104,6 +113,44 @@ root.render(
                 path="incidents/:incidentId/resource-requests/:id"
                 element={<ResourceRequestDetail />}
               />
+              {/* F5 (04-05) — Notifications: Recipient Groups, Message
+                  Templates, Compose (4-step flow, accepts optional
+                  ?incident=<id>), Delivery & Acknowledgment Tracking.
+                  Appended here (not AppShell.tsx itself — see this plan's
+                  own sequencing note on the shared-file convention 02-05/
+                  02-06 established: main.tsx owns the nested route tree,
+                  AppShell.tsx is layout/chrome only) following the SAME
+                  append-not-overwrite discipline 03-05/03-06 demonstrated
+                  for their own two-same-wave-plans-touch-one-file
+                  scenario — 04-06 (same wave) appends its own `/reports/*`
+                  routes independently, with no compile-time dependency
+                  between the two route sets. */}
+              {/* 04-08 (gap closure): the bare `/notifications` landing
+                  page — the UX mockup's Navigation Map documents Compose's
+                  TWO reach-paths (this page's primary action / Incident
+                  Workspace's own action, 04-07) as an OR-requirement; this
+                  route is the half no prior plan wired. Registered BEFORE
+                  the more-specific `groups`/`templates`/`compose`/
+                  `:id/delivery` siblings below — react-router's path
+                  matching has no ambiguity between a bare segment and its
+                  more-specific siblings regardless of declaration order,
+                  but the landing page is kept first here to read as the
+                  "parent" of the group visually. */}
+              <Route path="notifications" element={<NotificationsLanding />} />
+              <Route path="notifications/groups" element={<RecipientGroups />} />
+              <Route path="notifications/templates" element={<MessageTemplates />} />
+              <Route path="notifications/compose" element={<ComposeNotification />} />
+              <Route path="notifications/:id/delivery" element={<DeliveryTracking />} />
+              {/* F7 (04-06) — Reporting & Learning: SITREP Generator, AAR
+                  Generator, Evidence & Audit Log View, Analytics &
+                  Reporting Dashboard. Appended here following the SAME
+                  append-not-overwrite discipline 04-05 (same wave) used
+                  for its own notifications/* routes above — no
+                  compile-time dependency between the two route sets. */}
+              <Route path="incidents/:id/sitreps/new" element={<SitrepGenerator />} />
+              <Route path="incidents/:id/aar/new" element={<AarGenerator />} />
+              <Route path="reports/evidence-log" element={<EvidenceLogView />} />
+              <Route path="reports/analytics" element={<AnalyticsDashboard />} />
             </Route>
           </Routes>
         </RouteGuard>

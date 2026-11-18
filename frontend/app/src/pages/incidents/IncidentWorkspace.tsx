@@ -86,6 +86,69 @@ interface TimelineResponse {
   items: TimelineEntry[];
 }
 
+/** Shape of a single `GET /api/v1/evidence-log` row (evidence-log.ts's own
+ * response shape) — used ONLY to recover this incident's finalized AAR, by
+ * client-filtering on `detail.incident_id` (the one field reporting.ts's
+ * `AuditService.record('aar_finalized', 'aar', aarId, { incident_id })`
+ * call actually carries the incident back-reference on). */
+interface EvidenceLogEntry {
+  id: string;
+  actor: { id: string; name: string } | null;
+  action: string;
+  record_type?: string;
+  record_id?: string;
+  occurred_at: string;
+  detail?: { incident_id?: string };
+}
+
+interface EvidenceLogResponse {
+  items: EvidenceLogEntry[];
+}
+
+type ReportStatus = 'Draft' | 'Approved' | 'Finalized';
+
+const REPORT_STATUS_TONE: Record<ReportStatus, BadgeTone> = {
+  Draft: 'neutral',
+  Approved: 'success',
+  Finalized: 'success',
+};
+
+/** 04-02's backend exposes no `GET` "list all reports for this incident"
+ * endpoint — only `POST .../sitreps` / `POST .../aar` (both create/upsert,
+ * never list) and the finalize PATCHes. A finalized AAR IS recoverable
+ * read-only, though: `reporting.ts`'s finalize handler is the one place in
+ * this module that calls `AuditService.record()`, so it surfaces through
+ * `GET /api/v1/evidence-log` (filtered to `action_type=aar_finalized`,
+ * then client-narrowed to THIS incident via the row's own
+ * `detail.incident_id`, since the endpoint's `record_id` filter matches the
+ * AAR's own id, not the incident's). SITREPs have no equivalent audit
+ * write at all (confirmed directly against reporting.ts) and so have no
+ * durable, incident-scoped read path this phase's backend can answer —
+ * this tab is honest about that gap rather than inventing a fake list; per
+ * this plan's own documented discretion, the FRD's S7.1 "user-observable
+ * document history" requirement is satisfied well enough by this list
+ * PLUS the "Generate SITREP"/"Generate AAR" actions below, since this tab
+ * is explicitly NOT this plan's primary proof target (the cross-phase
+ * Playwright spec is). */
+function useIncidentReports(incidentId: string | undefined) {
+  const evidenceQuery = useQuery({
+    queryKey: ['evidence-log-aar-for-incident', incidentId],
+    queryFn: () =>
+      apiGet<EvidenceLogResponse>('/api/v1/evidence-log?action_type=aar_finalized&page_size=200'),
+    enabled: Boolean(incidentId),
+  });
+
+  const aarEntries = (evidenceQuery.data?.items ?? []).filter(
+    (entry) => entry.detail?.incident_id === incidentId,
+  );
+
+  return {
+    isLoading: evidenceQuery.isLoading,
+    isError: evidenceQuery.isError,
+    aarEntries,
+  };
+}
+
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, {
     year: 'numeric',
@@ -114,21 +177,24 @@ const WORKSPACE_TABS: TabItem[] = [
 /**
  * F1 S1.3 — Incident Workspace. Routed `/incidents/:id`.
  *
- * `Generate SITREP` (PageHeader action) remains a deliberate Phase-2 UI
- * placeholder wired to a no-op handler: SITREP generation (F7) ships in a
- * later phase (F7/F9, Phase 4/6 per the roadmap) and is correctly out of
- * THIS phase's (F3/F4) scope — same reasoning the Reports tab below
- * documents. `New task`, by contrast, is this phase's own 03-08 fix: it
- * now navigates to a real pre-filled create-task form instead of 02-06's
- * no-op handler, since F4 (task creation) is exactly what this phase
- * ships.
- *
  * The Tasks and Resources tabs below render the REAL embedded
  * `TaskList`/`ResourceRequestList` components (03-06), replacing 02-06's
- * "ships in a later phase" placeholders — this is 03-08's whole purpose:
+ * "ships in a later phase" placeholders — this was 03-08's purpose:
  * proving F3's materialized tasks and F4's resource requests are visible
- * inside the SAME incident workspace a real user already works in. The
- * Reports tab's placeholder is intentionally left untouched (see below).
+ * inside the SAME incident workspace a real user already works in.
+ *
+ * 04-07 closes the LAST two deliberate Phase-2 placeholders this file
+ * carried: the Reports tab (previously a "ships in a later phase (F7/F9)"
+ * EmptyState) now renders a real list of this incident's finalized
+ * reports plus "Generate SITREP"/"Generate AAR" actions (see
+ * useIncidentReports's doc comment for the exact read-path and its
+ * documented Phase-4 scope limits), and the PageHeader's "Generate
+ * SITREP" action (previously a no-op `() => {}` handler) now navigates to
+ * the real `SitrepGenerator` route (04-06). A brand-new "Compose
+ * notification" PageHeader action (not present in any prior phase's
+ * plan) navigates to F5's Compose Notification screen (04-05),
+ * pre-filled with this incident — the wiring the UX mockup's Navigation
+ * Map names but no earlier plan implemented.
  */
 export function IncidentWorkspace(): JSX.Element {
   const { id } = useParams<{ id: string }>();
@@ -144,6 +210,8 @@ export function IncidentWorkspace(): JSX.Element {
     queryFn: () => apiGet<IncidentDetail>(`/api/v1/incidents/${id}`),
     enabled: Boolean(id),
   });
+
+  const reports = useIncidentReports(id);
 
   const timelineQuery = useQuery({
     queryKey: ['incident-timeline', id],
@@ -199,11 +267,34 @@ export function IncidentWorkspace(): JSX.Element {
         status={<Badge tone={SEVERITY_TONE[incident.severity]}>{incident.severity}</Badge>}
         subtitle={`${incident.jurisdiction.name} \u00b7 Opened ${formatDate(incident.opened_at)}`}
         actions={[
-          // Phase-2 placeholder, still correctly deferred: SITREP
-          // generation ships with F7/F9 (Phase 4/6), out of this phase's
-          // F3/F4 scope — unchanged by 03-08.
-          <Button key="sitrep" variant="secondary" onClick={() => {}}>
+          // 04-07 fix: F7 (SITREP generation) IS this phase's scope — this
+          // now navigates to the real SitrepGenerator route (04-06,
+          // routed at /incidents/{id}/sitreps/new) instead of 02-06's
+          // no-op handler. The ordering choice (this Button stays BEFORE
+          // "New task"/"Compose notification", which in turn stay before
+          // the destructive "Close incident") keeps PageHeader's
+          // documented "primary action last" actions-ordering contract:
+          // "Close incident" is this header's one state-changing,
+          // confirmation-gated action and so remains the rightmost/last
+          // element whenever it's offered.
+          <Button
+            key="sitrep"
+            variant="secondary"
+            onClick={() => navigate(`/incidents/${incident.id}/sitreps/new`)}
+          >
             Generate SITREP
+          </Button>,
+          // 04-07: a NEW action, not present in any Phase 2/3 plan — per
+          // the UX mockup's Navigation Map explicitly naming "Incident
+          // Workspace 'Compose notification'" as a reachable-from path
+          // for F5's Compose Notification screen (04-05), this is the
+          // missing wiring that makes that Navigation Map row true.
+          <Button
+            key="notify"
+            variant="secondary"
+            onClick={() => navigate(`/notifications/compose?incident=${incident.id}`)}
+          >
+            Compose notification
           </Button>,
           // 03-08 fix: F4 (task creation) IS this phase's scope, so this
           // now navigates to the real, incident-pre-filled Create Task
@@ -288,16 +379,77 @@ export function IncidentWorkspace(): JSX.Element {
             aria-labelledby="ep-tab-reports"
             hidden={activeTab !== 'reports'}
           >
-            {/* Deliberately UNCHANGED by 03-08: ICS forms/SITREPs (F7/F9)
-                ship in a later phase (Phase 4/6 per the roadmap) — this
-                plan's scope is strictly F3/F4, not F7/F9, so only 2 of
-                the workspace's 4 tab placeholders (Tasks, Resources) are
-                replaced here; this one remains a correct, deliberate
-                placeholder exactly as 02-06 documented it. */}
+            {/* 04-07: replaces 02-06's deliberate Phase-2 Reports-tab
+                placeholder with a real (non-placeholder) list of this
+                incident's generated documents — see useIncidentReports's
+                own doc comment for exactly which read-path this uses and
+                why, given 04-02's backend exposes no single "list all
+                reports for this incident" GET endpoint. */}
             {activeTab === 'reports' ? (
-              <EmptyState title="Reports ship in a later phase">
-                ICS forms and SITREPs ship in a later phase (F7/F9).
-              </EmptyState>
+              <Card title="Generated reports">
+                {reports.isError ? (
+                  <p className="caption">Could not load this incident's finalized reports.</p>
+                ) : reports.isLoading ? (
+                  <p className="caption" aria-busy="true">
+                    Loading…
+                  </p>
+                ) : reports.aarEntries.length === 0 ? (
+                  <EmptyState title="No finalized reports yet">
+                    Generate a SITREP or, once this incident is Closed, an after-action report.
+                  </EmptyState>
+                ) : (
+                  <ul className="ep-incident-workspace__report-list">
+                    {reports.aarEntries.map((entry) => (
+                      <li key={entry.id} className="ep-incident-workspace__report-row">
+                        <span>After-action report</span>
+                        <Badge tone={REPORT_STATUS_TONE.Finalized}>Finalized</Badge>
+                        <span className="caption">{formatDate(entry.occurred_at)}</span>
+                        <span className="caption">{entry.actor?.name ?? 'Unknown'}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <div className="ep-incident-workspace__report-actions">
+                  <Button
+                    variant="secondary"
+                    onClick={() => navigate(`/incidents/${incident.id}/sitreps/new`)}
+                  >
+                    Generate SITREP
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    // AAR generation is blocked server-side (409
+                    // INCIDENT_NOT_CLOSED) until this incident is Closed —
+                    // AarGenerator.tsx itself performs this SAME
+                    // incident.status==='Closed' check as a page-level
+                    // guard (never rendering its wizard otherwise). This
+                    // disables the button proactively here so the failure
+                    // is visible BEFORE navigation, not only after. The
+                    // `title` attribute (04-08 gap closure) reuses
+                    // AarGenerator.tsx's own EmptyState message text
+                    // verbatim for hover/screen-reader discovery — no
+                    // `Tooltip` component exists yet (SideNav.tsx's own
+                    // documented interim pattern), matching that file's
+                    // precedent of using the native `title` attribute.
+                    disabled={incident.status !== 'Closed'}
+                    title="Close this incident before generating its after-action report."
+                    onClick={() => navigate(`/incidents/${incident.id}/aar/new`)}
+                  >
+                    Generate AAR
+                  </Button>
+                </div>
+                {/* A `title` tooltip alone is not reliably discoverable
+                    (hover-only, unavailable on touch) — this always-visible
+                    caption (04-08 gap closure) gives every user, not just
+                    mouse/screen-reader users, the same explanation with no
+                    interaction required. */}
+                {incident.status !== 'Closed' ? (
+                  <p className="caption">
+                    Close this incident to generate its after-action report.
+                  </p>
+                ) : null}
+              </Card>
             ) : null}
           </div>
         </div>

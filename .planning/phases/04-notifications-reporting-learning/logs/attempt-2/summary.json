@@ -1,0 +1,22 @@
+{
+  "duration_secs": 8961.0,
+  "token_usage": {
+    "input": 727,
+    "output": 412360,
+    "total": 76262473,
+    "cache_read": 74150237,
+    "cache_write": 1699149,
+    "cost": 23.202973899999975
+  },
+  "model": "claude-sonnet-5",
+  "files_changed": [
+    ".planning/phases/04-notifications-reporting-learning/04-UAT.md",
+    ".planning/phases/04-notifications-reporting-learning/04-UAT.summary.json",
+    "backend/scripts/seed.ts"
+  ],
+  "verification_status": "failed",
+  "error_message": null,
+  "attempt_number": 2,
+  "created_at": "2026-11-18T08:30:15.835434+00:00",
+  "completed_at": "2026-11-18T10:59:37.055688628+00:00"
+}

@@ -30,9 +30,20 @@ export const userManager = new UserManager({
   automaticSilentRenew: false,
 });
 
-/** Redirects the browser to Keycloak's login page. */
-export function signIn(): Promise<void> {
-  return userManager.signinRedirect();
+/**
+ * Redirects the browser to Keycloak's login page.
+ *
+ * @param returnPath - Optional path (+ query string) to return to once the
+ *   sign-in round-trip completes, forwarded via oidc-client-ts's own
+ *   `state` param (`ExtraSigninRequestArgs.state`). Keycloak echoes this
+ *   value back verbatim on the callback; `SignInCallback.tsx` reads it off
+ *   `User.state` and navigates there instead of unconditionally landing on
+ *   `/`. Omitted entirely (not even an empty string) when no return path is
+ *   known, so `oidcUser.state` is `undefined` on the callback and the
+ *   existing `/` fallback applies unchanged.
+ */
+export function signIn(returnPath?: string): Promise<void> {
+  return userManager.signinRedirect(returnPath ? { state: returnPath } : undefined);
 }
 
 /** Clears local OIDC state and redirects to Keycloak's end-session endpoint. */
