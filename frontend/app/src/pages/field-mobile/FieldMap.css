@@ -1,0 +1,38 @@
+/*
+ * F6 S6.6 — Field Map. MapCanvas (design system) exposes no per-marker
+ * data-attribute or id-based DOM hook for a "pending" visual variant — its
+ * only identifying attribute per marker is `aria-label`, built as
+ * `${label} — ${status}` (MapCanvas.tsx). FieldMap.tsx always sets
+ * `status: 'Pending sync'` for its synthetic queued-report markers, so
+ * this attribute-selector substring match is the lowest-risk way to apply
+ * the mockup's "dashed outline" requirement without widening the shared
+ * design-system component's contract. Token-only — no raw px/hex
+ * literals beyond the dash pattern itself (not a color).
+ */
+
+.ep-field-map {
+  padding: var(--space-4);
+  padding-bottom: 0;
+}
+
+/*
+ * The 'resource' marker type (reused here for an unsynced field report —
+ * see FieldMap.tsx's doc comment) renders as a CSS border-triangle, not a
+ * bordered box, so `border-style: dashed` has no solid edge to dash.
+ * `outline` draws independently of that border trick, so a dashed outline
+ * (offset outward so it doesn't collide with the 0×0 triangle's own
+ * border-based paint) is what actually makes "dashed" visible here.
+ */
+.ep-field-map .ep-map-marker[aria-label$="Pending sync"] {
+  outline: var(--border-2) dashed var(--warning-solid);
+  outline-offset: var(--space-1);
+}
+
+.ep-field-map__action-bar {
+  position: sticky;
+  bottom: 0;
+  padding: var(--space-4);
+  background: var(--bg);
+  border-top: var(--border-1) solid var(--border);
+  z-index: var(--z-sticky);
+}
