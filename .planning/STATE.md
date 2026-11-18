@@ -3,14 +3,14 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-03-PLAN.md — Progress + LineChart/BarChart/DonutChart design-system components shipped, Phase 4 continues with 04-04 next
-last_updated: "2026-11-18T05:31:54.618Z"
-last_activity: "2026-11-18 — Plan 04-03 complete (Progress determinate progress bar + LineChart/BarChart/DonutChart data-visualization components, closing the design-system component gap this phase's screens need before 04-05/04-06 compose them. Progress: role=progressbar with aria-valuenow/min/max, showValue defaults true so the percentage is always visible text (never width-only decoration), reuses MapCanvas's toneVar helper. LineChart: up to 6 series distinguished by BOTH viz-N color AND marker shape (circle/square/triangle/diamond/cross, 6th-series ring-with-center-dot fallback documented inline), dashed threshold lines (never a color band), Left/Right-arrow keyboard readout rendered as visible <text>, hidden data-table twin. BarChart: grouped/stacked vertical/horizontal bars, values always printed on/beside bars, optional stripe/dot/hatch SVG pattern fills for print/grayscale survival, hidden data-table twin. DonutChart: 2-5 segment ring with center total, always-visible list legend (label+value+percentage for every segment), loud dev-only console.warn past 5 segments while still rendering all of them (never silent truncation), separate hidden data-table twin. New data-viz.test.tsx (5 tests) proves all of the above; full design-system suite (51 tests, 6 files) green; tsc --noEmit and vite build both clean. Zero deviations.)"
+stopped_at: Completed 04-01-PLAN.md — comms-reporting Notifications module (recipient-groups/templates/compose/send/delivery-status + shared AI-governance guard) backend-complete, Phase 4 continues
+last_updated: "2026-11-18T05:32:30Z"
+last_activity: "2026-11-18 — Plan 04-01 complete (comms-reporting backend module, F5 Notifications half: recipient-group/message-template CRUD, 4-step compose flow with mandatory named-person approval-before-send, per-recipient delivery/acknowledgment tracking, and the shared assertAiOriginApproved AI-governance guard 04-02's reporting module will reuse unchanged per TechArch 01-components.md \u00a72.4. Migration 1700000000008_notifications-schema.js (renumbered from the plan's literal 1700000000007 — that number was already claimed by Phase 3's plans-schema.js) creates ai_drafts/recipient_groups/message_templates/notifications/notification_recipients/notification_delivery_status with every CHECK constraint (chk_audience_present, chk_send_requires_approval, chk_ai_origin_requires_approval). POST .../compose rejects no-audience composes with 422 NO_AUDIENCE_SELECTED before any write; POST .../send re-verifies approver identity server-side (403 APPROVER_MISMATCH on a client-asserted approver_id not matching the caller), runs the shared AI-origin guard (400 AIDRAFT_UNAPPROVED_WRITE_BLOCKED), and writes exactly one incident_timeline entry inside the same withTimelineTransaction as the approval UPDATE when incident-linked. GET .../delivery-status returns the exact DDL-enum per-recipient shape with computed ack_percentage. Minimal POST /api/v1/ai-drafts + approve/discard stub (no live AI gateway this phase) makes the governance invariant testable end-to-end. Two auto-fixed Rule 1 bugs found via this plan's own integration test (ai_drafts stub's JSONB sources literal embedded an invalid now() call inside a JSON string; test itself asserted the wrong caller identity for the approver-mismatch case) plus one Rule 3 migration-number collision. New notifications.test.ts (3 tests) + full backend suite (12 files, 58 tests) green; tsc --noEmit and npm run build both clean.)"
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 55
-  completed_plans: 34
+  completed_plans: 35
   percent: 50
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 4 — Notifications, Reporting & Learning (IN PROGRESS) — Progress + chart components shipped (04-03), 04-04 next
+**Current focus:** Phase 4 — Notifications, Reporting & Learning (IN PROGRESS) — comms-reporting Notifications backend shipped (04-01), Progress + chart components shipped (04-03), 04-02/04-04 next
 
 ## Current Position
 
 Phase: 4 of 6 (Notifications, Reporting & Learning) — IN PROGRESS
-Plan: 3 of 7 complete in current phase (04-01, 04-02 pre-existing uncommitted work; 04-03 complete this session)
-Status: Executing — Plan 04-03 complete (Progress + LineChart/BarChart/DonutChart design-system components), 04-04 next
-Last activity: 2026-11-18 — Plan 04-03 complete (Progress determinate progress bar + LineChart/BarChart/DonutChart data-visualization components, closing the design-system component gap this phase's screens need before 04-05/04-06 compose them. Progress: role=progressbar with aria-valuenow/min/max, showValue defaults true so the percentage is always visible text (never width-only decoration), reuses MapCanvas's toneVar helper. LineChart: up to 6 series distinguished by BOTH viz-N color AND marker shape (circle/square/triangle/diamond/cross, 6th-series ring-with-center-dot fallback documented inline), dashed threshold lines (never a color band), Left/Right-arrow keyboard readout rendered as visible <text>, hidden data-table twin. BarChart: grouped/stacked vertical/horizontal bars, values always printed on/beside bars, optional stripe/dot/hatch SVG pattern fills for print/grayscale survival, hidden data-table twin. DonutChart: 2-5 segment ring with center total, always-visible list legend (label+value+percentage for every segment), loud dev-only console.warn past 5 segments while still rendering all of them (never silent truncation), separate hidden data-table twin. New data-viz.test.tsx (5 tests) proves all of the above; full design-system suite (51 tests, 6 files) green; tsc --noEmit and vite build both clean. Zero deviations.)
+Plan: 2 of 7 complete in current phase (04-01 complete this session; 04-03 complete this session, run in parallel — 04-02/04-04/04-05/04-06/04-07 remain)
+Status: Executing — Plan 04-01 complete (comms-reporting Notifications module backend: compose/send/delivery-status API + shared AI-governance guard), 04-02 next (depends_on 04-01)
+Last activity: 2026-11-18 — Plan 04-01 complete (comms-reporting backend module, F5 Notifications half — see Accumulated Context decisions below for full detail). Plan 04-03 also complete this session (Progress + LineChart/BarChart/DonutChart design-system components, closing the design-system component gap this phase's screens need before 04-05/04-06 compose them. Progress: role=progressbar with aria-valuenow/min/max, showValue defaults true. LineChart: up to 6 series distinguished by color AND marker shape, dashed threshold lines, hidden data-table twin. BarChart: grouped/stacked bars, values always printed, pattern fills for print/grayscale. DonutChart: 2-5 segment ring with center total, always-visible list legend, dev-only console.warn past 5 segments. New data-viz.test.tsx (5 tests) proves all of the above; full design-system suite (51 tests, 6 files) green. Zero deviations.)
 
 Progress: [█████░░░░░] 50%
 
@@ -36,9 +36,9 @@ Progress: [█████░░░░░] 50%
 
 **Velocity:**
 
-- Total plans completed: 33
+- Total plans completed: 35
 - Average duration: 23 min
-- Total execution time: 11.9 hours
+- Total execution time: 12.1 hours
 
 **By Phase:**
 
@@ -85,6 +85,7 @@ Progress: [█████░░░░░] 50%
 | Phase 03 P09 | 50 min | 2 tasks | 3 files |
 | Phase 03 P10 | 25 min | 3 tasks | 4 files |
 | Phase 04 P03 | 25 min | 3 tasks | 10 files |
+| Phase 04 P01 | 10 min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -176,6 +177,10 @@ Recent decisions affecting current work:
 - [Phase 03-10]: Exactly one new entry point for materialize-tasks (the PlanDetail PageHeader action) — no second affordance on the sections list or version-history sidebar, since per-section "Link tasks" (03-08) is a separate authoring concern from materializing
 - [Phase 04-03]: LineChart's 6th-series marker shape (the spec names exactly 5: circle/square/triangle/diamond/cross) resolved as a ring with a contrasting center dot — visually distinct from series-1's filled circle even in grayscale/print
 - [Phase 04-03]: DonutChart's >5-segment caller-contract violation is a dev-only console.warn (gated on process.env.NODE_ENV), never a thrown error or silent truncation — all segments always render regardless of count
+- [Phase 04-01]: Notifications migration renumbered to 1700000000008 (the plan's literal 1700000000007 was already claimed by Phase 3's plans-schema.js) — preserves node-pg-migrate's numeric-ordering contract with zero behavioral difference from the plan's intent
+- [Phase 04-01]: POST /api/v1/notifications/{id}/send's APPROVER_MISMATCH gate is enforced via caller-identity equality (body's approver_id must equal req.epmpUser.id), not a role-permission lookup on the asserted id — a caller cannot send on behalf of a DIFFERENT named person regardless of that person's own permissions, matching FRD's "enforced server-side, not just hidden client-side" rule
+- [Phase 04-01]: assertAiOriginApproved/AiOriginNotApprovedError exported from comms-reporting/notifications.ts as the ONE shared AI-governance guard — 04-02's reporting module imports it unchanged rather than reimplementing, per TechArch 01-components.md \u00a72.4 rule 3
+- [Phase 04-01]: Geography-type recipient groups structurally resolve to zero concrete notification_recipients at both list (member_count omitted) and compose time — documented Phase-6/F16-roster-sync-dependent scope boundary, no live roster-geo-match exists this phase
 
 ### Pending Todos
 
@@ -187,6 +192,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-18T05:31:54.616Z
-Stopped at: Completed 04-03-PLAN.md — Progress + LineChart/BarChart/DonutChart design-system components shipped, Phase 4 continues with 04-04 next
+Last session: 2026-11-18T05:32:30Z
+Stopped at: Completed 04-01-PLAN.md — comms-reporting Notifications module (recipient-groups/templates/compose/send/delivery-status + shared AI-governance guard) backend-complete; 04-03 also complete this session; 04-02 next (depends_on 04-01)
 Resume file: None
