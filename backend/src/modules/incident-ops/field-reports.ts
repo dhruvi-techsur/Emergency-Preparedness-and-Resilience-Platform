@@ -327,9 +327,20 @@ export default async function fieldReportsRoutes(app: FastifyInstance) {
       // frequently aren't. Casting the uuid side to text sidesteps that
       // entirely and still matches correctly when $1 happens to BE a
       // UUID string.
+      //
+      // Jurisdiction-scope enforcement (F-05-01 fix, 05-SECURITY.md): the
+      // scope check runs on this same lookup, BEFORE any file write --
+      // an out-of-scope id 404s here and never reaches the upload logic
+      // below. Standalone reports (incident_id IS NULL) carry no
+      // jurisdiction data and are left unscoped, same convention as
+      // tasks.ts's fetchTaskRow.
       const existing = await query<{ id: string }>(
-        `SELECT id FROM field_reports WHERE id::text = $1 OR client_report_id = $1`,
-        [pathId],
+        `SELECT fr.id
+         FROM field_reports fr
+         LEFT JOIN incidents i ON i.id = fr.incident_id
+         WHERE (fr.id::text = $1 OR fr.client_report_id = $1)
+           AND (fr.incident_id IS NULL OR i.jurisdiction_id = ANY($2))`,
+        [pathId, req.epmpUser!.jurisdiction_scope],
       );
       if (!existing[0]) {
         return reply.code(404).send(FIELD_REPORT_NOT_FOUND);
@@ -378,10 +389,17 @@ export default async function fieldReportsRoutes(app: FastifyInstance) {
     { preHandler: requirePermission('field_reports', 'view') },
     async (req, reply) => {
       const { id: pathId, photoId } = req.params;
-      // Same `id::text = $1` cast reasoning as the POST route above.
+      // Same `id::text = $1` cast reasoning as the POST route above, and
+      // the same jurisdiction-scope join+filter (F-05-01 fix,
+      // 05-SECURITY.md) -- an out-of-scope id 404s before the photo
+      // bytes are ever read from disk.
       const reportRows = await query<{ id: string }>(
-        `SELECT id FROM field_reports WHERE id::text = $1 OR client_report_id = $1`,
-        [pathId],
+        `SELECT fr.id
+         FROM field_reports fr
+         LEFT JOIN incidents i ON i.id = fr.incident_id
+         WHERE (fr.id::text = $1 OR fr.client_report_id = $1)
+           AND (fr.incident_id IS NULL OR i.jurisdiction_id = ANY($2))`,
+        [pathId, req.epmpUser!.jurisdiction_scope],
       );
       const id = reportRows[0]?.id;
       if (!id) {

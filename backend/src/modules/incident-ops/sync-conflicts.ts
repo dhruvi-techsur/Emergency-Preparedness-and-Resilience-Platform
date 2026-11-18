@@ -50,6 +50,17 @@ export default async function syncConflictsRoutes(app: FastifyInstance) {
   // idx_sync_conflicts_unresolved), joined to users for a readable
   // resolved_by summary (null for the unresolved rows this list returns).
   // This is what "surfaced to a named person" renders against.
+  //
+  // Jurisdiction-scope enforcement (F-05-01 fix, 05-SECURITY.md): every
+  // list caller only ever sees conflicts whose underlying field_reports
+  // row is incident-linked AND in their own jurisdiction_scope -- same
+  // app-layer enforcement pattern tasks.ts/resource-requests.ts already
+  // use (F-01 fix, 03-SECURITY.md). sync_conflicts has no jurisdiction_id
+  // of its own, so the scope check joins sync_conflicts -> field_reports
+  // -> incidents. A conflict whose field_reports row is standalone
+  // (incident_id IS NULL, a documented valid resting state) carries no
+  // jurisdiction data at all and is left unscoped, same convention as
+  // tasks.ts's own `(t.incident_id IS NULL OR i.jurisdiction_id = ANY($N))`.
   app.get<{ Querystring: { page?: string; page_size?: string } }>(
     '/api/v1/sync-conflicts',
     { preHandler: requirePermission('field_reports', 'view') },
@@ -59,7 +70,13 @@ export default async function syncConflictsRoutes(app: FastifyInstance) {
       const offset = (page - 1) * page_size;
 
       const countRows = await query<{ count: string }>(
-        `SELECT COUNT(*) AS count FROM sync_conflicts WHERE resolution IS NULL`,
+        `SELECT COUNT(*) AS count
+         FROM sync_conflicts sc
+         LEFT JOIN field_reports fr ON fr.id = sc.entity_id
+         LEFT JOIN incidents i ON i.id = fr.incident_id
+         WHERE sc.resolution IS NULL
+           AND (fr.incident_id IS NULL OR i.jurisdiction_id = ANY($1))`,
+        [req.epmpUser!.jurisdiction_scope],
       );
       const total = parseInt(countRows[0]?.count ?? '0', 10);
 
@@ -69,10 +86,13 @@ export default async function syncConflictsRoutes(app: FastifyInstance) {
                 u.name AS resolved_by_name
          FROM sync_conflicts sc
          LEFT JOIN users u ON u.id = sc.resolved_by
+         LEFT JOIN field_reports fr ON fr.id = sc.entity_id
+         LEFT JOIN incidents i ON i.id = fr.incident_id
          WHERE sc.resolution IS NULL
+           AND (fr.incident_id IS NULL OR i.jurisdiction_id = ANY($3))
          ORDER BY sc.created_at ASC
          LIMIT $1 OFFSET $2`,
-        [page_size, offset],
+        [page_size, offset, req.epmpUser!.jurisdiction_scope],
       );
 
       return reply.code(200).send({
@@ -91,6 +111,11 @@ export default async function syncConflictsRoutes(app: FastifyInstance) {
   // client-side `.find()` over the unresolved-only list would silently
   // 404 for an ALREADY-resolved conflict a user navigates back to (e.g.
   // via browser back-button) -- this route has no such restriction.
+  // Jurisdiction-scope enforcement (F-05-01 fix, 05-SECURITY.md): same
+  // join+filter as the list route above. A conflict outside the caller's
+  // scope 404s with the existing SYNC_CONFLICT_NOT_FOUND code -- never a
+  // 403 -- matching this codebase's not-found-not-403 convention for
+  // scope violations (tasks.ts's fetchTaskRow does the same).
   app.get<{ Params: { id: string } }>(
     '/api/v1/sync-conflicts/:id',
     { preHandler: requirePermission('field_reports', 'view') },
@@ -102,8 +127,11 @@ export default async function syncConflictsRoutes(app: FastifyInstance) {
                 u.name AS resolved_by_name
          FROM sync_conflicts sc
          LEFT JOIN users u ON u.id = sc.resolved_by
-         WHERE sc.id = $1`,
-        [id],
+         LEFT JOIN field_reports fr ON fr.id = sc.entity_id
+         LEFT JOIN incidents i ON i.id = fr.incident_id
+         WHERE sc.id = $1
+           AND (fr.incident_id IS NULL OR i.jurisdiction_id = ANY($2))`,
+        [id, req.epmpUser!.jurisdiction_scope],
       );
       const row = rows[0];
       if (!row) {
@@ -128,7 +156,21 @@ export default async function syncConflictsRoutes(app: FastifyInstance) {
       const { id } = req.params;
       const { resolution } = req.body ?? ({} as never);
 
-      const rows = await query<SyncConflictRow>(`SELECT * FROM sync_conflicts WHERE id = $1`, [id]);
+      // Jurisdiction-scope enforcement (F-05-01 fix, 05-SECURITY.md): the
+      // scope check runs on this initial row lookup, BEFORE any mutation
+      // -- an out-of-scope id 404s here and never reaches the resolve
+      // logic below, matching this codebase's not-found-not-403
+      // convention (tasks.ts's fetchTaskRow does the same for its own
+      // mutation routes).
+      const rows = await query<SyncConflictRow>(
+        `SELECT sc.*
+         FROM sync_conflicts sc
+         LEFT JOIN field_reports fr ON fr.id = sc.entity_id
+         LEFT JOIN incidents i ON i.id = fr.incident_id
+         WHERE sc.id = $1
+           AND (fr.incident_id IS NULL OR i.jurisdiction_id = ANY($2))`,
+        [id, req.epmpUser!.jurisdiction_scope],
+      );
       const conflict = rows[0];
       if (!conflict) {
         return reply.code(404).send(SYNC_CONFLICT_NOT_FOUND);
