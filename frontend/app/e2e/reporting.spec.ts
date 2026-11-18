@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { Pool } from 'pg';
-import { signInAsPlanningChief } from './helpers/sign-in';
+import { signInAsPlanningChief, signInAsIncidentCommander } from './helpers/sign-in';
 
 /**
  * Full-stack e2e coverage of 04-06's objective: the four Reporting &
@@ -12,33 +12,19 @@ import { signInAsPlanningChief } from './helpers/sign-in';
  * the evidence log's dual-source aggregation with a structurally-absent
  * edit/delete affordance.
  *
- * Signs in as planner@epmp.local (planning_logistics_chief) — the ONLY
- * seeded identity holding `reporting:edit` (04-04's seed), which gates
- * both the SITREP Approve-and-finalize and AAR finalize actions this
- * spec exercises.
+ * Two identities, matching the roles that actually hold the needed
+ * permissions (04-04's seed):
+ *   - commander@epmp.local (incident_commander) holds `incidents` full
+ *     access (create/edit) — used to create and close the test incident,
+ *     since `planning_logistics_chief` holds `incidents:view` only
+ *     (02-01's seed). incident_commander also holds `reporting`
+ *     view/create (04-04's `reportingGenerateOnlyRoles`), sufficient to
+ *     trigger SITREP generation.
+ *   - planner@epmp.local (planning_logistics_chief) is the ONLY seeded
+ *     identity holding `reporting:edit` (04-04's `reportingAuthorRole`),
+ *     which gates both the SITREP Approve-and-finalize and AAR finalize
+ *     actions this spec exercises.
  */
-
-async function apiPostViaPage<T>(page: Page, path: string, body: object): Promise<T> {
-  return page.evaluate(
-    async ({ path, body }) => {
-      const token = window.sessionStorage.getItem('epmp_session_token');
-      const res = await fetch(path, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`POST ${path} failed: ${res.status} ${text}`);
-      }
-      return res.json();
-    },
-    { path, body },
-  );
-}
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL ?? 'postgres://postgres:devpass@localhost:5432/epmp',
@@ -97,17 +83,23 @@ test.describe.serial('Reporting & Learning — SITREP, AAR, Evidence log', () =>
     page,
   }) => {
     await ensurePlannerHasJurisdictionScope();
-    await signInAsPlanningChief(page);
+    // Created by incident_commander — planning_logistics_chief holds only
+    // `incidents:view` (02-01's seed), not `create`, so it cannot create
+    // the test incident itself (see file-header doc comment).
+    await signInAsIncidentCommander(page);
 
     incidentId = await createIncidentViaUi(page, 'E2E Reporting SITREP');
 
     await page.goto(`/incidents/${incidentId}/sitreps/new`);
 
     // Assert the auto-pulled sections render immediately after page load,
-    // with no form interaction of any kind from this test.
-    await expect(page.getByRole('heading', { name: 'Task status' })).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByRole('heading', { name: 'Resource-request status' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Current timeline' })).toBeVisible();
+    // with no form interaction of any kind from this test. Scoped to the
+    // Card title (<h3>) specifically — the Preview section below also
+    // repeats the identical text as an <h4>, so a bare role-heading
+    // lookup by name matches both.
+    await expect(page.locator('h3', { hasText: 'Task status' })).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('h3', { hasText: 'Resource-request status' })).toBeVisible();
+    await expect(page.locator('h3', { hasText: 'Current timeline' })).toBeVisible();
   });
 
   test('2. Navigating directly to the AAR Generator for the still-OPEN incident shows the closure-required message, no wizard', async ({
@@ -124,21 +116,34 @@ test.describe.serial('Reporting & Learning — SITREP, AAR, Evidence log', () =>
     await expect(page.getByText('Step 1 of 5')).toHaveCount(0);
   });
 
-  test('3. After closing the incident, the AAR wizard renders; an unowned corrective action blocks Finalize with the exact message', async ({
+  test('3. Closing the incident (as incident_commander) unblocks the AAR Generator', async ({
     page,
   }) => {
-    await signInAsPlanningChief(page);
-
-    // Close the incident directly via API (reusing 02-02's closure
-    // endpoint) — this spec's identity (planning_logistics_chief) does
-    // not hold `incidents:edit` itself (only incident_commander/
-    // eoc_director do, per 02-01's seed), so the UI's own Close-incident
-    // button isn't reachable by this identity; the direct API call is
-    // the documented test-fixture path for reaching a Closed incident
-    // under this role.
+    // Closed via the real UI's own Close-incident Modal, under
+    // incident_commander (the role holding `incidents:edit` — see
+    // file-header doc comment; planning_logistics_chief holds view-only).
+    await signInAsIncidentCommander(page);
     await page.goto(`/incidents/${incidentId}`);
-    await apiPostViaPage(page, `/api/v1/incidents/${incidentId}/closure`, { confirmed: true });
+    await page.getByRole('button', { name: 'Close incident' }).click();
+    const closureModal = page.getByRole('alertdialog');
+    await expect(closureModal).toBeVisible({ timeout: 10_000 });
+    await closureModal.getByRole('button', { name: 'Close incident' }).click();
+    await expect(closureModal).not.toBeVisible();
+  });
 
+  test('3b. An unowned corrective action blocks Finalize with the exact message', async ({
+    page,
+  }) => {
+    // A FRESH page (new browser context, per Playwright's default) is
+    // used here specifically so Keycloak's own SSO session cookie from
+    // test 3's incident_commander sign-in does NOT silently carry over —
+    // within the SAME context, re-running signInAsPlanningChief's
+    // page.goto('/') would otherwise redirect through Keycloak's
+    // authorization endpoint and land back on the ALREADY-authenticated
+    // incident_commander identity (Keycloak's own session, not this
+    // app's token), never presenting the login form this helper expects
+    // to fill in planner@epmp.local's credentials.
+    await signInAsPlanningChief(page);
     await page.goto(`/incidents/${incidentId}/aar/new`);
     await expect(page.getByText('Step 1 of 5: Timeline export')).toBeVisible({ timeout: 10_000 });
 
@@ -175,10 +180,19 @@ test.describe.serial('Reporting & Learning — SITREP, AAR, Evidence log', () =>
     await page.getByRole('button', { name: 'Continue' }).click();
     await expect(page.getByText('Step 4 of 5: Findings')).toBeVisible();
 
-    // The finding generated in test 3 was re-upserted against this
-    // incident's single Draft AAR row (aars.incident_id UNIQUE) — it
-    // reappears here via the auto-generate-on-mount re-fetch. Fill in the
-    // missing Owner/Due-date on the first (and only) finding row.
+    // Test 3b's finding lived ONLY in that test's own component state
+    // (the client-side ownership check blocked before any
+    // POST /api/v1/incidents/{id}/aar network call could persist it) —
+    // this test's fresh page mount re-generates the AAR from scratch
+    // with zero findings, so it adds its OWN finding here, WITH both
+    // Owner and Due-date filled in from the start, proving the success
+    // path independently of 3b's client-blocked path.
+    await page.getByRole('button', { name: '+ Add finding' }).click();
+    await page
+      .getByLabel('Finding text', { exact: false })
+      .fill('E2E finding with owned corrective action');
+    await page.getByLabel('Corrective action', { exact: false }).fill('Revise the resource-request SOP');
+
     const ownerCombobox = page.getByLabel('Owner', { exact: false });
     await ownerCombobox.click();
     await page.locator('.ep-combobox__listbox [role="option"]').first().click();
@@ -229,8 +243,11 @@ test.describe.serial('Reporting & Learning — SITREP, AAR, Evidence log', () =>
     // naming "target" anywhere — the component has no such prop to pass.
     await expect(page.locator('.ep-stat [class*="target"]')).toHaveCount(0);
 
-    await expect(page.getByText('Activation time trend')).toBeVisible();
-    await expect(page.getByText('Resource requests by type')).toBeVisible();
-    await expect(page.getByText('Corrective actions by status')).toBeVisible();
+    // Scoped to the Card title (<h3>) specifically — each chart's
+    // visually-hidden data-table twin repeats the identical text as its
+    // own <caption>, so a bare text lookup matches both.
+    await expect(page.locator('h3', { hasText: 'Activation time trend' })).toBeVisible();
+    await expect(page.locator('h3', { hasText: 'Resource requests by type' })).toBeVisible();
+    await expect(page.locator('h3', { hasText: 'Corrective actions by status' })).toBeVisible();
   });
 });

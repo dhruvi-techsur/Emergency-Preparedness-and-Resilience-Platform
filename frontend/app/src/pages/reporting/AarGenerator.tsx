@@ -343,6 +343,17 @@ export function AarGenerator(): JSX.Element {
         </Alert>
       ) : null}
 
+      {/* Rendered at this top level (not nested inside the step===4
+          block) since the finding-ownership violation can be discovered
+          from Step 5's Finalize click, after the user has already
+          navigated away from the Findings step — the alert must stay
+          visible regardless of which step is currently showing. */}
+      {findingsError ? (
+        <Alert tone="danger" title="Fix the following before finalizing">
+          {findingsError}
+        </Alert>
+      ) : null}
+
       {step === 1 ? (
         <Card title="Timeline export">
           {aar.timeline_export.length === 0 ? (
@@ -399,11 +410,6 @@ export function AarGenerator(): JSX.Element {
 
       {step === 4 ? (
         <Card title="Findings & corrective actions">
-          {findingsError ? (
-            <Alert tone="danger" title="Fix the following before continuing">
-              {findingsError}
-            </Alert>
-          ) : null}
           {findings.map((finding, index) => (
             <Card key={finding.id ?? `new-${index}`} title={`Finding ${index + 1}`}>
               <TextField
