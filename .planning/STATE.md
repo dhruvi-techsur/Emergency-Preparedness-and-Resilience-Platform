@@ -3,14 +3,14 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-04-PLAN.md
-last_updated: "2026-11-18T05:59:38.423Z"
-last_activity: "2026-11-18 — Plan 04-04 complete (seed role-permission grants for notifications/reporting — see Accumulated Context decisions below for full detail, and 04-04-SUMMARY.md for complete detail). notifications:approve restricted to incident_commander alone (PER-02's PIO-merge per PERSONAS-EPMP.md); reporting:edit (gating SITREP/AAR finalize) restricted to planning_logistics_chief alone. New integration-test describe block in notifications.test.ts (3 tests) proves seeded grants authorize/reject real requests end-to-end through OPA, not just exist as DB rows; eoc_director's lacking-approve grant rejects at the RBAC layer (403 ROLE_UNRESOLVED) before the route's own approver-match logic ever runs. Idempotency re-verified directly (npm run seed twice: 8 inserted then 0 inserted/30 already-present, zero duplicates). Full backend suite (13 files, 67 tests) green; tsc --noEmit and npm run build both clean. Zero deviations."
+stopped_at: Completed 04-05-PLAN.md
+last_updated: "2026-11-18T06:21:03.034Z"
+last_activity: 2026-11-18 — Plan 04-05 complete (Notifications frontend — see Accumulated Context decisions below for full detail, and 04-05-SUMMARY.md for complete detail). Four routable screens (RecipientGroups/MessageTemplates/ComposeNotification/DeliveryTracking) reachable from the shell's Coordinate SideNav group; Compose enforces its 4-step order with the exact FRD audience gate, never auto-populates from an AI draft without an explicit approved click, renders Step 3 fully read-only, and proactively permission-gates Approve-and-send via a new `permissions` field on GET /api/v1/me/nav-config. 8-test Playwright suite proves the complete compose-to-delivery flow including the cross-feature incident Timeline write. Shared files (AppShell.tsx/main.tsx/routes.ts) edited append-only alongside 04-06 (same wave, parallel) — no conflicts. Full backend suite (13 files, 67 tests) green; tsc --noEmit and all three workspace builds clean. 3 trivial auto-fixed deviations.
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 55
-  completed_plans: 37
+  completed_plans: 38
   percent: 50
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 4 — Notifications, Reporting & Learning (IN PROGRESS) — comms-reporting Notifications backend shipped (04-01), Progress + chart components shipped (04-03), Reporting & Learning backend shipped (04-02), role-permission seed grants shipped (04-04), 04-05/04-06/04-07 next
+**Current focus:** Phase 4 — Notifications, Reporting & Learning (IN PROGRESS) — comms-reporting Notifications backend shipped (04-01), Progress + chart components shipped (04-03), Reporting & Learning backend shipped (04-02), role-permission seed grants shipped (04-04), Notifications frontend screens shipped (04-05), 04-06/04-07 next
 
 ## Current Position
 
 Phase: 4 of 6 (Notifications, Reporting & Learning) — IN PROGRESS
-Plan: 4 of 7 complete in current phase (04-01 and 04-03 complete prior session; 04-02 and 04-04 complete this session — 04-05/04-06/04-07 remain)
-Status: Executing — Plan 04-04 complete (seed role-permission grants for notifications/reporting, proven end-to-end against real OPA), 04-05 next
-Last activity: 2026-11-18 — Plan 04-04 complete (seed role-permission grants for notifications/reporting — see Accumulated Context decisions below for full detail, and 04-04-SUMMARY.md for complete detail). notifications:approve restricted to incident_commander alone (PER-02's PIO-merge per PERSONAS-EPMP.md); reporting:edit (gating SITREP/AAR finalize) restricted to planning_logistics_chief alone. New integration-test describe block in notifications.test.ts (3 tests) proves seeded grants authorize/reject real requests end-to-end through OPA, not just exist as DB rows; eoc_director's lacking-approve grant rejects at the RBAC layer (403 ROLE_UNRESOLVED) before the route's own approver-match logic ever runs. Idempotency re-verified directly (npm run seed twice: 8 inserted then 0 inserted/30 already-present, zero duplicates). Full backend suite (13 files, 67 tests) green; tsc --noEmit and npm run build both clean. Zero deviations.
+Plan: 5 of 7 complete in current phase (04-01 and 04-03 complete prior session; 04-02 and 04-04 complete earlier this session; 04-05 complete this session — 04-06/04-07 remain)
+Status: Executing — Plan 04-05 complete (Notifications frontend screens: Recipient Groups, Message Templates, Compose Notification 4-step flow, Delivery & Acknowledgment Tracking — proven end-to-end via Playwright against the real compose stack), 04-06 next (parallel wave, already in progress)
+Last activity: 2026-11-18 — Plan 04-05 complete (Notifications frontend — see Accumulated Context decisions below for full detail, and 04-05-SUMMARY.md for complete detail). Four routable screens (RecipientGroups/MessageTemplates/ComposeNotification/DeliveryTracking) reachable from the shell's Coordinate SideNav group; Compose enforces its 4-step order with the exact FRD audience gate, never auto-populates from an AI draft without an explicit approved click, renders Step 3 fully read-only, and proactively permission-gates Approve-and-send via a new `permissions` field on GET /api/v1/me/nav-config. 8-test Playwright suite proves the complete compose-to-delivery flow including the cross-feature incident Timeline write. Shared files (AppShell.tsx/main.tsx/routes.ts) edited append-only alongside 04-06 (same wave, parallel) — no conflicts. Full backend suite (13 files, 67 tests) green; tsc --noEmit and all three workspace builds clean. 3 trivial auto-fixed deviations.
 
 Progress: [█████░░░░░] 50%
 
@@ -88,6 +88,7 @@ Progress: [█████░░░░░] 50%
 | Phase 04 P01 | 10 min | 3 tasks | 5 files |
 | Phase 04 P02 | 14 min | 3 tasks | 6 files |
 | Phase 04 P04 | 18 min | 2 tasks | 2 files |
+| Phase 04 P05 | 42 min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -189,6 +190,7 @@ Recent decisions affecting current work:
 - [Phase 04-02]: Evidence log deliberately excludes null-actor_id incident_timeline rows (e.g. the Overdue sweep) since the Actor column has no person to render for those
 - [Phase 04-04]: notifications 'approve' action-level granted ONLY to incident_commander (PER-02's PIO-merge per PERSONAS-EPMP.md) — the sole approve-and-send authority, matching F5's named-person-approval rule with one realistic seeded identity
 - [Phase 04-04]: reporting 'edit' action-level (gating SITREP/AAR finalize) granted ONLY to planning_logistics_chief — the FRD's named SITREP/AAR author role; incident_commander/eoc_director can trigger generation but not finalize, matching 03-07's no-single-role-holds-everything segregation pattern
+- [Phase 04-05]: Compose happens lazily at Step 4's danger-Modal confirm, not at Step-1 completion -- no partial notification rows for abandoned compose sessions; GET /api/v1/me/nav-config extended with a full feature->actions permissions map so Compose's Approve-and-send button can be proactively client-side gated without a second endpoint
 
 ### Pending Todos
 
@@ -200,6 +202,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-18T05:59:38.421Z
-Stopped at: Completed 04-04-PLAN.md
+Last session: 2026-11-18T06:21:03.033Z
+Stopped at: Completed 04-05-PLAN.md
 Resume file: None
