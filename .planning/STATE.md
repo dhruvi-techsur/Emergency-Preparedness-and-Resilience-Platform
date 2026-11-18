@@ -3,15 +3,15 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-06-PLAN.md
-last_updated: "2026-11-18T06:37:00.000Z"
-last_activity: 2026-11-18 — Plan 04-06 complete (Reporting & Learning frontend — see Accumulated Context decisions below for full detail, and 04-06-SUMMARY.md for complete detail). Four routable screens (SitrepGenerator/AarGenerator/EvidenceLogView/AnalyticsDashboard) reachable from a new "Improve" SideNav group; SITREP Generator auto-assembles its 3 read-only sections on mount with zero manual re-entry; AAR Generator never renders its wizard for a non-Closed incident (page-level guard, not a disabled button) and client-mirrors the finding-ownership gate; Evidence Log View is structurally edit/delete-free; Analytics Dashboard's Stat tiles cannot display an invented target since StatProps has no such field. 7-test Playwright suite proves the full lifecycle end-to-end, including 4 auto-fixed deviations discovered during its own verification (1 production bug — findingsError alert placement; 3 test-logic-only fixes — Keycloak SSO session carryover on identity switch, heading-text ambiguity vs hidden data-table captions, and a cross-test finding-persistence assumption). Shared files (main.tsx/routes.ts) edited append-only alongside 04-05 (same wave, parallel) — confirmed zero conflicts via git log showing 04-05's docs commit landing cleanly on top. Full backend suite (13 files, 67 tests) green; tsc --noEmit and all three workspace builds clean; app-shell.spec.ts re-verified green as a shared-file regression check.
+stopped_at: Completed 04-07-PLAN.md
+last_updated: "2026-11-18T07:08:23.431Z"
+last_activity: 2026-11-18 — Plan 04-07 complete (incident-to-evidence-trail integration proof — see Accumulated Context decisions below for full detail, and 04-07-SUMMARY.md for complete detail). Phase 4 is now FULLY COMPLETE (all 7 plans). Closed 02-06's Reports-tab/Generate-SITREP placeholders in IncidentWorkspace.tsx, added a new incident-linked Compose-notification PageHeader action, and proved — via a 7-test Playwright spec — that one incident's command-role assignment, task creation, sent notification, and finalized AAR compose into a single chronologically-ordered Timeline and evidence trail across all 4 phases' modules. Found and fixed a real pre-existing bug in evidence-log.ts: action_type/record_type filters 500'd on the incident_timeline half of its UNION query (WHERE clause referenced its own SELECT-list alias, which Postgres can't resolve). Full backend suite (67 tests) and design-system suite (51 tests) green; tsc --noEmit and all three workspace builds clean; 4 pre-existing Playwright specs re-verified with zero regression.
 progress:
   total_phases: 6
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 55
-  completed_plans: 40
-  percent: 50
+  completed_plans: 41
+  percent: 75
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 4 — Notifications, Reporting & Learning (IN PROGRESS) — comms-reporting Notifications backend shipped (04-01), Progress + chart components shipped (04-03), Reporting & Learning backend shipped (04-02), role-permission seed grants shipped (04-04), Notifications frontend screens shipped (04-05), Reporting & Learning frontend screens shipped (04-06), 04-07 next
+**Current focus:** Phase 4 — Notifications, Reporting & Learning (COMPLETE) — all 7 plans shipped: comms-reporting Notifications backend (04-01), Reporting & Learning backend (04-02), Progress + chart components (04-03), role-permission seed grants (04-04), Notifications frontend screens (04-05), Reporting & Learning frontend screens (04-06), and the phase's terminal cross-phase integration proof (04-07). Ready for Phase 5.
 
 ## Current Position
 
-Phase: 4 of 6 (Notifications, Reporting & Learning) — IN PROGRESS
-Plan: 6 of 7 complete in current phase (04-01 and 04-03 complete prior session; 04-02 and 04-04 complete earlier this session; 04-05 and 04-06 complete this session, same parallel wave — 04-07 remains)
-Status: Executing — Plan 04-06 complete (Reporting & Learning frontend screens: SITREP Generator, AAR Generator, Evidence & Audit Log View, Analytics & Reporting Dashboard — proven end-to-end via Playwright against the real compose stack), 04-07 next
-Last activity: 2026-11-18 — Plan 04-06 complete (Reporting & Learning frontend — see Accumulated Context decisions below for full detail, and 04-06-SUMMARY.md for complete detail). Four routable screens (SitrepGenerator/AarGenerator/EvidenceLogView/AnalyticsDashboard) reachable from a new "Improve" SideNav group; SITREP Generator auto-assembles its 3 read-only sections on mount with zero manual re-entry; AAR Generator never renders its wizard for a non-Closed incident and client-mirrors the server's finding-ownership gate; Evidence Log View is structurally edit/delete-free; Analytics Dashboard's Stat tiles cannot display an invented target since the component has no such field. 7-test Playwright suite proves the full lifecycle end-to-end. Shared files (main.tsx/routes.ts) edited append-only alongside 04-05 (same wave, parallel) — confirmed zero conflicts. Full backend suite (13 files, 67 tests) green; tsc --noEmit and all three workspace builds clean. 4 auto-fixed deviations (1 production bug, 3 test-logic-only), all found and resolved during this plan's own verification before any commit claimed success.
+Phase: 4 of 6 (Notifications, Reporting & Learning) — COMPLETE
+Plan: 7 of 7 complete in current phase (04-01/04-03 complete prior session; 04-02/04-04 complete earlier this session; 04-05/04-06 complete this session, same parallel wave; 04-07 complete this session)
+Status: Phase 4 complete — Plan 04-07 (incident-to-evidence-trail integration proof) closed 02-06's Reports-tab/Generate-SITREP placeholders, added a Compose-notification action, and proved the full F1→F4→F5→F7 cross-phase Timeline composition end-to-end via Playwright. Ready for Phase 5 planning.
+Last activity: 2026-11-18 — Plan 04-07 complete (see 04-07-SUMMARY.md for full detail). IncidentWorkspace.tsx's Reports tab now renders a real (non-placeholder) list of this incident's finalized AARs with working Generate-SITREP/Generate-AAR actions; PageHeader's Generate-SITREP action rewired from a no-op to the real SitrepGenerator route; a new Compose-notification PageHeader action added (the UX mockup's Navigation Map wiring no prior plan implemented). incident-to-evidence-trail.spec.ts (7 tests) proves one incident's command-role assignment, task creation, sent notification, and finalized AAR compose into a single chronologically-ordered Timeline and evidence trail. Found and fixed a real pre-existing bug in evidence-log.ts: action_type/record_type filters referenced their own SELECT-list output alias in the incident_timeline half of a UNION's WHERE clause, which Postgres can't resolve — every such filtered request was silently 500ing. Full backend suite (67 tests) and design-system suite (51 tests) green; tsc --noEmit and all three workspace builds clean; 4 pre-existing Playwright specs (incident-workspace, reporting, notifications-compose, plan-to-task-materialization — 27 tests total) re-verified with zero regression.
 
-Progress: [█████░░░░░] 50%
+Progress: [███████░░░] 75%
 
 ## Performance Metrics
 
@@ -90,6 +90,7 @@ Progress: [█████░░░░░] 50%
 | Phase 04 P04 | 18 min | 2 tasks | 2 files |
 | Phase 04 P05 | 42 min | 3 tasks | 7 files |
 | Phase 04 P06 | 70 min | 3 tasks | 7 files |
+| Phase 04 P07 | 45 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -197,6 +198,9 @@ Recent decisions affecting current work:
 - [Phase 04-06]: AnalyticsDashboard's Stat tiles pass no `target` prop because `StatProps` has no such field at all — the never-invented-target rule is a structural property of the design-system component, not merely a data-layer promise from the backend
 - [Phase 04-06]: Evidence log's actor-filter Combobox derives options from its own already-fetched rows rather than GET /api/v1/admin/users — planning_logistics_chief (reporting:view) doesn't hold admin:view, so reusing that endpoint would 403 for this view's real audience
 - [Phase 04-06]: PDF export intentionally NOT offered as a UI choice in Evidence Log View — 04-02's format=pdf backend path is a documented guaranteed 500 EXPORT_FAILED; offering a guaranteed-failing option is worse than omitting it
+- [Phase 04-07]: Reports tab's generated-document list reads GET /api/v1/evidence-log?action_type=aar_finalized (client-narrowed by detail.incident_id) rather than a new backend endpoint — 04-02 exposes no "list all reports for this incident" GET, and SITREPs have no equivalent audit-visible write to recover from at all; documented as an honest Phase-4 scope limitation since this tab is not this plan's primary proof target
+- [Phase 04-07]: Fixed a real pre-existing bug in evidence-log.ts: action_type/record_type filters referenced their own SELECT-list output alias (`action`) in the incident_timeline half of the UNION's WHERE clause, which Postgres cannot resolve (it.title is the real column, not a column literally named action) — every such filtered request was silently 500ing, surfaced client-side as a generic "Could not load the evidence log" error
+- [Phase 04-07]: incident-to-evidence-trail.spec.ts uses TWO identities (incident_commander, planning_logistics_chief), not a single-identity shortcut — reporting:edit (gating SITREP save-as-draft and AAR finalize) is held only by planning_logistics_chief per 04-04's seed, discovered when the spec's own first single-identity draft produced false-positive passing assertions
 
 ### Pending Todos
 
@@ -208,6 +212,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-18T06:37:00.000Z
-Stopped at: Completed 04-06-PLAN.md
+Last session: 2026-11-18T07:08:23.431Z
+Stopped at: Completed 04-07-PLAN.md
 Resume file: None
