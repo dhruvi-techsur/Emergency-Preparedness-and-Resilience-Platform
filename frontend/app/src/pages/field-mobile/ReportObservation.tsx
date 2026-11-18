@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Select, TextField, Button, Alert, type SelectOption } from '@epmp/design-system';
 import { uploadFieldReportPhoto } from '../../lib/api-client';
-import { enqueueFieldReport } from '../../lib/offline-queue';
+import { enqueueFieldReport, syncQueueNow } from '../../lib/offline-queue';
 import { FieldMobileShell } from '../../lib/field-mobile-shell';
 import './ReportObservation.css';
 
@@ -34,6 +34,11 @@ interface LocationCapture {
 export function ReportObservation(): JSX.Element {
   const navigate = useNavigate();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  // Holds the most recent submit's client_report_id — the photo-retry
+  // action (below) needs it to re-target the same already-synced report,
+  // and a ref (not state) is correct here since it is write-once-per-submit
+  // and read only from an event handler, never rendered.
+  const lastClientReportIdRef = React.useRef<string>('');
 
   const [observationType, setObservationType] = React.useState(OBSERVATION_TYPE_OPTIONS[0].value);
   const [description, setDescription] = React.useState('');
@@ -43,6 +48,7 @@ export function ReportObservation(): JSX.Element {
   const [locationError, setLocationError] = React.useState<string | null>(null);
   const [validationError, setValidationError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
+  const [photoUploadError, setPhotoUploadError] = React.useState<string | null>(null);
 
   const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -80,6 +86,7 @@ export function ReportObservation(): JSX.Element {
       return;
     }
     setValidationError(null);
+    setPhotoUploadError(null);
     setSubmitting(true);
 
     try {
@@ -87,6 +94,7 @@ export function ReportObservation(): JSX.Element {
       // deferred to sync time, per the FRD's explicit hard requirement.
       const capturedAt = new Date().toISOString();
       const clientReportId = crypto.randomUUID();
+      lastClientReportIdRef.current = clientReportId;
 
       await enqueueFieldReport({
         client_report_id: clientReportId,
@@ -104,19 +112,55 @@ export function ReportObservation(): JSX.Element {
       // that is a documented, bounded gap matching the mockup's own
       // "Photo upload failed post-reconnect" state, which already implies
       // photo delivery can lag behind the report itself.
+      //
+      // The photo-upload route is keyed by the SERVER-assigned
+      // field_reports.id, not client_report_id — enqueueFieldReport's own
+      // fire-and-forget sync (kicked off above) may not have landed yet,
+      // so this explicitly awaits syncQueueNow() itself before attempting
+      // the upload, guaranteeing the field_reports row exists server-side
+      // (the backend's photos routes additionally accept client_report_id
+      // directly as a fallback lookup, so this call is belt-and-suspenders
+      // against any remaining timing gap, not the sole fix).
+      let photoFailed = false;
       if (photo && navigator.onLine) {
         try {
+          await syncQueueNow();
           await uploadFieldReportPhoto(clientReportId, photo);
         } catch {
           // Non-blocking — the report text/location already queued
-          // successfully; a photo upload failure is flagged separately,
+          // successfully; surfaced to the user via photoUploadError below,
           // never blocking the whole report (FRD Process step 7).
+          photoFailed = true;
+          setPhotoUploadError("Photo didn't upload. The rest of your report synced. Retry the photo.");
         }
       }
 
-      navigate('/field');
+      // Only auto-navigate away on a clean success — a failed photo
+      // upload keeps the responder on this screen long enough to actually
+      // SEE the warning Alert above (navigating immediately would unmount
+      // this component before the Alert ever painted, making the message
+      // exist in state but never in front of the user).
+      if (!photoFailed) {
+        navigate('/field');
+      }
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleRetryPhoto = async () => {
+    if (!photo) return;
+    setPhotoUploadError(null);
+    try {
+      // The report itself already synced successfully (that's the only way
+      // photoUploadError could be set) — client_report_id is stable and
+      // re-resolves to the SAME server-assigned field_reports row via the
+      // backend's id-or-client_report_id lookup, so this retry targets the
+      // correct report without re-submitting the report body itself.
+      await uploadFieldReportPhoto(lastClientReportIdRef.current, photo);
+      navigate('/field');
+    } catch {
+      setPhotoUploadError("Photo didn't upload. The rest of your report synced. Retry the photo.");
     }
   };
 
@@ -187,6 +231,18 @@ export function ReportObservation(): JSX.Element {
         </div>
 
         {validationError ? <Alert tone="danger" title={validationError} /> : null}
+
+        {photoUploadError ? (
+          <Alert
+            tone="warning"
+            title={photoUploadError}
+            actions={
+              <Button variant="secondary" size="lg" onClick={() => void handleRetryPhoto()}>
+                Retry the photo
+              </Button>
+            }
+          />
+        ) : null}
       </div>
 
       <div className="ep-report-observation__action-bar">

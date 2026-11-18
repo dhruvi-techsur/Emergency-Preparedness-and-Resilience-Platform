@@ -301,16 +301,40 @@ export default async function fieldReportsRoutes(app: FastifyInstance) {
   // upload. Bytes persist to local disk (object-storage stand-in, see
   // UPLOADS_DIR docstring above) and are read back exclusively through the
   // paired GET route below.
+  //
+  // The `:id` path param is matched against EITHER field_reports.id (the
+  // server-assigned primary key) OR client_report_id (the client-generated
+  // idempotency key) -- ReportObservation.tsx's submit flow only ever has
+  // the client_report_id in hand at the moment it fires this upload
+  // (enqueueFieldReport is queue-first and returns void by design, so the
+  // caller never synchronously learns the server-assigned id). Accepting
+  // both identifier shapes here, resolved to the real field_reports.id
+  // before any INSERT, is what makes a same-request online photo upload
+  // actually resolve instead of 404ing against a client_report_id that
+  // field_reports.id was never equal to.
   app.post<{ Params: { id: string } }>(
     '/api/v1/field-reports/:id/photos',
     { preHandler: requirePermission('field_reports', 'create') },
     async (req, reply) => {
-      const { id } = req.params;
+      const { id: pathId } = req.params;
 
-      const existing = await query<{ id: string }>(`SELECT id FROM field_reports WHERE id = $1`, [id]);
+      // `id::text = $1` (not `id = $1`) -- the path param can be EITHER a
+      // real UUID (field_reports.id) or an arbitrary client-generated
+      // string (client_report_id, VARCHAR(100), not necessarily
+      // UUID-shaped) -- a bare `id = $1` comparison against the uuid
+      // column throws `operator does not exist: uuid = character varying`
+      // when $1 isn't valid UUID syntax, which client_report_id values
+      // frequently aren't. Casting the uuid side to text sidesteps that
+      // entirely and still matches correctly when $1 happens to BE a
+      // UUID string.
+      const existing = await query<{ id: string }>(
+        `SELECT id FROM field_reports WHERE id::text = $1 OR client_report_id = $1`,
+        [pathId],
+      );
       if (!existing[0]) {
         return reply.code(404).send(FIELD_REPORT_NOT_FOUND);
       }
+      const id = existing[0].id;
 
       try {
         const uploadedFile = await req.file();
@@ -347,12 +371,23 @@ export default async function fieldReportsRoutes(app: FastifyInstance) {
   // GET /api/v1/field-reports/{id}/photos/{photoId} -- streams the photo
   // bytes back through this same-origin, permission-gated route. Never
   // exposes storage_ref or a filesystem path to the client (object-store
-  // I/O rule, runtime-environment.md §9a).
+  // I/O rule, runtime-environment.md §9a). Same id-or-client_report_id
+  // resolution as the POST route above, for the same reason.
   app.get<{ Params: { id: string; photoId: string } }>(
     '/api/v1/field-reports/:id/photos/:photoId',
     { preHandler: requirePermission('field_reports', 'view') },
     async (req, reply) => {
-      const { id, photoId } = req.params;
+      const { id: pathId, photoId } = req.params;
+      // Same `id::text = $1` cast reasoning as the POST route above.
+      const reportRows = await query<{ id: string }>(
+        `SELECT id FROM field_reports WHERE id::text = $1 OR client_report_id = $1`,
+        [pathId],
+      );
+      const id = reportRows[0]?.id;
+      if (!id) {
+        return reply.code(404).send(FIELD_REPORT_NOT_FOUND);
+      }
+
       const rows = await query<{ storage_ref: string | null }>(
         `SELECT storage_ref FROM field_report_photos WHERE id = $1 AND field_report_id = $2`,
         [photoId, id],
