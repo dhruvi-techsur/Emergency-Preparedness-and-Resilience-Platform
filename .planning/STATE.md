@@ -2,15 +2,15 @@
 pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-stopped_at: Completed 03-10-PLAN.md — Phase 3 gap closure done (UAT ref uat:1 closed), Phase 3 fully complete, ready for Phase 4 planning
-last_updated: "2026-11-17T21:48:37Z"
-last_activity: "2026-11-17 — Plan 03-10 complete (gap-closure plan closing UAT ref 'uat:1': the one remaining real UI entry point for POST /api/v1/plans/{id}/materialize-tasks, 03-03's already-hardened backend endpoint. New MaterializeTasksModal.tsx — incident Combobox + optional per-section checkbox narrowing filter, renders {created, skipped} results inline as success/warning Alerts with human skip-reason strings, never raw error codes. PlanDetail.tsx gained a 'Materialize tasks' PageHeader action, gated to plan.status === 'Approved' && at least one section with a linked template — structurally impossible to click into a 404/409. plan-to-task-materialization.spec.ts test 5 rewritten to drive the real button/modal (the phase's own e2e suite had pre-emptively documented this exact gap via a raw page.evaluate() fetch); the now-unused apiPostViaPage helper and its stale doc comments removed. plans.spec.ts gained one negative-gating assertion proving the button is absent on a Review-status, zero-template plan, closing the plan's last untested must_haves truth. Zero deviations. Full e2e suite (11 files, 51 tests) + full backend suite (11 files, 55 tests) green; all three builds (design-system, backend, frontend app) clean. Phase 3 (Plans, Tasks & Resource Requests) remains fully complete, now with its one open UAT gap closed.)"
+status: executing
+stopped_at: Completed 04-03-PLAN.md — Progress + LineChart/BarChart/DonutChart design-system components shipped, Phase 4 continues with 04-04 next
+last_updated: "2026-11-18T05:31:54.618Z"
+last_activity: "2026-11-18 — Plan 04-03 complete (Progress determinate progress bar + LineChart/BarChart/DonutChart data-visualization components, closing the design-system component gap this phase's screens need before 04-05/04-06 compose them. Progress: role=progressbar with aria-valuenow/min/max, showValue defaults true so the percentage is always visible text (never width-only decoration), reuses MapCanvas's toneVar helper. LineChart: up to 6 series distinguished by BOTH viz-N color AND marker shape (circle/square/triangle/diamond/cross, 6th-series ring-with-center-dot fallback documented inline), dashed threshold lines (never a color band), Left/Right-arrow keyboard readout rendered as visible <text>, hidden data-table twin. BarChart: grouped/stacked vertical/horizontal bars, values always printed on/beside bars, optional stripe/dot/hatch SVG pattern fills for print/grayscale survival, hidden data-table twin. DonutChart: 2-5 segment ring with center total, always-visible list legend (label+value+percentage for every segment), loud dev-only console.warn past 5 segments while still rendering all of them (never silent truncation), separate hidden data-table twin. New data-viz.test.tsx (5 tests) proves all of the above; full design-system suite (51 tests, 6 files) green; tsc --noEmit and vite build both clean. Zero deviations.)"
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 33
-  completed_plans: 33
+  total_plans: 55
+  completed_plans: 34
   percent: 50
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 3 — Plans, Tasks & Resource Requests (COMPLETE, gap closure done) — ready for Phase 4 planning
+**Current focus:** Phase 4 — Notifications, Reporting & Learning (IN PROGRESS) — Progress + chart components shipped (04-03), 04-04 next
 
 ## Current Position
 
-Phase: 3 of 6 (Plans, Tasks & Resource Requests) — COMPLETE
-Plan: 10 of 10 complete in current phase (03-01 through 03-09 original + 03-10 gap closure — ALL COMPLETE)
-Status: 03-10 complete (gap-closure plan closing UAT ref uat:1 — the "Materialize tasks" UI trigger) — Phase 3 fully done with its one open UAT gap closed, ready for Phase 4 planning
-Last activity: 2026-11-17 — Plan 03-10 complete (gap-closure plan closing UAT ref 'uat:1': the one remaining real UI entry point for POST /api/v1/plans/{id}/materialize-tasks, 03-03's already-hardened backend endpoint. New MaterializeTasksModal.tsx — incident Combobox + optional per-section checkbox narrowing filter, renders {created, skipped} results inline as success/warning Alerts with human skip-reason strings, never raw error codes. PlanDetail.tsx gained a 'Materialize tasks' PageHeader action, gated to plan.status === 'Approved' && at least one section with a linked template — structurally impossible to click into a 404/409. plan-to-task-materialization.spec.ts test 5 rewritten to drive the real button/modal; the now-unused apiPostViaPage helper and its stale doc comments removed. plans.spec.ts gained one negative-gating assertion proving the button is absent on a Review-status, zero-template plan. Zero deviations. Full e2e suite (11 files, 51 tests) + full backend suite (11 files, 55 tests) green; all three builds clean.)
+Phase: 4 of 6 (Notifications, Reporting & Learning) — IN PROGRESS
+Plan: 3 of 7 complete in current phase (04-01, 04-02 pre-existing uncommitted work; 04-03 complete this session)
+Status: Executing — Plan 04-03 complete (Progress + LineChart/BarChart/DonutChart design-system components), 04-04 next
+Last activity: 2026-11-18 — Plan 04-03 complete (Progress determinate progress bar + LineChart/BarChart/DonutChart data-visualization components, closing the design-system component gap this phase's screens need before 04-05/04-06 compose them. Progress: role=progressbar with aria-valuenow/min/max, showValue defaults true so the percentage is always visible text (never width-only decoration), reuses MapCanvas's toneVar helper. LineChart: up to 6 series distinguished by BOTH viz-N color AND marker shape (circle/square/triangle/diamond/cross, 6th-series ring-with-center-dot fallback documented inline), dashed threshold lines (never a color band), Left/Right-arrow keyboard readout rendered as visible <text>, hidden data-table twin. BarChart: grouped/stacked vertical/horizontal bars, values always printed on/beside bars, optional stripe/dot/hatch SVG pattern fills for print/grayscale survival, hidden data-table twin. DonutChart: 2-5 segment ring with center total, always-visible list legend (label+value+percentage for every segment), loud dev-only console.warn past 5 segments while still rendering all of them (never silent truncation), separate hidden data-table twin. New data-viz.test.tsx (5 tests) proves all of the above; full design-system suite (51 tests, 6 files) green; tsc --noEmit and vite build both clean. Zero deviations.)
 
 Progress: [█████░░░░░] 50%
 
@@ -84,6 +84,7 @@ Progress: [█████░░░░░] 50%
 | Phase 03 P08 | 35 min | 2 tasks | 4 files |
 | Phase 03 P09 | 50 min | 2 tasks | 3 files |
 | Phase 03 P10 | 25 min | 3 tasks | 4 files |
+| Phase 04 P03 | 25 min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -173,6 +174,8 @@ Recent decisions affecting current work:
 - [Phase 03-09]: Resource-marker MapPopup renders directly from the thin marker object already in the polled markers array (no extra GET /api/v1/resource-requests/{id} fetch) — unlike the incident popup, which needs full detail (jurisdiction name, opened_at) the thin marker shape doesn't carry
 - [Phase 03-10]: Section checkboxes in MaterializeTasksModal are an opt-in NARROWING filter (default: all eligible sections' templates materialize), not a required per-section selection — matches the FRD's one-click framing and the backend's own optional section_ids param
 - [Phase 03-10]: Exactly one new entry point for materialize-tasks (the PlanDetail PageHeader action) — no second affordance on the sections list or version-history sidebar, since per-section "Link tasks" (03-08) is a separate authoring concern from materializing
+- [Phase 04-03]: LineChart's 6th-series marker shape (the spec names exactly 5: circle/square/triangle/diamond/cross) resolved as a ring with a contrasting center dot — visually distinct from series-1's filled circle even in grayscale/print
+- [Phase 04-03]: DonutChart's >5-segment caller-contract violation is a dev-only console.warn (gated on process.env.NODE_ENV), never a thrown error or silent truncation — all segments always render regardless of count
 
 ### Pending Todos
 
@@ -184,6 +187,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-17T21:48:37Z
-Stopped at: Completed 03-10-PLAN.md — Phase 3 gap closure done (UAT ref uat:1 closed), Phase 3 fully complete, ready for Phase 4 planning
+Last session: 2026-11-18T05:31:54.616Z
+Stopped at: Completed 04-03-PLAN.md — Progress + LineChart/BarChart/DonutChart design-system components shipped, Phase 4 continues with 04-04 next
 Resume file: None
