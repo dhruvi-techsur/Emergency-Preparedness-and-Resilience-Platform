@@ -126,7 +126,7 @@ Plans:
   3. A user can view a per-recipient delivery and acknowledgment tracking table showing current status for any sent notification.
   4. A user can generate ICS-standard output/SITREPs and an initial after-action report (timeline export, decisions log, resource-request history, findings/corrective-action list) directly from an incident's existing data, without manually re-entering it.
   5. A user can view an append-only, exportable evidence/audit log and an analytics/reporting dashboard summarizing incident, task, and resource-request activity.
-**Plans:** 7 plans
+**Plans:** 9 plans
 
 Plans:
 - [ ] 04-01-PLAN.md — Backend comms-reporting module: recipient-groups/message-templates CRUD, compose→send lifecycle, delivery-status tracking, shared assertAiOriginApproved AI-governance guard
@@ -136,6 +136,8 @@ Plans:
 - [ ] 04-05-PLAN.md — Frontend: Recipient Groups, Message Templates, Compose Notification (4-step), Delivery & Acknowledgment Tracking
 - [ ] 04-06-PLAN.md — Frontend: SITREP Generator, AAR Generator, Evidence & Audit Log View, Analytics & Reporting Dashboard
 - [ ] 04-07-PLAN.md — Integration: wire Reports tab + Compose-notification action into Incident Workspace, end-to-end cross-phase Timeline/evidence-trail proof
+- [ ] 04-08-PLAN.md — Gap closure (UAT refs 2/3/5): Notifications landing page + SideNav repoint (Compose's missing non-incident reach-path), OIDC deep-link return-path, disabled "Generate AAR" explanation
+- [ ] 04-09-PLAN.md — Gap closure (UAT ref 4, cosmetic): distinct PERMISSION_DENIED error for a resolved role missing one specific action, vs ROLE_UNRESOLVED's genuine no-role case
 
 ### Phase 5: Mobile Field Operations
 **Goal**: Field responders can submit structured observations and task updates from an installable mobile web app that keeps working fully offline and reconciles safely when connectivity returns — so field-to-EOC reporting never silently loses or overwrites data.
