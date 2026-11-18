@@ -35,7 +35,25 @@ interface EvidenceLogFilters {
 // UNION — each half starts its own $-param numbering from 1 since they're
 // combined via a single outer query wrapping the UNION ALL, not literal
 // string concatenation sharing one param list.
-function buildFilterConditions(filters: EvidenceLogFilters, startIdx: number): { clause: string; params: unknown[] } {
+//
+// [Rule 1 - Bug fix, discovered during 04-07's own Playwright run]:
+// `actionColumn`/`recordTypeColumn` let each half's WHERE clause reference
+// its OWN real underlying column rather than always writing the literal
+// `action`/`record_type` output-alias names. audit_log's SELECT list
+// already names its columns `action`/`record_type` with no renaming, so
+// those identifiers happen to also be real column names there — but
+// incident_timeline's half selects `it.title AS action` (there is no
+// `action` column on that table at all), and Postgres's WHERE clause is
+// evaluated BEFORE the SELECT list, so it cannot see a SELECT-list alias —
+// `action = $N` against that half raised a bare `column "action" does not
+// exist`, which `fetchEvidenceLogRows`'s caller silently turned into "Could
+// not load the evidence log" for EVERY `action_type`-filtered request, not
+// just this plan's own AAR-finalized lookup.
+function buildFilterConditions(
+  filters: EvidenceLogFilters,
+  startIdx: number,
+  columns: { actionColumn: string; recordTypeColumn: string },
+): { clause: string; params: unknown[] } {
   const conditions: string[] = [];
   const params: unknown[] = [];
   let idx = startIdx;
@@ -45,11 +63,11 @@ function buildFilterConditions(filters: EvidenceLogFilters, startIdx: number): {
     params.push(filters.actor_id);
   }
   if (filters.action_type) {
-    conditions.push(`action = $${idx++}`);
+    conditions.push(`${columns.actionColumn} = $${idx++}`);
     params.push(filters.action_type);
   }
   if (filters.record_type) {
-    conditions.push(`record_type = $${idx++}`);
+    conditions.push(`${columns.recordTypeColumn} = $${idx++}`);
     params.push(filters.record_type);
   }
   if (filters.date_range) {
@@ -80,7 +98,10 @@ async function fetchEvidenceLogRows(
   // EXCLUDED: FRD's "Actor (Avatar + name)" column requires a real actor
   // to render, and a null-actor row has no person for that column — a
   // documented narrowing, not a bug.
-  const auditFilters = buildFilterConditions(filters, 1);
+  const auditFilters = buildFilterConditions(filters, 1, {
+    actionColumn: 'al.action',
+    recordTypeColumn: 'al.record_type',
+  });
   const auditSql = `
     SELECT al.id, al.actor_id, u.name AS actor_name, al.action, al.record_type, al.record_id,
            al.occurred_at, al.detail, 'audit_log' AS source_table
@@ -90,7 +111,16 @@ async function fetchEvidenceLogRows(
   `;
 
   const timelineStartIdx = auditFilters.params.length + 1;
-  const timelineFilters = buildFilterConditions(filters, timelineStartIdx);
+  // incident_timeline has no real `record_type` column at all (the
+  // SELECT list's 'incident' is a hard-coded literal, not a column) — so
+  // its "column" reference for that filter is the identical literal
+  // re-stated, which Postgres evaluates as a constant equality check
+  // rather than an identifier lookup (correctly matching/no-matching
+  // depending on whether the caller filtered for record_type=incident).
+  const timelineFilters = buildFilterConditions(filters, timelineStartIdx, {
+    actionColumn: 'it.title',
+    recordTypeColumn: "'incident'",
+  });
   const timelineSql = `
     SELECT it.id, it.actor_id, u.name AS actor_name, it.title AS action, 'incident' AS record_type,
            it.incident_id AS record_id, it.occurred_at, it.detail, 'incident_timeline' AS source_table
