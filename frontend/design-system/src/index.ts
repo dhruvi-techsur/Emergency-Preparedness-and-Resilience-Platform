@@ -92,6 +92,8 @@ export type { LayerPanelProps, MapLayer } from './maps/LayerPanel';
 // PRODUCT PATTERNS
 export { Provenance } from './product-patterns/Provenance';
 export type { ProvenanceProps } from './product-patterns/Provenance';
+export { SyncStatus } from './product-patterns/SyncStatus';
+export type { SyncStatusProps, SyncStatusState } from './product-patterns/SyncStatus';
 
 // DATA VISUALIZATION
 export { LineChart } from './data/LineChart';

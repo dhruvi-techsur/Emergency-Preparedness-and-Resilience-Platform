@@ -1,0 +1,71 @@
+/*
+ * SyncStatus (PRODUCT PATTERNS) — token-only styling.
+ *
+ * Every color/radius/spacing/motion value below is a var(--token) reference
+ * into tokens.css. No hex literal, no arbitrary px, no shadow.
+ */
+
+.ep-sync-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  border: var(--border-1) solid transparent;
+  background: transparent;
+  font-family: var(--font-sans);
+  cursor: default;
+}
+
+/* The root renders as a <button> only when `onClick` is provided (see
+   SyncStatus.tsx) — these rules only matter in that interactive case. */
+button.ep-sync-status {
+  cursor: pointer;
+}
+button.ep-sync-status:focus-visible {
+  outline: var(--border-2) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.ep-sync-status__word {
+  color: inherit;
+}
+
+.ep-sync-status__detail {
+  color: inherit;
+  opacity: 0.85;
+}
+
+/* Tones — mirrors Badge.css's subtle-background/text-color pairing exactly,
+   so SyncStatus reads as the same family of status indicator. */
+.ep-sync-status--success {
+  background: var(--success-subtle);
+  color: var(--success-text);
+}
+.ep-sync-status--brand {
+  background: var(--brand-subtle);
+  color: var(--brand-text);
+}
+.ep-sync-status--warning {
+  background: var(--warning-subtle);
+  color: var(--warning-text);
+}
+.ep-sync-status--danger {
+  background: var(--danger-subtle);
+  color: var(--danger-text);
+}
+
+/*
+ * Syncing spin: reuses Button.css's existing `ep-btn-spin` @keyframes by
+ * NAME rather than redefining it here. Keyframes are global CSS (not
+ * module-scoped), and Button is always part of the design system's public
+ * bundle (exported from src/index.ts alongside every other component), so
+ * `@keyframes ep-btn-spin` is guaranteed present in the shipped bundle.css
+ * any consumer of SyncStatus also loads. Per this plan's own instruction:
+ * "do not duplicate the keyframe definition if a shared one can be
+ * referenced" — this is that case.
+ */
+.ep-sync-status__icon-spin {
+  display: inline-flex;
+  animation: ep-btn-spin var(--duration-slow) linear infinite;
+}
