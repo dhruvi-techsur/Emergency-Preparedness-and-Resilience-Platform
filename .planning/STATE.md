@@ -3,15 +3,15 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-07-PLAN.md
-last_updated: "2026-11-18T07:08:23.431Z"
-last_activity: 2026-11-18 — Plan 04-07 complete (incident-to-evidence-trail integration proof — see Accumulated Context decisions below for full detail, and 04-07-SUMMARY.md for complete detail). Phase 4 is now FULLY COMPLETE (all 7 plans). Closed 02-06's Reports-tab/Generate-SITREP placeholders in IncidentWorkspace.tsx, added a new incident-linked Compose-notification PageHeader action, and proved — via a 7-test Playwright spec — that one incident's command-role assignment, task creation, sent notification, and finalized AAR compose into a single chronologically-ordered Timeline and evidence trail across all 4 phases' modules. Found and fixed a real pre-existing bug in evidence-log.ts: action_type/record_type filters 500'd on the incident_timeline half of its UNION query (WHERE clause referenced its own SELECT-list alias, which Postgres can't resolve). Full backend suite (67 tests) and design-system suite (51 tests) green; tsc --noEmit and all three workspace builds clean; 4 pre-existing Playwright specs re-verified with zero regression.
+stopped_at: Completed 04-09-PLAN.md
+last_updated: "2026-11-18T12:43:53.000Z"
+last_activity: "2026-11-18 — Plan 04-09 complete (RBAC error-message accuracy gap closure — see 04-09-SUMMARY.md for full detail). Closed UAT gap ref 4 (cosmetic): requirePermission()'s checkPermission()-false branch now returns a new PERMISSION_DENIED error_code/message (\"your role doesn't include this action\") instead of the misleading ROLE_UNRESOLVED (\"isn't assigned a role yet\"), for the common case of a resolved role simply lacking one specific action grant (e.g. incident_commander attempting reporting:edit). ROLE_UNRESOLVED left unchanged, confirmed still exclusively used by the SSO callback's genuine role-resolution-failure path. New dedicated rbac.test.ts (3 tests) proves the distinction against real OPA policy evaluation; one pre-existing notifications.test.ts assertion updated to match. Full backend suite green at 70/70 tests across 14 files; tsc --noEmit and backend build clean. Phase 4's 04-08 gap-closure plan remains in progress independently (uncommitted working tree changes, no SUMMARY yet) — not part of this plan's scope."
 progress:
   total_phases: 6
-  completed_phases: 4
-  total_plans: 55
+  completed_phases: 3
+  total_plans: 57
   completed_plans: 41
-  percent: 75
+  percent: 50
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 4 — Notifications, Reporting & Learning (COMPLETE) — all 7 plans shipped: comms-reporting Notifications backend (04-01), Reporting & Learning backend (04-02), Progress + chart components (04-03), role-permission seed grants (04-04), Notifications frontend screens (04-05), Reporting & Learning frontend screens (04-06), and the phase's terminal cross-phase integration proof (04-07). Ready for Phase 5.
+**Current focus:** Phase 4 — Notifications, Reporting & Learning (gap closure in progress) — all 7 original plans shipped plus one gap-closure plan this session (04-09); a second gap-closure plan (04-08) remains independently in progress with no SUMMARY yet.
 
 ## Current Position
 
-Phase: 4 of 6 (Notifications, Reporting & Learning) — COMPLETE
-Plan: 7 of 7 complete in current phase (04-01/04-03 complete prior session; 04-02/04-04 complete earlier this session; 04-05/04-06 complete this session, same parallel wave; 04-07 complete this session)
-Status: Phase 4 complete — Plan 04-07 (incident-to-evidence-trail integration proof) closed 02-06's Reports-tab/Generate-SITREP placeholders, added a Compose-notification action, and proved the full F1→F4→F5→F7 cross-phase Timeline composition end-to-end via Playwright. Ready for Phase 5 planning.
-Last activity: 2026-11-18 — Plan 04-07 complete (see 04-07-SUMMARY.md for full detail). IncidentWorkspace.tsx's Reports tab now renders a real (non-placeholder) list of this incident's finalized AARs with working Generate-SITREP/Generate-AAR actions; PageHeader's Generate-SITREP action rewired from a no-op to the real SitrepGenerator route; a new Compose-notification PageHeader action added (the UX mockup's Navigation Map wiring no prior plan implemented). incident-to-evidence-trail.spec.ts (7 tests) proves one incident's command-role assignment, task creation, sent notification, and finalized AAR compose into a single chronologically-ordered Timeline and evidence trail. Found and fixed a real pre-existing bug in evidence-log.ts: action_type/record_type filters referenced their own SELECT-list output alias in the incident_timeline half of a UNION's WHERE clause, which Postgres can't resolve — every such filtered request was silently 500ing. Full backend suite (67 tests) and design-system suite (51 tests) green; tsc --noEmit and all three workspace builds clean; 4 pre-existing Playwright specs (incident-workspace, reporting, notifications-compose, plan-to-task-materialization — 27 tests total) re-verified with zero regression.
+Phase: 4 of 6 (Notifications, Reporting & Learning) — gap closure in progress (04-08 still open independently)
+Plan: 9 plans present in phase dir, 8 have SUMMARYs (04-01 through 04-07 original + 04-09 gap closure this session); 04-08 gap closure still in progress, not part of this plan's scope
+Status: Plan 04-09 (RBAC error-message accuracy gap closure) closed UAT gap ref 4 — requirePermission()'s denial branch now returns PERMISSION_DENIED instead of the misleading ROLE_UNRESOLVED for a resolved role missing one specific action.
+Last activity: 2026-11-18 — Plan 04-09 complete (see 04-09-SUMMARY.md for full detail). New PERMISSION_DENIED error_code/message in rbac.ts, returned by requirePermission()'s checkPermission()-false branch; ROLE_UNRESOLVED left unchanged and confirmed still exclusively used by the SSO callback's genuine role-resolution-failure path. New dedicated rbac.test.ts (3 tests) proves the distinction against real OPA policy evaluation. Full backend suite green at 70/70 tests across 14 files; tsc --noEmit and backend build clean.
 
-Progress: [███████░░░] 75%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -91,6 +91,7 @@ Progress: [███████░░░] 75%
 | Phase 04 P05 | 42 min | 3 tasks | 7 files |
 | Phase 04 P06 | 70 min | 3 tasks | 7 files |
 | Phase 04 P07 | 45 min | 2 tasks | 3 files |
+| Phase 04 P09 | 15 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -201,6 +202,7 @@ Recent decisions affecting current work:
 - [Phase 04-07]: Reports tab's generated-document list reads GET /api/v1/evidence-log?action_type=aar_finalized (client-narrowed by detail.incident_id) rather than a new backend endpoint — 04-02 exposes no "list all reports for this incident" GET, and SITREPs have no equivalent audit-visible write to recover from at all; documented as an honest Phase-4 scope limitation since this tab is not this plan's primary proof target
 - [Phase 04-07]: Fixed a real pre-existing bug in evidence-log.ts: action_type/record_type filters referenced their own SELECT-list output alias (`action`) in the incident_timeline half of the UNION's WHERE clause, which Postgres cannot resolve (it.title is the real column, not a column literally named action) — every such filtered request was silently 500ing, surfaced client-side as a generic "Could not load the evidence log" error
 - [Phase 04-07]: incident-to-evidence-trail.spec.ts uses TWO identities (incident_commander, planning_logistics_chief), not a single-identity shortcut — reporting:edit (gating SITREP save-as-draft and AAR finalize) is held only by planning_logistics_chief per 04-04's seed, discovered when the spec's own first single-identity draft produced false-positive passing assertions
+- [Phase 04-09]: requirePermission()'s checkPermission()-false branch now returns a new PERMISSION_DENIED error_code/message, not ROLE_UNRESOLVED — ROLE_UNRESOLVED stays reserved exclusively for the SSO callback's genuine role-resolution-failure path, since users.role_id is NOT NULL REFERENCES roles(id) and can never be unresolved once a users row exists at all; a resolved role lacking an action gets the SAME PERMISSION_DENIED response whether it holds zero or some-but-not-this grants on the feature
 
 ### Pending Todos
 
@@ -212,6 +214,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-18T07:08:23.431Z
-Stopped at: Completed 04-07-PLAN.md
+Last session: 2026-11-18T12:43:53.000Z
+Stopped at: Completed 04-09-PLAN.md
 Resume file: None
