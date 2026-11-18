@@ -15,8 +15,15 @@ import { Skeleton } from '@epmp/design-system';
  *    the local user, and mints EPMP's own short-lived session JWT.
  * 3. The returned `session_token` is stored via session-storage.ts
  *    (sessionStorage, never localStorage — threat register T-01-21).
- * 4. Redirect to `/` (Phase 1 has no deep-link return-path tracking yet;
- *    the shell's own RouteGuard resolves the landing route from there).
+ * 4. Read `oidcUser.state` back — the path+query `RouteGuard.tsx`'s
+ *    unauthenticated-branch effect forwarded into `signIn()` before the
+ *    redirect (04-08 gap closure) — and `navigate()` there instead of the
+ *    old unconditional `navigate('/')`. `state` is typed `unknown` by
+ *    oidc-client-ts, so it's type-guarded to a non-empty string starting
+ *    with `/` (and never `/auth/callback` itself, to avoid a pathological
+ *    self-redirect loop) before ever reaching `navigate()`; anything else
+ *    (including the common case of no return path at all) falls back to
+ *    `/`, exactly as before.
  */
 export function SignInCallback(): JSX.Element {
   const navigate = useNavigate();
@@ -68,7 +75,13 @@ export function SignInCallback(): JSX.Element {
 
         const { session_token } = (await res.json()) as { session_token: string };
         setSessionToken(session_token);
-        navigate('/', { replace: true });
+
+        const state = oidcUser.state;
+        const returnPath =
+          typeof state === 'string' && state.startsWith('/') && state !== '/auth/callback'
+            ? state
+            : '/';
+        navigate(returnPath, { replace: true });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Sign-in failed.');
       }
