@@ -2,16 +2,16 @@
 pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Plan 05-03 shipped Field Home/My Tasks/Report Observation — the phase's success-criterion-1 screens — proven end-to-end via Playwright against the real 05-01 backend using 05-05's seeded field-responder identity. 05-04 remains (wave 4).
-stopped_at: Completed 05-03-PLAN.md
-last_updated: "2026-11-18T14:57:06.000Z"
-last_activity: "2026-11-18 — Plan 05-03 complete (see 05-03-SUMMARY.md for full detail), run after 05-01/05-02/05-05. Built FieldMobileShell (shared SyncStatus-pinning wrapper) plus Field Home (/field), My Tasks field view (/field/tasks, one-tap Start/Mark done), and Report Observation (/field/report, photo+location capture, offline-first submit). Extended offline-queue.ts with a second tasks_status IndexedDB object store (DB_VERSION 1->2) and enqueueTaskStatusChange; added a camera icon to the design system and uploadFieldReportPhoto to api-client.ts. Wired this plan's 3 field-mobile routes into main.tsx so its own Playwright spec could exercise them end-to-end. Playwright spec proves both the exact empty-report validation message and the full queue-first submit-then-navigate flow. 1 auto-fixed Rule 3 deviation (offline-queue.test.ts broke against the new DB_VERSION/apiPatch mock, fixed). Both frontend/app and backend builds clean; frontend/app vitest (5 tests) + design-system vitest (59 tests) both green."
+status: Phase 5 (Mobile Field Operations) complete — all 5 plans shipped. Plan 05-04 closed out the phase, wiring all 6 field-mobile routes + a role-driven bottom-nav and proving sync-conflict resolution end-to-end. Ready for Phase 6.
+stopped_at: Completed 05-04-PLAN.md
+last_updated: "2026-11-18T15:30:00.000Z"
+last_activity: 2026-11-18 — Plan 05-04 complete (see 05-04-SUMMARY.md for full detail), the last plan of Phase 5. Shipped Queued Submissions View (/field/queued), Sync Conflict Resolution (/field/conflicts/:id), and Field Map (/field/map); wired all 6 field-mobile routes into main.tsx and a new role-driven 4-item bottom-nav group into GET /api/v1/me/nav-config. A new Playwright spec seeds a real conflict via the production sync-batch endpoint and proves the full detect-surface-resolve-commit chain with no default button selection. Phase 5 (Mobile Field Operations) is now fully complete.
 progress:
   total_phases: 6
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 57
-  completed_plans: 46
-  percent: 69
+  completed_plans: 48
+  percent: 83
 ---
 
 # Project State
@@ -21,14 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 5 — Mobile Field Operations — IN PROGRESS. Plan 05-01 (backend data layer + API) complete. Plan 05-02 (SyncStatus component + offline-queue library + PWA scaffolding) complete, run in parallel with 05-01. Plan 05-05 (field_reports RBAC seed + real field-responder Keycloak identity) complete. Plan 05-03 (Field Home/My Tasks/Report Observation screens) complete. 05-04 remains (wave 4).
+**Current focus:** Phase 5 — Mobile Field Operations — COMPLETE. All 5 plans shipped (05-01, 05-02, 05-05, 05-03, 05-04). Every F6 screen is built, routed, and reachable via a role-driven bottom-nav; all 4 phase success criteria verified end-to-end against the real backend. Ready for Phase 6.
 
 ## Current Position
 
-Phase: 5 of 6 (Mobile Field Operations) — IN PROGRESS
-Plan: 4 of 5 complete in current phase (05-01, 05-02, 05-05, 05-03 done; 05-04 pending, wave 4)
-Status: Plan 05-03 shipped Field Home/My Tasks/Report Observation — the phase's success-criterion-1 screens — proven end-to-end via Playwright against the real 05-01 backend using 05-05's seeded field-responder identity. 05-04 remains (wave 4).
-Last activity: 2026-11-18 — Plan 05-03 complete (see 05-03-SUMMARY.md for full detail), run after 05-01/05-02/05-05. Built FieldMobileShell (shared SyncStatus-pinning wrapper) plus Field Home (/field), My Tasks field view (/field/tasks, one-tap Start/Mark done), and Report Observation (/field/report, photo+location capture, offline-first submit). Extended offline-queue.ts with a second tasks_status IndexedDB object store (DB_VERSION 1->2) and enqueueTaskStatusChange; added a camera icon to the design system and uploadFieldReportPhoto to api-client.ts. Wired this plan's 3 field-mobile routes into main.tsx so its own Playwright spec could exercise them end-to-end. Playwright spec proves both the exact empty-report validation message and the full queue-first submit-then-navigate flow. 1 auto-fixed Rule 3 deviation (offline-queue.test.ts broke against the new DB_VERSION/apiPatch mock, fixed). Both frontend/app and backend builds clean; frontend/app vitest (5 tests) + design-system vitest (59 tests) both green.
+Phase: 5 of 6 (Mobile Field Operations) — COMPLETE
+
+Plan: 5 of 5 complete in current phase (05-01, 05-02, 05-05, 05-03, 05-04 all done)
+Status: Phase 5 (Mobile Field Operations) complete — all 5 plans shipped. Plan 05-04 closed out the phase, wiring all 6 field-mobile routes + a role-driven bottom-nav and proving sync-conflict resolution end-to-end. Ready for Phase 6.
+Last activity: 2026-11-18 — Plan 05-04 complete (see 05-04-SUMMARY.md for full detail), the last plan of Phase 5. Shipped Queued Submissions View (/field/queued), Sync Conflict Resolution (/field/conflicts/:id), and Field Map (/field/map); wired all 6 field-mobile routes into main.tsx and a new role-driven 4-item bottom-nav group into GET /api/v1/me/nav-config (the first plan to populate role_landing_config's intended field-mobile destination set). AppShell.tsx needed no edit — confirmed its bottom-bar wiring already derives mobileBottomBarItems generically. A new Playwright spec seeds a real conflict via the production sync-batch endpoint (same mechanism 05-01's own backend integration test uses) and proves the full detect-surface-resolve-commit chain with no default button selection, resolution committed server-side. Both frontend/app and backend builds clean; frontend/app vitest (5 tests) + design-system vitest (59 tests) both green; this plan's own Playwright spec (2 tests) + the pre-existing field-mobile-report.spec.ts (1 test, regression check) both pass. One pre-existing, out-of-scope test-isolation flake in tasks.test.ts logged to deferred-items.md (confirmed unrelated, passes in isolation).
+
+Plan 05-03 (prior): shipped Field Home/My Tasks/Report Observation — the phase's success-criterion-1 screens — proven end-to-end via Playwright against the real 05-01 backend using 05-05's seeded field-responder identity. Built FieldMobileShell (shared SyncStatus-pinning wrapper). Extended offline-queue.ts with a second tasks_status IndexedDB object store (DB_VERSION 1->2) and enqueueTaskStatusChange; added a camera icon to the design system and uploadFieldReportPhoto to api-client.ts.
 
 Plan 05-05 (prior): closed the final F6 gap — idempotent field_reports role_permissions grants and a real Keycloak-seeded field_responder identity, proven end-to-end through OPA with 3 new integration tests, so 05-03/05-04's field-mobile screens can sign in as a real seeded user from the start. Extended backend/scripts/seed.ts with idempotent field_reports grants (field_responder: view/create/resolve; incident_commander/eoc_director: view/resolve; planning_logistics_chief: view), added a fourth seeded Keycloak group/user (epmp-field-responders / field-responder@epmp.local) to epmp-realm.json, and added the canonical signInAsFieldResponder Playwright helper to sign-in.ts. Full backend suite (15 files, 77 tests) green with zero regression.
 
@@ -36,7 +39,7 @@ Plan 05-02 (prior): shipped the client-side half of F6 — SyncStatus design-sys
 
 Plan 05-01 (prior, backend): shipped the F6 backend data layer and API surface — field_reports/field_report_photos/sync_conflicts tables plus idempotent-submit/ordered-batch-sync/photo-upload/conflict-resolve endpoints, every incident-touching write wrapped in the shared withTimelineTransaction invariant. Integration test (4 cases) + full backend suite (15 files, 74 tests) green with zero regression; tsc --noEmit and backend build both clean.
 
-Progress: [███████░░░] 69%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
@@ -103,6 +106,7 @@ Progress: [███████░░░] 69%
 | Phase 05-02 P02 | 35 min | 3 tasks | 12 files |
 | Phase 05 P05 | 25 min | 2 tasks | 4 files |
 | Phase 05 P03 | 35 min | 3 tasks | 12 files |
+| Phase 05 P04 | 55 min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -228,6 +232,10 @@ Recent decisions affecting current work:
 - [Phase 05-03]: My Tasks' status-update tap degrades ANY apiPatch failure (not just navigator.onLine===false) to the same queued path — a field app should never make a tap feel lost regardless of why the network call failed
 - [Phase 05-03]: Report Observation's photo upload stays best-effort-online-only in this plan's scope (not IndexedDB-queued) — enqueueFieldReport already guarantees the report text/location is never lost; a documented, bounded gap
 - [Phase 05-03]: This plan wired its own 3 field-mobile routes (field, field/tasks, field/report) into main.tsx now rather than leaving all 6 for 05-04, since this plan's own Playwright spec needed them live to prove the offline-first submit flow end-to-end
+- [Phase 05-04]: Added GET /api/v1/sync-conflicts/:id (single-record lookup) to 05-01's sync-conflicts.ts rather than client-side .find()-ing the unresolved-only list, since an already-resolved conflict revisited (e.g. browser back) would otherwise 404 against that list
+- [Phase 05-04]: Field Map's queued/pending markers reuse MapMarkerType='resource' (the closest existing design-system type) with a dashed CSS outline for visual distinction, rather than widening the shared MapMarker union that 02-07/03-09 and other map consumers depend on unchanged
+- [Phase 05-04]: nav-config's new 'Field' bottom-bar group routes both 'Tasks' and 'Profile' to /field — 'Tasks' per the Navigation Map's documented landing-tab convention, 'Profile' because no dedicated screen exists anywhere in F6's scope and AppShell's header Avatar menu remains the real profile entry point at every breakpoint
+- [Phase 05-04]: AppShell.tsx required no code change — confirmed (not assumed) its isBelowBpMd branch already derives mobileBottomBarItems generically via navGroups.flatMap(g => g.items)
 
 ### Pending Todos
 
@@ -239,6 +247,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-18T14:57:06.000Z
-Stopped at: Completed 05-03-PLAN.md
+Last session: 2026-11-18T15:30:00.000Z
+Stopped at: Completed 05-04-PLAN.md
 Resume file: None
