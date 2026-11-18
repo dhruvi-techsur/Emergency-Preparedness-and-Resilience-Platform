@@ -89,6 +89,7 @@ async function fetchEvidenceLogRows(
   filters: EvidenceLogFilters,
   page_size: number,
   offset: number,
+  jurisdictionScope: string[],
 ): Promise<{ items: EvidenceLogRow[]; total: number }> {
   // Two read-only SELECTs, same filter params applied to both halves
   // BEFORE the UNION combines them, per this plan's own instruction —
@@ -98,6 +99,14 @@ async function fetchEvidenceLogRows(
   // EXCLUDED: FRD's "Actor (Avatar + name)" column requires a real actor
   // to render, and a null-actor row has no person for that column — a
   // documented narrowing, not a bug.
+  //
+  // audit_log has no incident_id/jurisdiction link in its schema at all
+  // (it records platform/admin events like login, sso_config_change,
+  // user_suspend that aren't inherently incident- or jurisdiction-scoped)
+  // — left unscoped here, matching 04-SECURITY.md's F-02 fix note that
+  // this half "likely needs... an explicit product decision" rather than
+  // a mechanical filter; no incident/jurisdiction column exists to filter
+  // on without a schema change, so none is fabricated here.
   const auditFilters = buildFilterConditions(filters, 1, {
     actionColumn: 'al.action',
     recordTypeColumn: 'al.record_type',
@@ -121,15 +130,24 @@ async function fetchEvidenceLogRows(
     actionColumn: 'it.title',
     recordTypeColumn: "'incident'",
   });
+  // Jurisdiction-scope gate (F-02 fix) — joins through incidents and
+  // filters by the caller's own jurisdiction_scope, mirroring
+  // analytics.ts's own correct `i.jurisdiction_id = ANY($N)` pattern in
+  // this same module. Without this, any reporting:view holder (down to
+  // field_responder, the lowest-privilege seeded role) could read
+  // Timeline rows from incidents entirely outside their jurisdiction.
+  const jurisdictionIdx = timelineStartIdx + timelineFilters.params.length;
   const timelineSql = `
     SELECT it.id, it.actor_id, u.name AS actor_name, it.title AS action, 'incident' AS record_type,
            it.incident_id AS record_id, it.occurred_at, it.detail, 'incident_timeline' AS source_table
     FROM incident_timeline it
+    JOIN incidents i ON i.id = it.incident_id
     LEFT JOIN users u ON u.id = it.actor_id
     ${timelineFilters.clause ? `${timelineFilters.clause} AND it.actor_id IS NOT NULL` : 'WHERE it.actor_id IS NOT NULL'}
+    AND i.jurisdiction_id = ANY($${jurisdictionIdx})
   `;
 
-  const allParams = [...auditFilters.params, ...timelineFilters.params];
+  const allParams = [...auditFilters.params, ...timelineFilters.params, jurisdictionScope];
 
   const countRows = await query<{ count: string }>(
     `SELECT COUNT(*)::int AS count FROM (${auditSql} UNION ALL ${timelineSql}) combined`,
@@ -165,6 +183,7 @@ export default async function evidenceLogRoutes(app: FastifyInstance) {
         { date_range, actor_id, action_type, record_type },
         page_size,
         offset,
+        req.epmpUser!.jurisdiction_scope,
       );
 
       return reply.code(200).send({
@@ -207,7 +226,12 @@ export default async function evidenceLogRoutes(app: FastifyInstance) {
       // page_size caps unbounded growth while still satisfying "exports
       // the exact filtered view on screen" for realistic evidence-log
       // sizes within this phase's scope.
-      const { items } = await fetchEvidenceLogRows({ date_range, actor_id, action_type, record_type }, 10000, 0);
+      const { items } = await fetchEvidenceLogRows(
+        { date_range, actor_id, action_type, record_type },
+        10000,
+        0,
+        req.epmpUser!.jurisdiction_scope,
+      );
 
       const header = 'timestamp,actor,action,record_type,record_id\n';
       const csvEscape = (value: string) => `"${value.replace(/"/g, '""')}"`;
