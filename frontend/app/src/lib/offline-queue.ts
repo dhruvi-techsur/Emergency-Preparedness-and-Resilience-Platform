@@ -52,6 +52,21 @@ export interface QueueSnapshot {
    */
   queuedCount: number;
   items: QueuedFieldReport[];
+  /**
+   * Queued task-status changes (05-03's SECOND object store) — kept as a
+   * SEPARATE array rather than merged into `items` above, since
+   * QueuedFieldReport and QueuedTaskStatusChange have materially
+   * different shapes (no shared `client_report_id`/`observation_type`
+   * fields) and every EXISTING `items` consumer (FieldMap's
+   * location-marker filter, the retry/delete handlers keyed on
+   * `client_report_id`) already assumes field_reports-only semantics —
+   * widening `items` itself to a union would force every one of those
+   * call sites to narrow first. Review finding W2: before this field
+   * existed, Queued Submissions View (the one screen whose entire
+   * purpose is "every queued item resolves visibly") had no way to show
+   * these at all, even though `queuedCount` above already counted them.
+   */
+  taskStatusItems: QueuedTaskStatusChange[];
 }
 
 /** Matches backend tasks.ts's TaskStatus enum (incident-ops/tasks.ts). */
@@ -179,7 +194,7 @@ export async function getQueueSnapshot(): Promise<QueueSnapshot> {
     state = 'online';
   }
 
-  return { state, queuedCount, items };
+  return { state, queuedCount, items, taskStatusItems };
 }
 
 /**

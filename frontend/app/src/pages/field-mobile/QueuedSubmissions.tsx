@@ -7,6 +7,7 @@ import {
   deleteQueuedItem,
   enqueueFieldReport,
   type QueuedFieldReport,
+  type QueuedTaskStatusChange,
   type QueueSnapshot,
 } from '../../lib/offline-queue';
 import { FieldMobileShell } from '../../lib/field-mobile-shell';
@@ -14,7 +15,11 @@ import './QueuedSubmissions.css';
 
 /** Per-`queue_status` Badge word/tone — `pending` is deliberately `neutral`
  * (the mockup's plain "Queued" badge, not a status-color tone) since it is
- * a transient waiting-state, not yet a success/failure outcome. */
+ * a transient waiting-state, not yet a success/failure outcome. Covers
+ * BOTH field_reports' and tasks_status' `queue_status` unions —
+ * tasks_status's union (`pending|syncing|synced|failed`) is a strict
+ * subset of field_reports' (which additionally has `conflict`), so one
+ * shared lookup table is correct for both without a cast. */
 const STATUS_BADGE: Record<QueuedFieldReport['queue_status'], { label: string; tone: BadgeTone }> = {
   pending: { label: 'Queued', tone: 'neutral' },
   syncing: { label: 'Syncing', tone: 'brand' },
@@ -34,6 +39,12 @@ function formatTimestamp(iso: string): string {
 
 function titleFor(item: QueuedFieldReport): string {
   return item.observation_type || 'Field observation';
+}
+
+/** 05-04-PLAN.md's own documented title format for tasks_status items
+ * (review finding W2): `"Task status: {new_status}"`. */
+function titleForTaskStatus(item: QueuedTaskStatusChange): string {
+  return `Task status: ${item.new_status}`;
 }
 
 /**
@@ -88,21 +99,45 @@ export function QueuedSubmissions(): JSX.Element {
   };
 
   const items = snapshot?.items ?? [];
+  const taskStatusItems = snapshot?.taskStatusItems ?? [];
   // Most-recently-captured first -- matches the mockup's "newest on top"
   // convention for a queue the responder is actively monitoring.
   const sortedItems = [...items].sort((a, b) => b.created_at.localeCompare(a.created_at));
+  // Review finding W2: queued task-status changes (05-03's second
+  // IndexedDB object store) rendered in their OWN sorted list, appended
+  // after field_reports' own cards below -- they have no `conflict_id`/
+  // retry/delete action surface (a task-status change is re-attempted by
+  // tapping the SAME Start/Mark-done button again on My Tasks, not from
+  // this screen), so they are read-only Cards here: title + Badge +
+  // Captured timestamp only, same visual language as field_reports'
+  // cards but without the per-item actions that only make sense for a
+  // field report.
+  const sortedTaskStatusItems = [...taskStatusItems].sort((a, b) =>
+    b.created_at.localeCompare(a.created_at),
+  );
 
   return (
     <FieldMobileShell>
       <div className="ep-queued-submissions">
         <h1 className="h1">Queued submissions</h1>
 
-        {sortedItems.length === 0 ? (
+        {sortedItems.length === 0 && sortedTaskStatusItems.length === 0 ? (
           <EmptyState title="Nothing queued">
             Every submitted report has synced.
           </EmptyState>
         ) : (
           <div className="ep-queued-submissions__list">
+            {sortedTaskStatusItems.map((item) => {
+              const badge = STATUS_BADGE[item.queue_status];
+              return (
+                <Card key={`${item.task_id}-${item.captured_at}`} title={titleForTaskStatus(item)}>
+                  <div className="ep-queued-submissions__badge-row">
+                    <Badge tone={badge.tone}>{badge.label}</Badge>
+                  </div>
+                  <p className="caption">Captured: {formatTimestamp(item.captured_at)}</p>
+                </Card>
+              );
+            })}
             {sortedItems.map((item) => {
               const badge = STATUS_BADGE[item.queue_status];
               const isConflict = item.queue_status === 'conflict';
