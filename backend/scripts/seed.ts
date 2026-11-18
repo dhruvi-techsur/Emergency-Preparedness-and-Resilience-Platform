@@ -967,6 +967,654 @@ async function main() {
     );
   }
 
+  // -------------------------------------------------------------------
+  // UAT data-doctor fixtures (Phase 4 UAT pass, F5 Notifications + F7
+  // Reporting/Learning): every row below is additive (findOrInsert /
+  // existence-guarded direct SQL, never UPDATE/DELETE of a prior row)
+  // and self-describing via its UAT- prefix, per this file's own
+  // established convention for every earlier phase's fixtures above.
+  // -------------------------------------------------------------------
+
+  const nowMs = Date.now();
+  const hoursAgoIso = (h: number) => new Date(nowMs - h * 60 * 60 * 1000).toISOString();
+  const daysAgoIso = (d: number) => new Date(nowMs - d * 24 * 60 * 60 * 1000).toISOString();
+
+  // --- Test 1 (Compose Notification): a Jurisdiction-type recipient group
+  // --- the ONLY type incident_commander can see per this plan's own
+  // --- admin:view gap (RecipientGroups.tsx's Role-type picker needs
+  // --- admin:view, which incident_commander deliberately lacks).
+  // --- Natural key: (name, type) — recipient_groups has no UNIQUE
+  // --- constraint of its own, same situation as jurisdictions/sso_config.
+  const uatRecipientGroup = await findOrInsert(
+    'recipient_groups',
+    ['name', 'type'],
+    ['UAT-NOTIFY Default Agency residents', 'Jurisdiction'],
+    ['name', 'type', 'selector', 'created_by'],
+    [
+      'UAT-NOTIFY Default Agency residents',
+      'Jurisdiction',
+      JSON.stringify({ jurisdiction_id: jurisdiction.id }),
+      commanderUser.id,
+    ],
+  );
+  record('recipient_groups', uatRecipientGroup);
+
+  // Nice-to-have per test 1's own precondition list — a message template
+  // so Step 2's "Template (optional)" Select has a real option, though
+  // compose works from scratch too.
+  const uatMessageTemplate = await findOrInsert(
+    'message_templates',
+    ['name'],
+    ['UAT-NOTIFY Shelter-in-place advisory template'],
+    ['name', 'category', 'body', 'created_by'],
+    [
+      'UAT-NOTIFY Shelter-in-place advisory template',
+      'Public Safety',
+      'This is an advisory for Default Agency residents: shelter in place until further notice. Monitor official channels for updates.',
+      commanderUser.id,
+    ],
+  );
+  record('message_templates', uatMessageTemplate);
+
+  // --- Test 2 (Delivery & Acknowledgment Tracking): an already
+  // --- approved-and-sent notification, attached to the existing
+  // --- UAT-ASSIGN-ROLE incident (Open, already has task/resource-request
+  // --- content from the Phase-3 fixture above), with a MIX of delivery
+  // --- statuses across its recipients — richer than the real send path
+  // --- alone would produce (04-01's send handler resolves every
+  // --- recipient straight to 'Sent', documented pre-F14 simplification),
+  // --- so the Delivery Tracking table shows the full Queued/Sent/
+  // --- Delivered/Failed/Acknowledged tone range a human tester can
+  // --- actually see, not just one status repeated. Natural key:
+  // --- message_body (notifications has no UNIQUE constraint of its own).
+  const uatSentNotificationBody =
+    'UAT-NOTIFY-SENT Shelter-in-place advisory issued for Default Agency residents.';
+  const uatSentNotification = await findOrInsert(
+    'notifications',
+    ['message_body'],
+    [uatSentNotificationBody],
+    [
+      'incident_id',
+      'message_body',
+      'ai_origin',
+      'channels',
+      'recipient_group_ids',
+      'approved_by',
+      'approved_at',
+      'sent_at',
+      'created_by',
+    ],
+    [
+      uatOverdueIncidentId,
+      uatSentNotificationBody,
+      false,
+      ['SMS', 'Email'],
+      [uatRecipientGroup.id],
+      commanderUser.id,
+      hoursAgoIso(2),
+      hoursAgoIso(2),
+      commanderUser.id,
+    ],
+  );
+  record('notifications', uatSentNotification);
+
+  if (uatSentNotification.inserted) {
+    const uatRecipients: Array<{
+      name: string;
+      contact: string;
+      channel: string;
+      status: 'Delivered' | 'Acknowledged' | 'Failed' | 'Sent';
+      failure_reason?: string;
+    }> = [
+      { name: 'Incident Commander', contact: 'commander@epmp.local', channel: 'Email', status: 'Acknowledged' },
+      { name: 'Planning Chief', contact: 'planner@epmp.local', channel: 'Email', status: 'Delivered' },
+      { name: 'EOC Director', contact: 'eocdirector@epmp.local', channel: 'SMS', status: 'Delivered' },
+      {
+        name: 'EPMP Admin',
+        contact: 'admin@epmp.local',
+        channel: 'SMS',
+        status: 'Failed',
+        failure_reason: 'Carrier rejected the message (invalid number format).',
+      },
+    ];
+    for (const r of uatRecipients) {
+      const recipientRows = await pool.query<{ id: string }>(
+        `INSERT INTO notification_recipients (notification_id, recipient_name, recipient_contact, channel)
+         VALUES ($1,$2,$3,$4) RETURNING id`,
+        [uatSentNotification.id, r.name, r.contact, r.channel],
+      );
+      await pool.query(
+        `INSERT INTO notification_delivery_status (notification_recipient_id, status, failure_reason, updated_at)
+         VALUES ($1,$2,$3,$4)`,
+        [recipientRows.rows[0].id, r.status, r.failure_reason ?? null, hoursAgoIso(1)],
+      );
+    }
+    await pool.query(
+      `INSERT INTO incident_timeline (incident_id, title, tone, actor_id, source, detail, occurred_at)
+       VALUES ($1, $2, 'brand', $3, 'EPMP', $4, $5)`,
+      [
+        uatOverdueIncidentId,
+        `Notification sent: ${uatSentNotificationBody.slice(0, 60)}`,
+        commanderUser.id,
+        JSON.stringify({ notification_id: uatSentNotification.id, approver_id: commanderUser.id, channels: ['SMS', 'Email'] }),
+        hoursAgoIso(2),
+      ],
+    );
+  }
+
+  // --- Test 4 (Generate AAR — wizard half): a SECOND closed incident with
+  // --- rich Timeline activity (command-role assignment, activation
+  // --- change, task, fulfilled resource request, sent notification),
+  // --- left WITHOUT a pre-generated aars row so a human tester's own
+  // --- walkthrough of the wizard triggers real auto-assembly on first
+  // --- visit (AarGenerator.tsx's own auto-POST-on-mount contract), then
+  // --- carries it through finding-ownership + finalize themselves.
+  // --- Test 4's OPEN half (closure-gate EmptyState) is already satisfied
+  // --- by the pre-existing UAT-ASSIGN-ROLE/UAT-ESCALATE-READY incidents
+  // --- (both still Open) — no new fixture needed for that side.
+  const uatAarReadyIncident = await findOrInsert(
+    'incidents',
+    ['name', 'jurisdiction_id'],
+    ['UAT-CLOSED-AAR-READY Default Agency Severe Weather', jurisdiction.id],
+    ['name', 'type', 'severity', 'jurisdiction_id', 'opened_at', 'created_by'],
+    [
+      'UAT-CLOSED-AAR-READY Default Agency Severe Weather',
+      'Severe Weather',
+      'Elevated',
+      jurisdiction.id,
+      daysAgoIso(3),
+      commanderUser.id,
+    ],
+  );
+  record('incidents', uatAarReadyIncident);
+
+  if (uatAarReadyIncident.inserted) {
+    await pool.query(
+      `INSERT INTO incident_timeline (incident_id, title, tone, actor_id, source, occurred_at)
+       VALUES ($1, 'Incident created', 'brand', $2, 'EPMP', $3)`,
+      [uatAarReadyIncident.id, commanderUser.id, daysAgoIso(3)],
+    );
+
+    // Command-role assignment — decision-tagged via DECISION_TITLE_PATTERN's
+    // "assigned to" match (reporting.ts).
+    await pool.query(
+      `INSERT INTO incident_command_roles (incident_id, role_title, person_id, assigned_by, assigned_at)
+       VALUES ($1, 'Incident Commander', $2, $2, $3)`,
+      [uatAarReadyIncident.id, commanderUser.id, daysAgoIso(3)],
+    );
+    await pool.query(
+      `INSERT INTO incident_timeline (incident_id, title, tone, actor_id, source, detail, occurred_at)
+       VALUES ($1, 'Incident Commander assigned to Incident Commander', 'brand', $2, 'EPMP', $3, $4)`,
+      [
+        uatAarReadyIncident.id,
+        commanderUser.id,
+        JSON.stringify({ role_title: 'Incident Commander', person_id: commanderUser.id }),
+        daysAgoIso(3),
+      ],
+    );
+
+    // Activation change — decision-tagged, and feeds analytics.ts's
+    // median_activation_time KPI (JOIN LATERAL on 'Activation changed to%').
+    // Deliberately a bit AFTER opened_at (daysAgoIso(3)) — a timestamp
+    // identical to opened_at would make the KPI's own
+    // first_activation.occurred_at - i.opened_at delta compute to exactly
+    // zero, indistinguishable from "no real elapsed time", which defeats
+    // this fixture's purpose of proving the KPI renders a genuine
+    // non-zero value.
+    await pool.query(`UPDATE incidents SET activation_level = 'Partial' WHERE id = $1`, [uatAarReadyIncident.id]);
+    await pool.query(
+      `INSERT INTO incident_timeline (incident_id, title, tone, actor_id, source, detail, occurred_at)
+       VALUES ($1, 'Activation changed to Partial', 'warning', $2, 'EPMP', $3, $4)`,
+      [
+        uatAarReadyIncident.id,
+        commanderUser.id,
+        JSON.stringify({ from: 'Monitoring', to: 'Partial' }),
+        hoursAgoIso(3 * 24 - 2),
+      ],
+    );
+
+    // Task — ordinary (non-decision-tagged) timeline content.
+    const taskRows = await pool.query<{ id: string }>(
+      `INSERT INTO tasks (title, description, status, owner_id, incident_id, due_at, requires_approval, created_by)
+       VALUES ($1,$2,'Done',$3,$4,$5,false,$3) RETURNING id`,
+      [
+        'UAT-AAR-READY Verify shelter capacity',
+        'Confirm emergency shelter has adequate capacity for displaced residents.',
+        commanderUser.id,
+        uatAarReadyIncident.id,
+        daysAgoIso(2),
+      ],
+    );
+    const uatAarReadyTaskId = taskRows.rows[0].id;
+    await pool.query(
+      `INSERT INTO task_status_history (task_id, from_status, to_status, changed_by, changed_at)
+       VALUES ($1, NULL, 'Open', $2, $3)`,
+      [uatAarReadyTaskId, commanderUser.id, daysAgoIso(3)],
+    );
+    await pool.query(
+      `INSERT INTO task_status_history (task_id, from_status, to_status, changed_by, changed_at)
+       VALUES ($1, 'Open', 'Done', $2, $3)`,
+      [uatAarReadyTaskId, commanderUser.id, daysAgoIso(2)],
+    );
+    await pool.query(
+      `INSERT INTO incident_timeline (incident_id, title, tone, actor_id, source, detail, occurred_at)
+       VALUES ($1, $2, 'brand', $3, 'EPMP', $4, $5)`,
+      [
+        uatAarReadyIncident.id,
+        'Task created: UAT-AAR-READY Verify shelter capacity',
+        commanderUser.id,
+        JSON.stringify({ task_id: uatAarReadyTaskId, owner_id: commanderUser.id }),
+        daysAgoIso(3),
+      ],
+    );
+
+    // Resource request, fulfilled end-to-end — feeds the AAR's
+    // resource_history section AND analytics.ts's
+    // resource_request_fulfillment_time KPI (needs status='Fulfilled'
+    // with a real fulfilled_at - created_at gap). Approved by
+    // planner@epmp.local (resource_requests:approve holder) so this
+    // incident's Timeline carries a SECOND distinct actor, same purpose
+        // as every other phase's cross-reviewer fixture.
+    const uatAarReadyRrDescription = 'UAT-AAR-READY Cots and blankets for shelter';
+    const rrRows = await pool.query<{ id: string }>(
+      `INSERT INTO resource_requests
+         (resource_type, description, quantity, status, incident_id, requesting_role, needed_by, requested_by, approved_by, assigned_to, fulfilled_at, created_at, updated_at)
+       VALUES ('Supplies',$1,10,'Fulfilled',$2,'incident_commander',$3,$4,$5,'Logistics pool A',$6,$7,$6)
+       RETURNING id`,
+      [
+        uatAarReadyRrDescription,
+        uatAarReadyIncident.id,
+        daysAgoIso(3),
+        commanderUser.id,
+        plannerUser.id,
+        hoursAgoIso(36),
+        daysAgoIso(3),
+      ],
+    );
+    const uatAarReadyRrId = rrRows.rows[0].id;
+    await pool.query(
+      `INSERT INTO resource_request_status_history (resource_request_id, from_status, to_status, changed_by, changed_at)
+       VALUES ($1, NULL, 'Draft', $2, $3)`,
+      [uatAarReadyRrId, commanderUser.id, daysAgoIso(3)],
+    );
+    await pool.query(
+      `INSERT INTO resource_request_status_history (resource_request_id, from_status, to_status, changed_by, changed_at)
+       VALUES ($1, 'Draft', 'Awaiting approval', $2, $3)`,
+      [uatAarReadyRrId, commanderUser.id, daysAgoIso(3)],
+    );
+    await pool.query(
+      `INSERT INTO resource_request_status_history (resource_request_id, from_status, to_status, changed_by, changed_at)
+       VALUES ($1, 'Awaiting approval', 'Approved', $2, $3)`,
+      [uatAarReadyRrId, plannerUser.id, daysAgoIso(2)],
+    );
+    await pool.query(
+      `INSERT INTO resource_request_status_history (resource_request_id, from_status, to_status, changed_by, changed_at)
+       VALUES ($1, 'Approved', 'Fulfilled', $2, $3)`,
+      [uatAarReadyRrId, plannerUser.id, hoursAgoIso(36)],
+    );
+    await pool.query(
+      `INSERT INTO incident_timeline (incident_id, title, tone, actor_id, source, detail, occurred_at)
+       VALUES ($1, $2, 'brand', $3, 'EPMP', $4, $5)`,
+      [
+        uatAarReadyIncident.id,
+        `Resource request: Supplies (${uatAarReadyRrDescription})`,
+        commanderUser.id,
+        JSON.stringify({ resource_request_id: uatAarReadyRrId, quantity: 10 }),
+        daysAgoIso(3),
+      ],
+    );
+    await pool.query(
+      `INSERT INTO incident_timeline (incident_id, title, tone, actor_id, source, detail, occurred_at)
+       VALUES ($1, $2, 'success', $3, 'EPMP', $4, $5)`,
+      [
+        uatAarReadyIncident.id,
+        `Resource request approved: Supplies (${uatAarReadyRrDescription})`,
+        plannerUser.id,
+        JSON.stringify({ resource_request_id: uatAarReadyRrId }),
+        daysAgoIso(2),
+      ],
+    );
+    await pool.query(
+      `INSERT INTO incident_timeline (incident_id, title, tone, actor_id, source, detail, occurred_at)
+       VALUES ($1, $2, 'success', $3, 'EPMP', $4, $5)`,
+      [
+        uatAarReadyIncident.id,
+        `Resource request fulfilled: Supplies (${uatAarReadyRrDescription})`,
+        plannerUser.id,
+        JSON.stringify({ resource_request_id: uatAarReadyRrId, assigned_to: 'Logistics pool A' }),
+        hoursAgoIso(36),
+      ],
+    );
+
+    // A sent notification tied to THIS incident (test 8 reusable, and
+    // rounds out the AAR's Timeline with the exact "command-role
+    // assignment + a task + a notification sent" triple the test spec
+    // names).
+    const uatAarReadyNotifBody = 'UAT-AAR-READY Evacuation lifted for Default Agency shelter zone.';
+    const notifRows = await pool.query<{ id: string }>(
+      `INSERT INTO notifications
+         (incident_id, message_body, ai_origin, channels, recipient_group_ids, approved_by, approved_at, sent_at, created_by, created_at)
+       VALUES ($1,$2,false,$3,$4,$5,$6,$6,$5,$6) RETURNING id`,
+      [
+        uatAarReadyIncident.id,
+        uatAarReadyNotifBody,
+        ['Email'],
+        [uatRecipientGroup.id],
+        commanderUser.id,
+        hoursAgoIso(30),
+      ],
+    );
+    await pool.query(
+      `INSERT INTO incident_timeline (incident_id, title, tone, actor_id, source, detail, occurred_at)
+       VALUES ($1, $2, 'brand', $3, 'EPMP', $4, $5)`,
+      [
+        uatAarReadyIncident.id,
+        `Notification sent: ${uatAarReadyNotifBody.slice(0, 60)}`,
+        commanderUser.id,
+        JSON.stringify({ notification_id: notifRows.rows[0].id, approver_id: commanderUser.id, channels: ['Email'] }),
+        hoursAgoIso(30),
+      ],
+    );
+
+    // Closure — the literal "Incident closed" decision-tagged entry
+    // reporting.ts's DECISION_TITLE_PATTERN matches, and the state the
+    // AAR_NOT_CLOSED gate (reporting.ts) requires before generation.
+    await pool.query(
+      `UPDATE incidents SET status = 'Closed', closed_at = $2, updated_at = $2 WHERE id = $1`,
+      [uatAarReadyIncident.id, hoursAgoIso(24)],
+    );
+    await pool.query(
+      `INSERT INTO incident_timeline (incident_id, title, tone, actor_id, source, occurred_at)
+       VALUES ($1, 'Incident closed', 'brand', $2, 'EPMP', $3)`,
+      [uatAarReadyIncident.id, commanderUser.id, hoursAgoIso(24)],
+    );
+  }
+
+  // --- Test 7 (Incident Workspace Reports tab integration): a THIRD
+  // --- incident, closed the same way, but with its AAR actually
+  // --- generated AND finalized (findings owned, closure_status set to
+  // --- both values so analytics' corrective_action_closure_rate KPI has
+  // --- a non-trivial denominator too) — recoverable via
+  // --- GET /api/v1/evidence-log?action_type=aar_finalized, matching
+  // --- IncidentWorkspace.tsx's useIncidentReports read path exactly.
+  const uatAarFinalizedIncident = await findOrInsert(
+    'incidents',
+    ['name', 'jurisdiction_id'],
+    ['UAT-CLOSED-AAR-FINALIZED Default Agency HazMat Response', jurisdiction.id],
+    ['name', 'type', 'severity', 'jurisdiction_id', 'opened_at', 'created_by'],
+    [
+      'UAT-CLOSED-AAR-FINALIZED Default Agency HazMat Response',
+      'HazMat',
+      'Critical',
+      jurisdiction.id,
+      daysAgoIso(10),
+      commanderUser.id,
+    ],
+  );
+  record('incidents', uatAarFinalizedIncident);
+
+  if (uatAarFinalizedIncident.inserted) {
+    await pool.query(
+      `INSERT INTO incident_timeline (incident_id, title, tone, actor_id, source, occurred_at)
+       VALUES ($1, 'Incident created', 'brand', $2, 'EPMP', $3)`,
+      [uatAarFinalizedIncident.id, commanderUser.id, daysAgoIso(10)],
+    );
+
+    await pool.query(
+      `INSERT INTO incident_command_roles (incident_id, role_title, person_id, assigned_by, assigned_at)
+       VALUES ($1, 'Incident Commander', $2, $2, $3)`,
+      [uatAarFinalizedIncident.id, commanderUser.id, daysAgoIso(10)],
+    );
+    await pool.query(
+      `INSERT INTO incident_timeline (incident_id, title, tone, actor_id, source, detail, occurred_at)
+       VALUES ($1, 'Incident Commander assigned to Incident Commander', 'brand', $2, 'EPMP', $3, $4)`,
+      [
+        uatAarFinalizedIncident.id,
+        commanderUser.id,
+        JSON.stringify({ role_title: 'Incident Commander', person_id: commanderUser.id }),
+        daysAgoIso(10),
+      ],
+    );
+
+    // Same "must be after opened_at, not equal to it" reasoning as
+    // UAT-CLOSED-AAR-READY's identical fixture above.
+    await pool.query(`UPDATE incidents SET activation_level = 'Full' WHERE id = $1`, [uatAarFinalizedIncident.id]);
+    await pool.query(
+      `INSERT INTO incident_timeline (incident_id, title, tone, actor_id, source, detail, occurred_at)
+       VALUES ($1, 'Activation changed to Full', 'warning', $2, 'EPMP', $3, $4)`,
+      [
+        uatAarFinalizedIncident.id,
+        commanderUser.id,
+        JSON.stringify({ from: 'Monitoring', to: 'Full' }),
+        hoursAgoIso(10 * 24 - 3),
+      ],
+    );
+
+    const taskRows2 = await pool.query<{ id: string }>(
+      `INSERT INTO tasks (title, description, status, owner_id, incident_id, due_at, requires_approval, created_by)
+       VALUES ($1,$2,'Done',$3,$4,$5,false,$3) RETURNING id`,
+      [
+        'UAT-AAR-FINALIZED Decontaminate affected site',
+        'Confirm the affected site has been decontaminated and cleared for re-entry.',
+        commanderUser.id,
+        uatAarFinalizedIncident.id,
+        daysAgoIso(9),
+      ],
+    );
+    const uatAarFinalizedTaskId = taskRows2.rows[0].id;
+    await pool.query(
+      `INSERT INTO task_status_history (task_id, from_status, to_status, changed_by, changed_at)
+       VALUES ($1, NULL, 'Open', $2, $3)`,
+      [uatAarFinalizedTaskId, commanderUser.id, daysAgoIso(10)],
+    );
+    await pool.query(
+      `INSERT INTO task_status_history (task_id, from_status, to_status, changed_by, changed_at)
+       VALUES ($1, 'Open', 'Done', $2, $3)`,
+      [uatAarFinalizedTaskId, commanderUser.id, daysAgoIso(9)],
+    );
+    await pool.query(
+      `INSERT INTO incident_timeline (incident_id, title, tone, actor_id, source, detail, occurred_at)
+       VALUES ($1, $2, 'brand', $3, 'EPMP', $4, $5)`,
+      [
+        uatAarFinalizedIncident.id,
+        'Task created: UAT-AAR-FINALIZED Decontaminate affected site',
+        commanderUser.id,
+        JSON.stringify({ task_id: uatAarFinalizedTaskId, owner_id: commanderUser.id }),
+        daysAgoIso(10),
+      ],
+    );
+
+    const uatAarFinalizedRrDescription = 'UAT-AAR-FINALIZED Hazmat containment kits';
+    const rrRows2 = await pool.query<{ id: string }>(
+      `INSERT INTO resource_requests
+         (resource_type, description, quantity, status, incident_id, requesting_role, needed_by, requested_by, approved_by, assigned_to, fulfilled_at, created_at, updated_at)
+       VALUES ('Equipment',$1,4,'Fulfilled',$2,'incident_commander',$3,$4,$5,'Logistics pool B',$6,$7,$6)
+       RETURNING id`,
+      [
+        uatAarFinalizedRrDescription,
+        uatAarFinalizedIncident.id,
+        daysAgoIso(10),
+        commanderUser.id,
+        plannerUser.id,
+        daysAgoIso(9),
+        daysAgoIso(10),
+      ],
+    );
+    const uatAarFinalizedRrId = rrRows2.rows[0].id;
+    await pool.query(
+      `INSERT INTO resource_request_status_history (resource_request_id, from_status, to_status, changed_by, changed_at)
+       VALUES ($1, NULL, 'Draft', $2, $3)`,
+      [uatAarFinalizedRrId, commanderUser.id, daysAgoIso(10)],
+    );
+    await pool.query(
+      `INSERT INTO resource_request_status_history (resource_request_id, from_status, to_status, changed_by, changed_at)
+       VALUES ($1, 'Draft', 'Awaiting approval', $2, $3)`,
+      [uatAarFinalizedRrId, commanderUser.id, daysAgoIso(10)],
+    );
+    await pool.query(
+      `INSERT INTO resource_request_status_history (resource_request_id, from_status, to_status, changed_by, changed_at)
+       VALUES ($1, 'Awaiting approval', 'Approved', $2, $3)`,
+      [uatAarFinalizedRrId, plannerUser.id, daysAgoIso(9.5)],
+    );
+    await pool.query(
+      `INSERT INTO resource_request_status_history (resource_request_id, from_status, to_status, changed_by, changed_at)
+       VALUES ($1, 'Approved', 'Fulfilled', $2, $3)`,
+      [uatAarFinalizedRrId, plannerUser.id, daysAgoIso(9)],
+    );
+    await pool.query(
+      `INSERT INTO incident_timeline (incident_id, title, tone, actor_id, source, detail, occurred_at)
+       VALUES ($1, $2, 'brand', $3, 'EPMP', $4, $5)`,
+      [
+        uatAarFinalizedIncident.id,
+        `Resource request: Equipment (${uatAarFinalizedRrDescription})`,
+        commanderUser.id,
+        JSON.stringify({ resource_request_id: uatAarFinalizedRrId, quantity: 4 }),
+        daysAgoIso(10),
+      ],
+    );
+    await pool.query(
+      `INSERT INTO incident_timeline (incident_id, title, tone, actor_id, source, detail, occurred_at)
+       VALUES ($1, $2, 'success', $3, 'EPMP', $4, $5)`,
+      [
+        uatAarFinalizedIncident.id,
+        `Resource request approved: Equipment (${uatAarFinalizedRrDescription})`,
+        plannerUser.id,
+        JSON.stringify({ resource_request_id: uatAarFinalizedRrId }),
+        daysAgoIso(9.5),
+      ],
+    );
+    await pool.query(
+      `INSERT INTO incident_timeline (incident_id, title, tone, actor_id, source, detail, occurred_at)
+       VALUES ($1, $2, 'success', $3, 'EPMP', $4, $5)`,
+      [
+        uatAarFinalizedIncident.id,
+        `Resource request fulfilled: Equipment (${uatAarFinalizedRrDescription})`,
+        plannerUser.id,
+        JSON.stringify({ resource_request_id: uatAarFinalizedRrId, assigned_to: 'Logistics pool B' }),
+        daysAgoIso(9),
+      ],
+    );
+
+    const uatAarFinalizedNotifBody = 'UAT-AAR-FINALIZED HazMat all-clear issued for Default Agency response zone.';
+    const notifRows2 = await pool.query<{ id: string }>(
+      `INSERT INTO notifications
+         (incident_id, message_body, ai_origin, channels, recipient_group_ids, approved_by, approved_at, sent_at, created_by, created_at)
+       VALUES ($1,$2,false,$3,$4,$5,$6,$6,$5,$6) RETURNING id`,
+      [
+        uatAarFinalizedIncident.id,
+        uatAarFinalizedNotifBody,
+        ['Email', 'IPAWS'],
+        [uatRecipientGroup.id],
+        commanderUser.id,
+        daysAgoIso(8.5),
+      ],
+    );
+    await pool.query(
+      `INSERT INTO incident_timeline (incident_id, title, tone, actor_id, source, detail, occurred_at)
+       VALUES ($1, $2, 'brand', $3, 'EPMP', $4, $5)`,
+      [
+        uatAarFinalizedIncident.id,
+        `Notification sent: ${uatAarFinalizedNotifBody.slice(0, 60)}`,
+        commanderUser.id,
+        JSON.stringify({ notification_id: notifRows2.rows[0].id, approver_id: commanderUser.id, channels: ['Email', 'IPAWS'] }),
+        daysAgoIso(8.5),
+      ],
+    );
+
+    await pool.query(
+      `UPDATE incidents SET status = 'Closed', closed_at = $2, updated_at = $2 WHERE id = $1`,
+      [uatAarFinalizedIncident.id, daysAgoIso(8)],
+    );
+    await pool.query(
+      `INSERT INTO incident_timeline (incident_id, title, tone, actor_id, source, occurred_at)
+       VALUES ($1, 'Incident closed', 'brand', $2, 'EPMP', $3)`,
+      [uatAarFinalizedIncident.id, commanderUser.id, daysAgoIso(8)],
+    );
+
+    // Generate the AAR content exactly the way reporting.ts's own
+    // assembleAarAssembly() does (same filter predicate, same source
+    // tables), then insert it already Finalized — mirrors a human
+    // tester's own "generate -> add finding -> finalize" path end-to-end,
+    // just performed once here so the Reports tab/evidence-log have
+    // something to show on first UAT visit.
+    const timelineRows = await pool.query<Record<string, unknown>>(
+      `SELECT id, occurred_at, title, meta, tone, actor_id, source, detail
+       FROM incident_timeline WHERE incident_id = $1 ORDER BY occurred_at ASC`,
+      [uatAarFinalizedIncident.id],
+    );
+    const decisionTitlePattern = /Activation changed to|assigned to|Incident closed/;
+    const decisionsLog = timelineRows.rows.filter((row) => {
+      const source = row.source as string;
+      const tone = row.tone as string;
+      const title = row.title as string;
+      if (source !== 'EPMP') return false;
+      if (tone === 'warning' || tone === 'danger') return true;
+      return decisionTitlePattern.test(title);
+    });
+    const resourceRequestsForAar = await pool.query<Record<string, unknown>>(
+      `SELECT * FROM resource_requests WHERE incident_id = $1`,
+      [uatAarFinalizedIncident.id],
+    );
+    const resourceHistoryForAar = await pool.query<Record<string, unknown>>(
+      `SELECT h.* FROM resource_request_status_history h
+       JOIN resource_requests r ON r.id = h.resource_request_id
+       WHERE r.incident_id = $1`,
+      [uatAarFinalizedIncident.id],
+    );
+
+    const uatAar = await findOrInsert(
+      'aars',
+      ['incident_id'],
+      [uatAarFinalizedIncident.id],
+      ['incident_id', 'timeline_export', 'decisions_log', 'resource_history', 'status', 'finalized_by', 'finalized_at', 'created_by'],
+      [
+        uatAarFinalizedIncident.id,
+        JSON.stringify(timelineRows.rows),
+        JSON.stringify(decisionsLog),
+        JSON.stringify({ requests: resourceRequestsForAar.rows, status_history: resourceHistoryForAar.rows }),
+        'Finalized',
+        plannerUser.id,
+        daysAgoIso(7),
+        commanderUser.id,
+      ],
+    );
+    record('aars', uatAar);
+
+    if (uatAar.inserted) {
+      // One owned-and-closed corrective action (feeds
+      // corrective_action_closure_rate's numerator AND denominator with a
+      // real Closed row), finalized by planner@epmp.local (reporting:edit
+      // holder) — matches the real finalize route's authority.
+      await pool.query(
+        `INSERT INTO aar_findings (aar_id, finding_text, category, corrective_action, owner_id, due_date, closure_status)
+         VALUES ($1,$2,$3,$4,$5,$6,'Closed')`,
+        [
+          uatAar.id,
+          'HazMat containment kits were slower to fulfill than the response window allowed.',
+          'Logistics',
+          'Pre-position a second cache of containment kits at the Default Agency staging site.',
+          plannerUser.id,
+          new Date(nowMs + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+        ],
+      );
+
+      // The SAME AuditService.record() write reporting.ts's finalize
+      // route performs — this IS the single-writer audit_log entry
+      // IncidentWorkspace.tsx's useIncidentReports/evidence-log.ts's
+      // action_type=aar_finalized filter finds.
+      await pool.query(
+        `INSERT INTO audit_log (actor_id, action, record_type, record_id, detail, occurred_at)
+         VALUES ($1,'aar_finalized','aar',$2,$3,$4)`,
+        [
+          plannerUser.id,
+          uatAar.id,
+          JSON.stringify({ incident_id: uatAarFinalizedIncident.id }),
+          daysAgoIso(7),
+        ],
+      );
+    }
+  }
+
   // record_authority_registry baseline rows (natural key: record_type, which IS unique)
   const authorityRows = [
     { record_type: 'user_identity', authoritative_system: 'EPMP' },
