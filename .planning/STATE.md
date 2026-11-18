@@ -2,14 +2,15 @@
 pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-last_updated: "2026-11-18T14:20:37.543Z"
-last_activity: "2026-11-18 — Phase 4 complete"
+status: Plan 05-01 (Field Operations backend — idempotent submit, ordered batch sync, conflict detection/resolution) complete, running in parallel with 05-02 (offline queue) this session.
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-11-18T14:28:12.218Z"
+last_activity: 2026-11-18 — Plan 05-01 complete (see 05-01-SUMMARY.md for full detail), run in parallel with 05-02. New field_reports/field_report_photos/sync_conflicts tables plus four endpoints (POST /field-reports idempotent-on-client_report_id, POST /field-reports/sync-batch ordered per-item conflict detection, POST+GET /field-reports/:id/photos non-blocking multipart upload, POST /sync-conflicts/:id/resolve named-person keep_mine|keep_eoc) give 05-02's offline queue and 05-03/05-04's field-mobile screens a real backend to sync against. Integration test (4 cases) + full backend suite (15 files, 74 tests) green with zero regression; tsc --noEmit and backend build both clean.
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 57
-  completed_plans: 42
+  completed_plans: 43
   percent: 67
 ---
 
@@ -20,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 4 — Notifications, Reporting & Learning — COMPLETE. All 9 plans shipped (7 original + 2 gap-closure plans, 04-08 and 04-09, run in parallel this session). UAT gap refs 2, 3, 4, and 5 all closed. Ready for Phase 5 planning.
+**Current focus:** Phase 5 — Mobile Field Operations — IN PROGRESS. Plan 05-01 (backend data layer + API) complete. 05-02 (offline queue) running in parallel this session. 05-03/05-04/05-05 remain.
 
 ## Current Position
 
-Phase: 4 of 6 (Notifications, Reporting & Learning) — COMPLETE (all 9 plans)
-Plan: 9 of 9 complete in current phase (04-01 through 04-07 original; 04-08 and 04-09 gap-closure plans, run in parallel this session)
-Status: Plan 04-08 (Notifications landing / deep-link return-path / AAR button explanation gap closure) closed UAT gap refs 2, 3, and 5. Combined with 04-09 (RBAC error-message accuracy, gap ref 4), every open UAT gap for Phase 4 is now closed.
-Last activity: 2026-11-18 — Plan 04-08 complete (see 04-08-SUMMARY.md for full detail), run in parallel with 04-09. New /notifications landing page gives Compose Notification a standalone reach-path (satisfying the UX mockup's OR-requirement alongside 04-07's Incident Workspace action); oidc-client-ts's own `state` param now threads a deep link's return path through the full sign-in redirect+callback round-trip (RouteGuard → oidc-config → SignInCallback), proven by a new Playwright spec using the correct same-browser-context-second-page isolation primitive; the disabled "Generate AAR" button now explains itself via both a title attribute and an always-visible caption. Full Playwright suite (76 tests), backend suite (70 tests), and design-system suite (51 tests) all green with zero regression; tsc --noEmit clean; full 3-workspace build green.
+Phase: 5 of 6 (Mobile Field Operations) — IN PROGRESS
+Plan: 1 of 5 complete in current phase (05-01 done; 05-02 in progress in parallel this session; 05-03/05-04/05-05 pending)
+Status: Plan 05-01 shipped the F6 backend data layer and API surface — field_reports/field_report_photos/sync_conflicts tables plus idempotent-submit/ordered-batch-sync/photo-upload/conflict-resolve endpoints, every incident-touching write wrapped in the shared withTimelineTransaction invariant.
+Last activity: 2026-11-18 — Plan 05-01 complete (see 05-01-SUMMARY.md for full detail), run in parallel with 05-02. New field_reports/field_report_photos/sync_conflicts tables plus four endpoints (POST /field-reports idempotent-on-client_report_id, POST /field-reports/sync-batch ordered per-item conflict detection, POST+GET /field-reports/:id/photos non-blocking multipart upload, POST /sync-conflicts/:id/resolve named-person keep_mine|keep_eoc) give 05-02's offline queue and 05-03/05-04's field-mobile screens a real backend to sync against. Integration test (4 cases) + full backend suite (15 files, 74 tests) green with zero regression; tsc --noEmit and backend build both clean.
 
 Progress: [███████░░░] 67%
 
@@ -92,6 +93,7 @@ Progress: [███████░░░] 67%
 | Phase 04 P07 | 45 min | 2 tasks | 3 files |
 | Phase 04 P09 | 15 min | 2 tasks | 3 files |
 | Phase 04 P08 | 35 min | 3 tasks | 10 files |
+| Phase 05 P01 | 8 min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -207,6 +209,10 @@ Recent decisions affecting current work:
 - [Phase 04-08]: SignInCallback's state type-guard requires a non-empty string starting with '/' AND explicitly rejects '/auth/callback' itself, not just non-string values — closes both the open-redirect vector (any absolute URL falls through to the existing '/' fallback) and a pathological self-redirect loop
 - [Phase 04-08]: AAR button explanation ships BOTH a title attribute (hover/screen-reader, matching SideNav.tsx's own interim no-Tooltip-yet pattern) AND an always-visible caption — a title-only tooltip is not reliably discoverable on touch devices or without hover
 - [Phase 04-08]: auth-deep-link-return-path.spec.ts uses page.context().newPage() (a second page in the SAME browser context, sharing cookies but with independent sessionStorage) to reproduce the gap, NOT browser.newContext() (a separate cookie jar that would hit a real Keycloak login form instead of the silent SSO round-trip the gap is actually about) — and issues a SINGLE navigation directly to the deep link rather than a preliminary visit to '/' first, since '/' is itself unauthenticated and would kick off a second, racing OIDC round-trip with the wrong return path
+- [Phase 05-01]: field-operations migration renumbered 1700000000009 -> 1700000000010 (the plan's literal number collides with Phase 4's already-existing 1700000000009_reporting-schema.js) — same renumbering precedent 04-01/04-02 established
+- [Phase 05-01]: @fastify/multipart registered locally inside field-reports.ts's own plugin scope (not globally in server.ts) to contain the new dependency's blast radius to the one route that needs multipart parsing
+- [Phase 05-01]: Photo bytes persist to backend/uploads/ (gitignored) as a local-disk stand-in for a real object-storage adapter (no MinIO/S3 configured this phase), read back exclusively through a same-origin GET route pair — documented as a drop-in replacement point for a future real adapter
+- [Phase 05-01]: sync-batch conflict detection covers entity_type='field_report' vs incidents.updated_at only; any other entity_type (e.g. a future F4 task-status sync-batch) is a documented extension point for a later plan
 
 ### Pending Todos
 
@@ -218,6 +224,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-18T12:54:19.562Z
-Stopped at: Completed 04-08-PLAN.md
+Last session: 2026-11-18T14:28:12.218Z
+Stopped at: Completed 05-01-PLAN.md
 Resume file: None
