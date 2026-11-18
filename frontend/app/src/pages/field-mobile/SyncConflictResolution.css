@@ -1,0 +1,87 @@
+/*
+ * F6 S6.5 — Sync Conflict Resolution. Both version blocks render
+ * side-by-side on wide viewports, stacking to a single column on narrow
+ * mobile per the mockup's "side-by-side (stacked on narrow mobile)" note.
+ * The two resolution buttons at the bottom have EQUAL visual weight
+ * except for the standard primary/secondary distinction — neither is
+ * pre-selected. Token-only — no raw px/hex literals.
+ */
+
+.ep-sync-conflict-resolution {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  padding-bottom: var(--space-16);
+}
+
+.ep-sync-conflict-resolution__versions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+@media (min-width: 768px) {
+  .ep-sync-conflict-resolution__versions {
+    flex-direction: row;
+  }
+
+  .ep-sync-conflict-resolution__version {
+    flex: 1 1 0;
+  }
+}
+
+.ep-sync-conflict-resolution__version {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: var(--border-1) solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.ep-sync-conflict-resolution__fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.ep-sync-conflict-resolution__field-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ep-sync-conflict-resolution__field-row dt {
+  color: var(--ink-muted);
+}
+
+.ep-sync-conflict-resolution__field-row dd {
+  margin: 0;
+}
+
+/* Token-only highlight for a differing field — background from
+ * var(--warning-subtle), never a raw hex literal. */
+.ep-sync-conflict-resolution__value--diff {
+  background: var(--warning-subtle);
+  color: var(--warning-text);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-1);
+  display: inline-block;
+}
+
+.ep-sync-conflict-resolution__action-bar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--bg);
+  border-top: var(--border-1) solid var(--border);
+  z-index: var(--z-sticky);
+}
+
+.ep-sync-conflict-resolution__action-bar > * {
+  flex: 1 1 0;
+}

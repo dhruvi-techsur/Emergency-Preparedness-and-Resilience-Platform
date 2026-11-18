@@ -210,6 +210,19 @@ export async function enqueueTaskStatusChange(
 }
 
 /**
+ * Removes a single `pending` field_reports row from IndexedDB directly —
+ * the Queued Submissions View's "Delete" action (05-04), only ever shown
+ * for `pending` items per the mockup's explicit "only available before it
+ * syncs" constraint. No network call: a pending item was never sent to the
+ * server, so there is nothing server-side to undo.
+ */
+export async function deleteQueuedItem(clientReportId: string): Promise<void> {
+  const db = await getDb();
+  await db.delete(STORE_NAME, clientReportId);
+  await notifySubscribers();
+}
+
+/**
  * Subscribes to queue state changes: calls `cb` immediately with the
  * current snapshot, then again on every subsequent queue mutation or
  * online/offline window event. Returns an unsubscribe function.

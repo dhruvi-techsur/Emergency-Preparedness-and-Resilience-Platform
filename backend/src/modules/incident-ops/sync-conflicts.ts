@@ -84,6 +84,35 @@ export default async function syncConflictsRoutes(app: FastifyInstance) {
     },
   );
 
+  // GET /api/v1/sync-conflicts/{id} -- single-record lookup. 05-01 shipped
+  // only the unresolved-list route above; this plan (05-04) adds this
+  // small, clearly-scoped single-id route since Sync Conflict Resolution
+  // needs to fetch exactly one conflict by its route param, and a
+  // client-side `.find()` over the unresolved-only list would silently
+  // 404 for an ALREADY-resolved conflict a user navigates back to (e.g.
+  // via browser back-button) -- this route has no such restriction.
+  app.get<{ Params: { id: string } }>(
+    '/api/v1/sync-conflicts/:id',
+    { preHandler: requirePermission('field_reports', 'view') },
+    async (req, reply) => {
+      const { id } = req.params;
+      const rows = await query<SyncConflictListRow>(
+        `SELECT sc.id, sc.entity_type, sc.entity_id, sc.field_version, sc.eoc_version,
+                sc.resolution, sc.resolved_by, sc.resolved_at, sc.created_at,
+                u.name AS resolved_by_name
+         FROM sync_conflicts sc
+         LEFT JOIN users u ON u.id = sc.resolved_by
+         WHERE sc.id = $1`,
+        [id],
+      );
+      const row = rows[0];
+      if (!row) {
+        return reply.code(404).send(SYNC_CONFLICT_NOT_FOUND);
+      }
+      return reply.code(200).send(shapeSyncConflictRow(row));
+    },
+  );
+
   // POST /api/v1/sync-conflicts/{id}/resolve -- a distinct action-level
   // ('resolve', not 'view') from the list route above -- mirrors Phase 3's
   // plans/resource_requests review/approve no-single-role segregation
