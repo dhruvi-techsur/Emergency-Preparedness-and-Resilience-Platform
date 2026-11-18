@@ -49,6 +49,10 @@ import { RecipientGroups } from './pages/notifications/RecipientGroups';
 import { MessageTemplates } from './pages/notifications/MessageTemplates';
 import { ComposeNotification } from './pages/notifications/ComposeNotification';
 import { DeliveryTracking } from './pages/notifications/DeliveryTracking';
+import { SitrepGenerator } from './pages/reporting/SitrepGenerator';
+import { AarGenerator } from './pages/reporting/AarGenerator';
+import { EvidenceLogView } from './pages/reporting/EvidenceLogView';
+import { AnalyticsDashboard } from './pages/reporting/AnalyticsDashboard';
 
 const queryClient = new QueryClient();
 
@@ -124,6 +128,16 @@ root.render(
               <Route path="notifications/templates" element={<MessageTemplates />} />
               <Route path="notifications/compose" element={<ComposeNotification />} />
               <Route path="notifications/:id/delivery" element={<DeliveryTracking />} />
+              {/* F7 (04-06) — Reporting & Learning: SITREP Generator, AAR
+                  Generator, Evidence & Audit Log View, Analytics &
+                  Reporting Dashboard. Appended here following the SAME
+                  append-not-overwrite discipline 04-05 (same wave) used
+                  for its own notifications/* routes above — no
+                  compile-time dependency between the two route sets. */}
+              <Route path="incidents/:id/sitreps/new" element={<SitrepGenerator />} />
+              <Route path="incidents/:id/aar/new" element={<AarGenerator />} />
+              <Route path="reports/evidence-log" element={<EvidenceLogView />} />
+              <Route path="reports/analytics" element={<AnalyticsDashboard />} />
             </Route>
           </Routes>
         </RouteGuard>

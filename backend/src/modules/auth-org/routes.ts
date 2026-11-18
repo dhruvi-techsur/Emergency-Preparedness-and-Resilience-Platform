@@ -226,6 +226,20 @@ export default async function authOrgRoutes(app: FastifyInstance) {
       const hasNotifications = permRows.some(
         (r) => r.feature === 'notifications' && r.actions.length > 0,
       );
+      // Phase 4 (F7, 04-06): any role holding ANY 'reporting' permission
+      // (04-04's seed grants the full view/create/edit set to
+      // planning_logistics_chief, view+create to incident_commander/
+      // eoc_director, and view-only to field_responder) sees a NEW
+      // "Improve" SideNav group with "Evidence log" and "Analytics" items
+      // — per the UX mockup's Navigation Map
+      // (`SideNav → Improve: "Reports" → sub-tab "Analytics"`, and the
+      // Evidence Log living under its OWN F7-aggregate route per this
+      // plan's own documented distinction from 01-11's existing
+      // `/admin/audit-log`). This is a brand-new group key (not an
+      // append to an existing one), so no collision with 04-05 (same
+      // wave)'s "Coordinate" append is possible — each plan's Task 3
+      // appends only to the groups/keys it actually owns.
+      const hasReporting = permRows.some((r) => r.feature === 'reporting' && r.actions.length > 0);
 
       const nav_groups = [
         ...(hasPlans
@@ -304,6 +318,32 @@ export default async function authOrgRoutes(app: FastifyInstance) {
                         },
                       ]
                     : []),
+                ],
+              },
+            ]
+          : []),
+        // Phase 4 (F7, 04-06): new "Improve" group, independent of
+        // 04-05's "Coordinate" append above — SITREP/AAR generation is
+        // reached from the Incident Workspace's own Reports-tab actions
+        // (04-07 wires that entry point), not a top-level nav item, per
+        // the mockup's Navigation Map.
+        ...(hasReporting
+          ? [
+              {
+                label: 'Improve',
+                items: [
+                  {
+                    id: 'evidence-log',
+                    label: 'Evidence log',
+                    icon: 'file',
+                    href: '/reports/evidence-log',
+                  },
+                  {
+                    id: 'analytics',
+                    label: 'Analytics',
+                    icon: 'layers',
+                    href: '/reports/analytics',
+                  },
                 ],
               },
             ]
