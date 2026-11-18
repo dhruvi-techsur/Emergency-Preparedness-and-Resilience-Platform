@@ -49,6 +49,24 @@ const PERMISSION_DENIED = {
  * the 15-min session token to expire (TechArch 04-security.md §5.1).
  */
 export function requirePermission(feature: string, action: string): preHandlerHookHandler {
+  return requireAnyPermission(feature, [action]);
+}
+
+/**
+ * Same session/status resolution as `requirePermission` above, but passes
+ * if the role holds ANY ONE of the given actions on `feature` — the
+ * `tasks`/status-transition route uses this to accept EITHER the
+ * broad `edit` grant (command/logistics roles, who can also reassign
+ * owners via the separate `/owner` route) OR the narrower `status` grant
+ * (field_responder — status-transitions ONLY, deliberately still denied
+ * `edit` so a field responder can never reassign a task's owner or
+ * edit its title/description/due date, just move it through the
+ * Start/Mark-done state machine from the mobile UI). Keeping this as a
+ * genuinely separate, narrower action string (rather than just adding
+ * `edit` to field_responder's tasks grant) is what makes "field_responder
+ * cannot edit tasks" still a true, enforced statement after this fix.
+ */
+export function requireAnyPermission(feature: string, actions: string[]): preHandlerHookHandler {
   return async (req: FastifyRequest, reply: FastifyReply) => {
     const auth = req.headers.authorization;
     if (!auth?.startsWith('Bearer ')) {
@@ -72,7 +90,17 @@ export function requirePermission(feature: string, action: string): preHandlerHo
       return reply.code(401).send(SESSION_EXPIRED);
     }
 
-    const allowed = await checkPermission({ role_id: user.role_id, feature, action });
+    let allowed = false;
+    for (const action of actions) {
+      // eslint-disable-next-line no-await-in-loop -- sequential, short-circuiting on
+      // the first allow is intentional: avoids firing every OPA query when the
+      // first action already grants access (the common case for single-action
+      // callers via requirePermission above).
+      if (await checkPermission({ role_id: user.role_id, feature, action })) {
+        allowed = true;
+        break;
+      }
+    }
     if (!allowed) {
       return reply.code(403).send(PERMISSION_DENIED);
     }

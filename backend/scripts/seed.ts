@@ -167,14 +167,50 @@ async function main() {
     record('role_permissions', result);
   }
 
-  const tasksViewOnlyPerm = await findOrInsert(
-    'role_permissions',
-    ['role_id', 'feature'],
+  // field_responder: `view` (read-only task visibility, as above) PLUS a
+  // narrow `status` action — NOT `edit` — gating ONLY the
+  // PATCH /api/v1/tasks/:id/status one-tap Start/Mark-done transition My
+  // Tasks (field view) needs (05-03's F6 S6.2 screen). `edit` itself
+  // (owner reassignment, title/description/due-date changes) remains
+  // withheld from field_responder — this is a deliberately NARROWER grant
+  // than the full command/logistics `edit` action above, not a relaxation
+  // of it (review finding B2: the one-tap status button 403'd for every
+  // real field_responder because no actions beyond `view` existed on this
+  // row at all; adding `status` closes that gap without opening the wider
+  // `edit` surface a field responder was never meant to have).
+  //
+  // findOrInsert alone would never widen an ALREADY-seeded row's actions
+  // on a second run (its match is on (role_id, feature), which already
+  // exists from this exact block's own prior run before this fix) — the
+  // explicit UPDATE below is what makes the actions array actually change
+  // for anyone who seeded before this fix shipped, while still being a
+  // no-op (UPDATE sets the same already-correct array) on every run after.
+  const tasksFieldResponderActions = ['view', 'status'];
+  const existingTasksFieldResponderPerm = await pool.query<{ id: string; actions: string[] }>(
+    `SELECT id, actions FROM role_permissions WHERE role_id = $1 AND feature = $2`,
     [roleIds['field_responder'], 'tasks'],
-    ['role_id', 'feature', 'actions'],
-    [roleIds['field_responder'], 'tasks', ['view']],
   );
-  record('role_permissions', tasksViewOnlyPerm);
+  if (existingTasksFieldResponderPerm.rows.length === 0) {
+    await pool.query(`INSERT INTO role_permissions (role_id, feature, actions) VALUES ($1, $2, $3)`, [
+      roleIds['field_responder'],
+      'tasks',
+      tasksFieldResponderActions,
+    ]);
+    record('role_permissions', { id: '', inserted: true });
+  } else {
+    const row = existingTasksFieldResponderPerm.rows[0];
+    const current = row.actions;
+    const alreadyCorrect =
+      current.length === tasksFieldResponderActions.length &&
+      tasksFieldResponderActions.every((a) => current.includes(a));
+    if (!alreadyCorrect) {
+      await pool.query(`UPDATE role_permissions SET actions = $1 WHERE id = $2`, [
+        tasksFieldResponderActions,
+        row.id,
+      ]);
+    }
+    record('role_permissions', { id: row.id, inserted: false });
+  }
 
   // resource_requests feature (Phase 3, F4): planning_logistics_chief is the
   // FRD's explicitly-named "typically PER-03, logistics function" approver
