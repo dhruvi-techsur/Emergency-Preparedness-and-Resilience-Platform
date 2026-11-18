@@ -213,6 +213,19 @@ export default async function authOrgRoutes(app: FastifyInstance) {
       const hasResourceRequests = permRows.some(
         (r) => r.feature === 'resource_requests' && r.actions.length > 0,
       );
+      // Phase 4 (F5, 04-05): any role holding ANY 'notifications' permission
+      // (04-04's seed grants view-only to field_responder, view+create to
+      // eoc_director/planning_logistics_chief, and the full view+create+
+      // approve set to incident_commander alone, per PER-02's PIO-merge
+      // approval authority) sees "Notifications" in the SAME "Coordinate"
+      // SideNav group 03-06 created — same role_permissions-driven
+      // derivation pattern as hasTasks/hasResourceRequests above. This
+      // plan's Task 3 appends to the EXISTING "Coordinate" group rather
+      // than creating a duplicate key, per this plan's own documented
+      // append-not-overwrite convention (shared with 04-06, same wave).
+      const hasNotifications = permRows.some(
+        (r) => r.feature === 'notifications' && r.actions.length > 0,
+      );
 
       const nav_groups = [
         ...(hasPlans
@@ -250,7 +263,7 @@ export default async function authOrgRoutes(app: FastifyInstance) {
               },
             ]
           : []),
-        ...(hasTasks || hasResourceRequests
+        ...(hasTasks || hasResourceRequests || hasNotifications
           ? [
               {
                 label: 'Coordinate',
@@ -261,6 +274,36 @@ export default async function authOrgRoutes(app: FastifyInstance) {
                   ...(hasResourceRequests
                     ? [{ id: 'resource-requests', label: 'Resources', icon: 'truck', href: '/resource-requests' }]
                     : []),
+                  // 04-05: appends two Notifications sub-items (Groups,
+                  // Templates) to this SAME Coordinate group — Compose and
+                  // Delivery Tracking are reached from these screens'
+                  // own in-page actions (New notification / row click),
+                  // not separate top-level nav entries, per the mockup's
+                  // Navigation Map ("SideNav → Coordinate: 'Notifications'
+                  // → sub-tab 'Groups'/'Templates'").
+                  ...(hasNotifications
+                    ? [
+                        {
+                          id: 'notification-groups',
+                          label: 'Notification groups',
+                          icon: 'bell',
+                          href: '/notifications/groups',
+                        },
+                        {
+                          id: 'message-templates',
+                          label: 'Message templates',
+                          // 'file-text' is used by 01-03's pre-existing
+                          // ADMIN_NAV_ITEMS above but isn't actually a
+                          // member of the design system's ICON_NAMES set
+                          // (confirmed against Icon.tsx) — a pre-existing
+                          // gap out of this plan's scope to fix. Using
+                          // 'file' (a real icon) here avoids repeating
+                          // that same mismatch in a newly-added item.
+                          icon: 'file',
+                          href: '/notifications/templates',
+                        },
+                      ]
+                    : []),
                 ],
               },
             ]
@@ -268,7 +311,20 @@ export default async function authOrgRoutes(app: FastifyInstance) {
         ...(hasAdmin ? [{ label: 'Admin', items: ADMIN_NAV_ITEMS }] : []),
       ];
 
-      return reply.code(200).send({ nav_groups });
+      // `permissions`: the signed-in user's full feature->actions map,
+      // piggybacked on this already-fetched role_permissions query. 04-05's
+      // ComposeNotification.tsx reads this (via the same react-query cache
+      // key this page's own AppShell.tsx query already populates) to
+      // proactively disable "Approve and send" for a non-approver BEFORE
+      // any API round-trip, rather than inventing a second dedicated
+      // endpoint for what is, functionally, the same role_permissions read
+      // this route already performs for nav derivation.
+      const permissions: Record<string, string[]> = {};
+      for (const row of permRows) {
+        permissions[row.feature] = row.actions;
+      }
+
+      return reply.code(200).send({ nav_groups, permissions });
     },
   );
 

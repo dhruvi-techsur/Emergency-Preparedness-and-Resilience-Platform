@@ -45,6 +45,10 @@ import { TaskDetail } from './pages/tasks-resources/TaskDetail';
 import { ResourceRequestList } from './pages/tasks-resources/ResourceRequestList';
 import { CreateResourceRequest } from './pages/tasks-resources/CreateResourceRequest';
 import { ResourceRequestDetail } from './pages/tasks-resources/ResourceRequestDetail';
+import { RecipientGroups } from './pages/notifications/RecipientGroups';
+import { MessageTemplates } from './pages/notifications/MessageTemplates';
+import { ComposeNotification } from './pages/notifications/ComposeNotification';
+import { DeliveryTracking } from './pages/notifications/DeliveryTracking';
 
 const queryClient = new QueryClient();
 
@@ -104,6 +108,22 @@ root.render(
                 path="incidents/:incidentId/resource-requests/:id"
                 element={<ResourceRequestDetail />}
               />
+              {/* F5 (04-05) — Notifications: Recipient Groups, Message
+                  Templates, Compose (4-step flow, accepts optional
+                  ?incident=<id>), Delivery & Acknowledgment Tracking.
+                  Appended here (not AppShell.tsx itself — see this plan's
+                  own sequencing note on the shared-file convention 02-05/
+                  02-06 established: main.tsx owns the nested route tree,
+                  AppShell.tsx is layout/chrome only) following the SAME
+                  append-not-overwrite discipline 03-05/03-06 demonstrated
+                  for their own two-same-wave-plans-touch-one-file
+                  scenario — 04-06 (same wave) appends its own `/reports/*`
+                  routes independently, with no compile-time dependency
+                  between the two route sets. */}
+              <Route path="notifications/groups" element={<RecipientGroups />} />
+              <Route path="notifications/templates" element={<MessageTemplates />} />
+              <Route path="notifications/compose" element={<ComposeNotification />} />
+              <Route path="notifications/:id/delivery" element={<DeliveryTracking />} />
             </Route>
           </Routes>
         </RouteGuard>
