@@ -1,22 +1,47 @@
 {
-  "duration_secs": 3814.0,
+  "duration_secs": 8789.0,
   "token_usage": {
-    "input": 448,
-    "output": 331975,
-    "total": 37686408,
-    "cache_read": 36095935,
-    "cache_write": 1258050,
-    "cost": 13.684957999999998
+    "input": 1662,
+    "output": 789028,
+    "total": 131936958,
+    "cache_read": 127375732,
+    "cache_write": 3770536,
+    "cost": 42.795090399999985
   },
   "model": "claude-sonnet-5",
   "files_changed": [
     ".planning/ROADMAP.md",
+    ".planning/STATE.md",
     ".planning/phases/04-notifications-reporting-learning/04-08-PLAN.md",
-    ".planning/phases/04-notifications-reporting-learning/04-09-PLAN.md"
+    ".planning/phases/04-notifications-reporting-learning/04-08-SUMMARY.md",
+    ".planning/phases/04-notifications-reporting-learning/04-09-PLAN.md",
+    ".planning/phases/04-notifications-reporting-learning/04-09-SUMMARY.md",
+    ".planning/phases/04-notifications-reporting-learning/04-GATE.md",
+    ".planning/phases/04-notifications-reporting-learning/04-REVIEW.md",
+    ".planning/phases/04-notifications-reporting-learning/04-SECURITY.md",
+    ".planning/phases/04-notifications-reporting-learning/04-VERIFICATION.md",
+    ".planning/phases/04-notifications-reporting-learning/logs/attempt-3/execution.md",
+    ".planning/phases/04-notifications-reporting-learning/logs/attempt-3/summary.json",
+    ".planning/phases/04-notifications-reporting-learning/logs/attempt-3/verification.md",
+    "backend/src/modules/auth-org/rbac.test.ts",
+    "backend/src/modules/auth-org/rbac.ts",
+    "backend/src/modules/auth-org/routes.ts",
+    "backend/src/modules/comms-reporting/evidence-log.ts",
+    "backend/src/modules/comms-reporting/notifications.test.ts",
+    "backend/src/modules/comms-reporting/notifications.ts",
+    "frontend/app/e2e/auth-deep-link-return-path.spec.ts",
+    "frontend/app/e2e/incident-workspace.spec.ts",
+    "frontend/app/e2e/notifications-compose.spec.ts",
+    "frontend/app/src/auth/RouteGuard.tsx",
+    "frontend/app/src/auth/oidc-config.ts",
+    "frontend/app/src/main.tsx",
+    "frontend/app/src/pages/SignInCallback.tsx",
+    "frontend/app/src/pages/incidents/IncidentWorkspace.tsx",
+    "frontend/app/src/pages/notifications/NotificationsLanding.tsx"
   ],
   "verification_status": "passed",
   "error_message": null,
   "attempt_number": 3,
   "created_at": "2026-11-18T11:00:17.010553+00:00",
-  "completed_at": "2026-11-18T12:03:51.301953880+00:00"
+  "completed_at": "2026-11-18T13:26:46.063960264+00:00"
 }
