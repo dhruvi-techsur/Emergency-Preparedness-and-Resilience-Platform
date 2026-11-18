@@ -14,7 +14,7 @@ import {
   type SelectOption,
   type ComboboxOption,
 } from '@epmp/design-system';
-import { apiGet } from '../../lib/api-client';
+import { apiGet, apiGetBlob, ApiRequestError } from '../../lib/api-client';
 
 interface EvidenceLogEntry {
   id: string;
@@ -87,9 +87,11 @@ function recordHrefFor(entry: EvidenceLogEntry): string | null {
  * this component renders absolutely NO edit or delete affordance anywhere
  * in its markup, for ANY role including an admin-permissioned one — there
  * is no conditional branch anywhere below that could introduce one. The
- * "Export as CSV" action is a direct browser-navigable download link
- * (plain anchor/location.href, not a fetch+blob dance) since the backend
- * sets Content-Disposition: attachment. PDF export is NOT offered as a UI
+ * "Export as CSV" action fetches the CSV with the app's Bearer-token auth
+ * header (via apiGetBlob) and triggers the download through a synthetic
+ * `<a download>` click on an object URL — a plain `window.location.href`
+ * navigation cannot carry the Authorization header this app's entire auth
+ * model requires, so it would always 401. PDF export is NOT offered as a UI
  * option at all — 04-02's `format=pdf` path is a documented, guaranteed
  * `500 EXPORT_FAILED`, and offering a UI choice that always fails is
  * worse than simply not offering it; if a future PDF library lands, this
@@ -102,6 +104,7 @@ export function EvidenceLogView(): JSX.Element {
   const [actionType, setActionType] = React.useState('');
   const [recordType, setRecordType] = React.useState('');
   const [page, setPage] = React.useState(1);
+  const [exportError, setExportError] = React.useState<string | null>(null);
 
   // No larger actor-list endpoint exists for this view either — reuses
   // 01-11's AuditLogView.tsx exact "derive options from already-fetched
@@ -142,6 +145,21 @@ export function EvidenceLogView(): JSX.Element {
     }
     return Array.from(seen.entries()).map(([value, label]) => ({ value, label }));
   }, [unfilteredQuery.data]);
+
+  const handleExportCsv = async () => {
+    setExportError(null);
+    try {
+      const blob = await apiGetBlob(`/api/v1/evidence-log/export?format=csv&${queryParams}`);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'evidence-log.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setExportError(err instanceof ApiRequestError ? err.message : 'Could not export the evidence log.');
+    }
+  };
 
   const items = evidenceQuery.data?.items ?? [];
   const total = evidenceQuery.data?.total ?? 0;
@@ -186,21 +204,21 @@ export function EvidenceLogView(): JSX.Element {
         title="Evidence & audit log"
         crumbs={[{ label: 'Evidence log' }]}
         actions={[
-          // Direct browser-navigable download — the backend sets
-          // Content-Disposition: attachment, so a plain navigation
-          // (window.location.href) is the simplest correct
-          // implementation, never a fetch+blob dance.
-          <Button
-            key="export-csv"
-            variant="secondary"
-            onClick={() => {
-              window.location.href = `/api/v1/evidence-log/export?format=csv&${queryParams}`;
-            }}
-          >
+          // Fetches with the app's Bearer-token auth header and triggers
+          // the download via an object URL + synthetic <a download> click
+          // — a plain window.location.href navigation cannot carry the
+          // Authorization header this route's requirePermission requires.
+          <Button key="export-csv" variant="secondary" onClick={() => void handleExportCsv()}>
             Export as CSV
           </Button>,
         ]}
       />
+
+      {exportError && (
+        <Alert tone="danger" title="Export failed">
+          {exportError}
+        </Alert>
+      )}
 
       <Alert tone="info" title="PDF export is not available this phase">
         Only CSV export is offered here — 04-02's PDF export path is a documented backend gap

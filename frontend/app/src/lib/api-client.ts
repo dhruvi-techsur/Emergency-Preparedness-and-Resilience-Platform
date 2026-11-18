@@ -61,6 +61,34 @@ export async function apiGet<T>(path: string): Promise<T> {
   return handleResponse<T>(res);
 }
 
+/**
+ * For endpoints that return a binary/file body (e.g. CSV export) rather
+ * than JSON. Every other apiGet/apiPost/apiPatch call site in this app
+ * attaches the Bearer token via authHeaders() — a raw `window.location.href`
+ * navigation to an authenticated route cannot carry that header at all, so
+ * any download-triggering route must go through fetch like this one does.
+ * Reuses the same 401 SESSION_EXPIRED handling apiGet gets for free.
+ */
+export async function apiGetBlob(path: string): Promise<Blob> {
+  const res = await fetch(path, { headers: { ...authHeaders() } });
+  if (res.status === 401) {
+    clearSessionToken();
+    window.location.href = '/';
+    throw new ApiRequestError(401, {
+      error_code: 'SESSION_EXPIRED',
+      message: 'Your session has ended. Sign in again to continue.',
+    });
+  }
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({
+      error_code: 'UNKNOWN_ERROR',
+      message: `Request failed with status ${res.status}`,
+    }))) as ApiError;
+    throw new ApiRequestError(res.status, body);
+  }
+  return res.blob();
+}
+
 export async function apiPost<T>(path: string, body: object): Promise<T> {
   const res = await fetch(path, {
     method: 'POST',
