@@ -3,6 +3,7 @@ import type { PoolClient } from 'pg';
 import { requirePermission } from '../auth-org/rbac.js';
 import { query, pool } from '../../db/client.js';
 import { TimelineService, withTimelineTransaction } from '../incident-ops/timeline.js';
+import { fetchIncidentForMutation } from '../incident-ops/incidents.js';
 
 export type RecipientGroupType = 'Role' | 'Jurisdiction' | 'Geography';
 export type DeliveryStatus = 'Queued' | 'Sent' | 'Delivered' | 'Failed' | 'Acknowledged';
@@ -365,6 +366,18 @@ export default async function notificationsRoutes(app: FastifyInstance) {
           error_code: 'MESSAGE_TOO_LONG',
           message: 'This message exceeds the character limit for the selected channel. Shorten it.',
         });
+      }
+
+      // 3. Jurisdiction-scope gate — mirrors reporting.ts's own correct
+      // usage of fetchIncidentForMutation for every incident-linked route
+      // in this same module. A caller-supplied incident_id must resolve
+      // within the caller's own jurisdiction_scope before any write ties
+      // a notification (and later, a Timeline entry at send time) to it.
+      if (incident_id) {
+        const incident = await fetchIncidentForMutation(incident_id, req.epmpUser!.jurisdiction_scope);
+        if (!incident) {
+          return reply.code(404).send(NOTIFICATION_NOT_FOUND);
+        }
       }
 
       const client = await pool.connect();
