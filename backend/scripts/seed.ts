@@ -394,6 +394,65 @@ async function main() {
   // file: blanket admin/platform access is scoped to the admin console,
   // not incident-reporting operations — intentional, not an oversight.
 
+  // field_reports feature (Phase 5, F6): the FRD's named field-submission
+  // role is field_responder (PER-04) — it gets view/create for submitting
+  // its own reports offline/online. The initial instinct was to withhold
+  // `resolve` from field_responder (treating Sync Conflict Resolution as
+  // an EOC-side-only action), but re-reading the mockup's own Navigation
+  // Map corrects that: the Sync Conflict Resolution screen is explicitly
+  // "Reached from: Queued Submissions View conflict row" — i.e. the FIELD
+  // RESPONDER resolves THEIR OWN conflict on their own device via "Keep my
+  // version"/"Keep EOC version". So field_responder DOES need `resolve`,
+  // not just view/create — granting only view/create here would make
+  // 05-04's own Sync Conflict Resolution screen unusable by the exact role
+  // the FRD designed it for. incident_commander/eoc_director (PER-02/
+  // PER-01) also need view+resolve — EOC-side command staff reviewing the
+  // operating picture should see field submissions too and be able to
+  // resolve conflicts from the EOC side, per the FRD's "surfaced to a
+  // named person for resolution" being role-agnostic about WHICH named
+  // person as long as it's never automatic. planning_logistics_chief
+  // (PER-03) gets view-only — situational read access, consistent with
+  // every other feature's read-access-for-planning-staff pattern 03-07/
+  // 04-04 established. secops_admin deliberately gets NO explicit
+  // 'field_reports' row here, for the identical reason documented above
+  // for every other feature in this file: blanket admin/platform access
+  // is scoped to the admin console, not field-operations, and does not
+  // need explicit field_reports grants for this phase's RBAC model.
+  const fieldResponderFieldReportsPerm = await findOrInsert(
+    'role_permissions',
+    ['role_id', 'feature'],
+    [roleIds['field_responder'], 'field_reports'],
+    ['role_id', 'feature', 'actions'],
+    [roleIds['field_responder'], 'field_reports', ['view', 'create', 'resolve']],
+  );
+  record('role_permissions', fieldResponderFieldReportsPerm);
+
+  // incident_commander/eoc_director get view+resolve (NOT create) — EOC-side
+  // command staff review and resolve conflicts surfaced from the field, but
+  // field-report AUTHORSHIP itself belongs to field_responder per the FRD's
+  // mobile-first submission flow.
+  const fieldReportsEocResolverRoles = ['incident_commander', 'eoc_director'] as const;
+
+  for (const roleName of fieldReportsEocResolverRoles) {
+    const result = await findOrInsert(
+      'role_permissions',
+      ['role_id', 'feature'],
+      [roleIds[roleName], 'field_reports'],
+      ['role_id', 'feature', 'actions'],
+      [roleIds[roleName], 'field_reports', ['view', 'resolve']],
+    );
+    record('role_permissions', result);
+  }
+
+  const fieldReportsViewOnlyPerm = await findOrInsert(
+    'role_permissions',
+    ['role_id', 'feature'],
+    [roleIds['planning_logistics_chief'], 'field_reports'],
+    ['role_id', 'feature', 'actions'],
+    [roleIds['planning_logistics_chief'], 'field_reports', ['view']],
+  );
+  record('role_permissions', fieldReportsViewOnlyPerm);
+
   // No explicit call to syncRolePermissionsToOpa here: unlike this plan's
   // earlier concern, OPA's data document is re-synced fresh from
   // role_permissions at every server.ts startup (see server.ts's `start()`),
@@ -442,6 +501,13 @@ async function main() {
     // "eocdirector@epmp.local" users.
     { idp_group: '/epmp-planning-logistics-chiefs', role_id: roleIds['planning_logistics_chief'] },
     { idp_group: '/epmp-eoc-directors', role_id: roleIds['eoc_director'] },
+    // Phase 5 (F6, 05-05): a fourth seeded Keycloak group/user so every
+    // Phase 5 Playwright suite (05-03, 05-04) can sign in as a REAL,
+    // SSO-provisioned field_responder identity from the start — see
+    // backend/keycloak/epmp-realm.json's "epmp-field-responders" group +
+    // "field-responder@epmp.local" user, and
+    // frontend/app/e2e/helpers/sign-in.ts's signInAsFieldResponder.
+    { idp_group: '/epmp-field-responders', role_id: roleIds['field_responder'] },
   ];
   const ssoConfig = await findOrInsert(
     'sso_config',
@@ -644,6 +710,28 @@ async function main() {
   await pool.query(
     `UPDATE users SET jurisdiction_scope = jurisdiction_scope || $1
      WHERE email = 'eocdirector@epmp.local' AND NOT ($2 = ANY(jurisdiction_scope))`,
+    [[jurisdiction.id], jurisdiction.id],
+  );
+
+  // Phase 5 (F6, 05-05) UAT fixture: field-responder@epmp.local,
+  // pre-provisioned with the 'Default Agency' jurisdiction_scope up front —
+  // identical rationale/pattern to commander@epmp.local's treatment above
+  // (02-07's documented gap fix): sso.ts's JIT provisioning on first-ever
+  // Keycloak login sets jurisdiction_scope = '{}', which would otherwise
+  // leave this identity unable to see any jurisdiction-scoped field-report
+  // data. idp_subject is intentionally left NULL here for the same reason
+  // documented above for planner@epmp.local/eocDirectorUser.
+  const fieldResponderUser = await findOrInsert(
+    'users',
+    ['email'],
+    ['field-responder@epmp.local'],
+    ['email', 'name', 'role_id', 'jurisdiction_scope'],
+    ['field-responder@epmp.local', 'Field Responder', roleIds['field_responder'], [jurisdiction.id]],
+  );
+  record('users', fieldResponderUser);
+  await pool.query(
+    `UPDATE users SET jurisdiction_scope = jurisdiction_scope || $1
+     WHERE email = 'field-responder@epmp.local' AND NOT ($2 = ANY(jurisdiction_scope))`,
     [[jurisdiction.id], jurisdiction.id],
   );
 

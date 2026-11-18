@@ -47,6 +47,10 @@
     {
       "name": "epmp-eoc-directors",
       "path": "/epmp-eoc-directors"
+    },
+    {
+      "name": "epmp-field-responders",
+      "path": "/epmp-field-responders"
     }
   ],
   "users": [
@@ -113,6 +117,22 @@
         }
       ],
       "groups": ["/epmp-eoc-directors"]
+    },
+    {
+      "username": "field-responder@epmp.local",
+      "email": "field-responder@epmp.local",
+      "firstName": "Field",
+      "lastName": "Responder",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "devpass123",
+          "temporary": false
+        }
+      ],
+      "groups": ["/epmp-field-responders"]
     }
   ]
 }
