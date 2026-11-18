@@ -2,16 +2,16 @@
 pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Plan 05-05 closed the final F6 gap — idempotent field_reports role_permissions grants and a real Keycloak-seeded field_responder identity, proven end-to-end through OPA with 3 new integration tests, so 05-03/05-04's field-mobile screens can sign in as a real seeded user from the start.
-stopped_at: Completed 05-05-PLAN.md
-last_updated: "2026-11-18T14:41:46.775Z"
-last_activity: "2026-11-18 — Plan 05-05 complete (see 05-05-SUMMARY.md for full detail), run after 05-01/05-02. Extended backend/scripts/seed.ts with idempotent field_reports grants (field_responder: view/create/resolve; incident_commander/eoc_director: view/resolve; planning_logistics_chief: view), added a fourth seeded Keycloak group/user (epmp-field-responders / field-responder@epmp.local) to epmp-realm.json, and added the canonical signInAsFieldResponder Playwright helper to sign-in.ts for 05-03/05-04 to import. 3 new integration tests prove the seeded grants authorize real requests end-to-end through OPA. Full backend suite (15 files, 77 tests) green with zero regression; tsc --noEmit clean in both backend and frontend/app; both builds clean."
+status: Plan 05-03 shipped Field Home/My Tasks/Report Observation — the phase's success-criterion-1 screens — proven end-to-end via Playwright against the real 05-01 backend using 05-05's seeded field-responder identity. 05-04 remains (wave 4).
+stopped_at: Completed 05-03-PLAN.md
+last_updated: "2026-11-18T14:57:06.000Z"
+last_activity: "2026-11-18 — Plan 05-03 complete (see 05-03-SUMMARY.md for full detail), run after 05-01/05-02/05-05. Built FieldMobileShell (shared SyncStatus-pinning wrapper) plus Field Home (/field), My Tasks field view (/field/tasks, one-tap Start/Mark done), and Report Observation (/field/report, photo+location capture, offline-first submit). Extended offline-queue.ts with a second tasks_status IndexedDB object store (DB_VERSION 1->2) and enqueueTaskStatusChange; added a camera icon to the design system and uploadFieldReportPhoto to api-client.ts. Wired this plan's 3 field-mobile routes into main.tsx so its own Playwright spec could exercise them end-to-end. Playwright spec proves both the exact empty-report validation message and the full queue-first submit-then-navigate flow. 1 auto-fixed Rule 3 deviation (offline-queue.test.ts broke against the new DB_VERSION/apiPatch mock, fixed). Both frontend/app and backend builds clean; frontend/app vitest (5 tests) + design-system vitest (59 tests) both green."
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 57
-  completed_plans: 45
-  percent: 67
+  completed_plans: 46
+  percent: 69
 ---
 
 # Project State
@@ -21,28 +21,30 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 5 — Mobile Field Operations — IN PROGRESS. Plan 05-01 (backend data layer + API) complete. Plan 05-02 (SyncStatus component + offline-queue library + PWA scaffolding) complete, run in parallel with 05-01. Plan 05-05 (field_reports RBAC seed + real field-responder Keycloak identity) complete. 05-03/05-04 remain.
+**Current focus:** Phase 5 — Mobile Field Operations — IN PROGRESS. Plan 05-01 (backend data layer + API) complete. Plan 05-02 (SyncStatus component + offline-queue library + PWA scaffolding) complete, run in parallel with 05-01. Plan 05-05 (field_reports RBAC seed + real field-responder Keycloak identity) complete. Plan 05-03 (Field Home/My Tasks/Report Observation screens) complete. 05-04 remains (wave 4).
 
 ## Current Position
 
 Phase: 5 of 6 (Mobile Field Operations) — IN PROGRESS
-Plan: 3 of 5 complete in current phase (05-01, 05-02, 05-05 done; 05-03/05-04 pending, wave 3/4)
-Status: Plan 05-05 closed the final F6 gap — idempotent field_reports role_permissions grants and a real Keycloak-seeded field_responder identity, proven end-to-end through OPA with 3 new integration tests, so 05-03/05-04's field-mobile screens can sign in as a real seeded user from the start.
-Last activity: 2026-11-18 — Plan 05-05 complete (see 05-05-SUMMARY.md for full detail), run after 05-01/05-02. Extended backend/scripts/seed.ts with idempotent field_reports grants (field_responder: view/create/resolve; incident_commander/eoc_director: view/resolve; planning_logistics_chief: view), added a fourth seeded Keycloak group/user (epmp-field-responders / field-responder@epmp.local) to epmp-realm.json, and added the canonical signInAsFieldResponder Playwright helper to sign-in.ts for 05-03/05-04 to import. 3 new integration tests prove the seeded grants authorize real requests end-to-end through OPA. Full backend suite (15 files, 77 tests) green with zero regression; tsc --noEmit clean in both backend and frontend/app; both builds clean.
+Plan: 4 of 5 complete in current phase (05-01, 05-02, 05-05, 05-03 done; 05-04 pending, wave 4)
+Status: Plan 05-03 shipped Field Home/My Tasks/Report Observation — the phase's success-criterion-1 screens — proven end-to-end via Playwright against the real 05-01 backend using 05-05's seeded field-responder identity. 05-04 remains (wave 4).
+Last activity: 2026-11-18 — Plan 05-03 complete (see 05-03-SUMMARY.md for full detail), run after 05-01/05-02/05-05. Built FieldMobileShell (shared SyncStatus-pinning wrapper) plus Field Home (/field), My Tasks field view (/field/tasks, one-tap Start/Mark done), and Report Observation (/field/report, photo+location capture, offline-first submit). Extended offline-queue.ts with a second tasks_status IndexedDB object store (DB_VERSION 1->2) and enqueueTaskStatusChange; added a camera icon to the design system and uploadFieldReportPhoto to api-client.ts. Wired this plan's 3 field-mobile routes into main.tsx so its own Playwright spec could exercise them end-to-end. Playwright spec proves both the exact empty-report validation message and the full queue-first submit-then-navigate flow. 1 auto-fixed Rule 3 deviation (offline-queue.test.ts broke against the new DB_VERSION/apiPatch mock, fixed). Both frontend/app and backend builds clean; frontend/app vitest (5 tests) + design-system vitest (59 tests) both green.
+
+Plan 05-05 (prior): closed the final F6 gap — idempotent field_reports role_permissions grants and a real Keycloak-seeded field_responder identity, proven end-to-end through OPA with 3 new integration tests, so 05-03/05-04's field-mobile screens can sign in as a real seeded user from the start. Extended backend/scripts/seed.ts with idempotent field_reports grants (field_responder: view/create/resolve; incident_commander/eoc_director: view/resolve; planning_logistics_chief: view), added a fourth seeded Keycloak group/user (epmp-field-responders / field-responder@epmp.local) to epmp-realm.json, and added the canonical signInAsFieldResponder Playwright helper to sign-in.ts. Full backend suite (15 files, 77 tests) green with zero regression.
 
 Plan 05-02 (prior): shipped the client-side half of F6 — SyncStatus design-system component, IndexedDB-backed offline-queue library with queue-first writes and auto-sync-on-reconnect, and PWA manifest/service-worker scaffolding for home-screen installability. New SyncStatus product-pattern component (icon+word+color for online/syncing/offline/conflict, exported from window.EPMP) and frontend/app/src/lib/offline-queue.ts (enqueueFieldReport/getQueueSnapshot/subscribeToQueue/syncQueueNow) give 05-03/05-04's field-mobile screens both reusable primitives they need. Design-system suite (59 tests, +8 new) and frontend/app's new offline-queue suite (5 tests against fake-indexeddb) both green.
 
 Plan 05-01 (prior, backend): shipped the F6 backend data layer and API surface — field_reports/field_report_photos/sync_conflicts tables plus idempotent-submit/ordered-batch-sync/photo-upload/conflict-resolve endpoints, every incident-touching write wrapped in the shared withTimelineTransaction invariant. Integration test (4 cases) + full backend suite (15 files, 74 tests) green with zero regression; tsc --noEmit and backend build both clean.
 
-Progress: [███████░░░] 67%
+Progress: [███████░░░] 69%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 36
+- Total plans completed: 37
 - Average duration: 24 min
-- Total execution time: 13.3 hours
+- Total execution time: 13.9 hours
 
 **By Phase:**
 
@@ -100,6 +102,7 @@ Progress: [███████░░░] 67%
 | Phase 05 P01 | 8 min | 3 tasks | 7 files |
 | Phase 05-02 P02 | 35 min | 3 tasks | 12 files |
 | Phase 05 P05 | 25 min | 2 tasks | 4 files |
+| Phase 05 P03 | 35 min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -221,6 +224,10 @@ Recent decisions affecting current work:
 - [Phase 05-01]: sync-batch conflict detection covers entity_type='field_report' vs incidents.updated_at only; any other entity_type (e.g. a future F4 task-status sync-batch) is a documented extension point for a later plan
 - [Phase 05-02]: offline-queue.ts: a network-level sync-batch failure leaves every attempted item queue_status unchanged at 'pending' (never 'failed'), so it is retried on the next reconnect instead of silently abandoned
 - [Phase 05-05]: field_responder granted resolve (not just view/create) on field_reports — the mockup's Sync Conflict Resolution screen is reached from the field responder's own Queued Submissions View, so they resolve their own conflict on-device; incident_commander/eoc_director get view+resolve but NOT create
+- [Phase 05-03]: offline-queue.ts's IndexedDB gets a SECOND object store (tasks_status, DB_VERSION 1->2) for queued task-status changes rather than a parallel queue mechanism — one offline-queue, not two
+- [Phase 05-03]: My Tasks' status-update tap degrades ANY apiPatch failure (not just navigator.onLine===false) to the same queued path — a field app should never make a tap feel lost regardless of why the network call failed
+- [Phase 05-03]: Report Observation's photo upload stays best-effort-online-only in this plan's scope (not IndexedDB-queued) — enqueueFieldReport already guarantees the report text/location is never lost; a documented, bounded gap
+- [Phase 05-03]: This plan wired its own 3 field-mobile routes (field, field/tasks, field/report) into main.tsx now rather than leaving all 6 for 05-04, since this plan's own Playwright spec needed them live to prove the offline-first submit flow end-to-end
 
 ### Pending Todos
 
@@ -232,6 +239,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-18T14:41:46.774Z
-Stopped at: Completed 05-05-PLAN.md
+Last session: 2026-11-18T14:57:06.000Z
+Stopped at: Completed 05-03-PLAN.md
 Resume file: None
