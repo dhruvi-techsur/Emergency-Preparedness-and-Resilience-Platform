@@ -28,6 +28,8 @@ export { EmptyState } from './feedback/EmptyState';
 export type { EmptyStateProps } from './feedback/EmptyState';
 export { Toast } from './feedback/Toast';
 export type { ToastProps, ToastTone } from './feedback/Toast';
+export { Progress } from './feedback/Progress';
+export type { ProgressProps, ProgressTone } from './feedback/Progress';
 
 // FORMS
 export { TextField } from './forms/TextField';
