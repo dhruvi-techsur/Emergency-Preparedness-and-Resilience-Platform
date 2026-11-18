@@ -53,6 +53,29 @@ async function createTestIncident(jurisdictionId: string): Promise<string> {
   return res.body.id;
 }
 
+// 05-05: mints a session token for a user whose role_id is one of the REAL
+// persona roles (field_responder, planning_logistics_chief, ...) seeded by
+// scripts/seed.ts — proving this plan's seeded role_permissions grants
+// genuinely authorize the correct role, not a test-scoped role_permissions
+// row that would bypass the real seed entirely.
+async function mintTokenForSeededRole(roleName: string, jurisdictionId: string): Promise<string> {
+  const roleRows = await query<{ id: string }>(`SELECT id FROM roles WHERE name = $1`, [roleName]);
+  const roleId = roleRows[0]?.id;
+  expect(roleId, `Seeded role '${roleName}' must exist — run npm run seed first`).toBeTruthy();
+
+  const email = `field-reports-test-${roleName}-${Date.now()}-${Math.random()}@epmp.local`;
+  const inserted = await query<{ id: string }>(
+    `INSERT INTO users (email, name, role_id, jurisdiction_scope, status) VALUES ($1, $2, $3, $4, 'Active') RETURNING id`,
+    [email, `Test ${roleName}`, roleId, [jurisdictionId]],
+  );
+
+  return mintSessionToken({
+    id: inserted[0].id,
+    role_id: roleId,
+    jurisdiction_scope: [jurisdictionId],
+  });
+}
+
 beforeAll(async () => {
   await app.ready();
 
@@ -263,5 +286,90 @@ describe('incident-ops field-reports routes', () => {
       .send({ resolution: 'keep_eoc' });
     expect(secondResolveRes.status).not.toBe(200);
     expect(secondResolveRes.body.error_code).toBe('SYNC_CONFLICT_ALREADY_RESOLVED');
+  });
+
+  // 05-05: the four assertions below mint tokens for REAL seeded roles
+  // (field_responder, planning_logistics_chief) rather than this file's
+  // own test-scoped role above — proving backend/scripts/seed.ts's
+  // field_reports grants genuinely authorize the correct real-world
+  // role-to-action combinations end-to-end through OPA. Requires
+  // `npm run seed` to have been run against this same database before
+  // this suite executes (see this plan's own <verify> block).
+
+  it('a user with the SEEDED field_responder role can POST /api/v1/field-reports (create grant works end-to-end)', async () => {
+    const fieldResponderToken = await mintTokenForSeededRole('field_responder', testJurisdictionId);
+
+    const res = await request(app.server)
+      .post('/api/v1/field-reports')
+      .set('Authorization', `Bearer ${fieldResponderToken}`)
+      .send({
+        client_report_id: `seeded-field-responder-${Date.now()}-${Math.random()}`,
+        observation_type: 'Road hazard',
+        description: 'Seeded field_responder create-grant proof',
+        captured_at: new Date().toISOString(),
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.sync_status).toBe('synced');
+  });
+
+  it('a user with the SEEDED field_responder role can POST /api/v1/sync-conflicts/{id}/resolve (resolve grant works end-to-end, matching the mockup\'s field-responder-resolves-their-own-conflict design)', async () => {
+    const fieldResponderToken = await mintTokenForSeededRole('field_responder', testJurisdictionId);
+
+    // Create a fresh incident and force a conflict the same way the
+    // earlier sync-batch test does, so this test owns its own
+    // independent conflict row rather than reusing the globalThis one
+    // already resolved above.
+    const incidentId = await createTestIncident(testJurisdictionId);
+    const beforeBump = new Date(Date.now() - 60_000).toISOString();
+    await query(`UPDATE incidents SET updated_at = now() WHERE id = $1`, [incidentId]);
+
+    const batchRes = await request(app.server)
+      .post('/api/v1/field-reports/sync-batch')
+      .set('Authorization', `Bearer ${fieldResponderToken}`)
+      .send({
+        reports: [
+          {
+            client_report_id: `seeded-field-responder-conflict-${Date.now()}-${Math.random()}`,
+            incident_id: incidentId,
+            observation_type: 'Damage assessment',
+            description: 'Forces a conflict for the resolve-grant proof',
+            captured_at: beforeBump,
+          },
+        ],
+      });
+    expect(batchRes.status).toBe(200);
+    expect(batchRes.body.results[0].status).toBe('conflict');
+    const seededConflictId = batchRes.body.results[0].conflict_id;
+    expect(seededConflictId).toBeTruthy();
+
+    const resolveRes = await request(app.server)
+      .post(`/api/v1/sync-conflicts/${seededConflictId}/resolve`)
+      .set('Authorization', `Bearer ${fieldResponderToken}`)
+      .send({ resolution: 'keep_mine' });
+
+    expect(resolveRes.status).toBe(200);
+    expect(resolveRes.status).not.toBe(403);
+    expect(resolveRes.body.resolution).toBe('keep_mine');
+  });
+
+  it('a user with the SEEDED planning_logistics_chief role is DENIED create (403) but ALLOWED view (200) on field_reports — the view-only split is real, not just intended', async () => {
+    const planningChiefToken = await mintTokenForSeededRole('planning_logistics_chief', testJurisdictionId);
+
+    const createRes = await request(app.server)
+      .post('/api/v1/field-reports')
+      .set('Authorization', `Bearer ${planningChiefToken}`)
+      .send({
+        client_report_id: `seeded-planning-chief-denied-${Date.now()}-${Math.random()}`,
+        observation_type: 'Road hazard',
+        description: 'This create attempt must be denied — planning_logistics_chief is view-only on field_reports',
+        captured_at: new Date().toISOString(),
+      });
+    expect(createRes.status).toBe(403);
+
+    const viewRes = await request(app.server)
+      .get('/api/v1/sync-conflicts')
+      .set('Authorization', `Bearer ${planningChiefToken}`);
+    expect(viewRes.status).toBe(200);
   });
 });
