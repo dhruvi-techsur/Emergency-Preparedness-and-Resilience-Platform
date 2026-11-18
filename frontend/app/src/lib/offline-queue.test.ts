@@ -13,6 +13,7 @@ import { apiPost } from './api-client';
 import {
   enqueueFieldReport,
   getQueueSnapshot,
+  resolveQueuedConflict,
   subscribeToQueue,
   syncQueueNow,
 } from './offline-queue';
@@ -168,5 +169,55 @@ describe('offline-queue', () => {
     const snapshot = await getQueueSnapshot();
     const row = snapshot.items.find((item) => item.client_report_id === report.client_report_id);
     expect(row?.queue_status).toBe('pending');
+  });
+
+  // Review finding W1: SyncConflictResolution.tsx's handleResolve() never
+  // cleared the local 'conflict' queue_status after a successful
+  // server-side resolve, leaving SyncStatus stuck showing 'conflict'
+  // forever. resolveQueuedConflict() is the fix — these two cases cover
+  // both resolution outcomes' DISTINCT local-status mapping.
+  it('resolveQueuedConflict("keep_mine") updates the matching local row from "conflict" to "synced"', async () => {
+    vi.stubGlobal('navigator', { onLine: false });
+
+    const report = baseReport();
+    await enqueueFieldReport(report);
+
+    vi.mocked(apiPost).mockResolvedValueOnce({
+      results: [{ client_report_id: report.client_report_id, status: 'conflict', conflict_id: 'conflict-keep-mine' }],
+    });
+    await syncQueueNow();
+
+    let snapshot = await getQueueSnapshot();
+    expect(snapshot.state).toBe('conflict');
+
+    await resolveQueuedConflict('conflict-keep-mine', 'keep_mine');
+
+    snapshot = await getQueueSnapshot();
+    const row = snapshot.items.find((item) => item.client_report_id === report.client_report_id);
+    expect(row?.queue_status).toBe('synced');
+    expect(snapshot.state).not.toBe('conflict');
+  });
+
+  it('resolveQueuedConflict("keep_eoc") updates the matching local row from "conflict" to "failed"', async () => {
+    vi.stubGlobal('navigator', { onLine: false });
+
+    const report = baseReport();
+    await enqueueFieldReport(report);
+
+    vi.mocked(apiPost).mockResolvedValueOnce({
+      results: [{ client_report_id: report.client_report_id, status: 'conflict', conflict_id: 'conflict-keep-eoc' }],
+    });
+    await syncQueueNow();
+
+    await resolveQueuedConflict('conflict-keep-eoc', 'keep_eoc');
+
+    const snapshot = await getQueueSnapshot();
+    const row = snapshot.items.find((item) => item.client_report_id === report.client_report_id);
+    expect(row?.queue_status).toBe('failed');
+    expect(snapshot.state).not.toBe('conflict');
+  });
+
+  it('resolveQueuedConflict is a no-op (does not throw) when no local row references the given conflict_id', async () => {
+    await expect(resolveQueuedConflict('no-such-conflict-id', 'keep_mine')).resolves.toBeUndefined();
   });
 });

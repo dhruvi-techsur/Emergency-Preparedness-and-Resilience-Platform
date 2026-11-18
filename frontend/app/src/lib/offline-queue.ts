@@ -223,6 +223,50 @@ export async function deleteQueuedItem(clientReportId: string): Promise<void> {
 }
 
 /**
+ * Updates the LOCAL field_reports row whose `conflict_id` matches a
+ * just-resolved sync_conflicts row — review finding W1's fix. Without
+ * this, a row that synced into `'conflict'` state (via syncQueueNow's
+ * reconciliation, which sets `queue_status` to the server's reported
+ * `'conflict'` and stores the returned `conflict_id`) stays stuck in
+ * `'conflict'` in IndexedDB FOREVER once SyncConflictResolution.tsx
+ * resolves it server-side — getQueueSnapshot()'s own state derivation
+ * (`'conflict'` if ANY item has `queue_status==='conflict'`) means
+ * SyncStatus would show a stale conflict indicator with no code path
+ * that ever clears it, even though the resolution genuinely succeeded.
+ *
+ * The LOCAL queue_status is set to mirror EXACTLY what
+ * `sync-conflicts.ts`'s resolve route did to the server-side
+ * `field_reports.sync_status` for each resolution outcome: `keep_mine`
+ * re-applies the field version (server sync_status -> 'synced'),
+ * `keep_eoc` explicitly does NOT apply it (server sync_status ->
+ * 'failed', so the responder can see-and-retry if they disagree) — this
+ * local write matches that exact two-way branch rather than collapsing
+ * both outcomes to a single state, so Queued Submissions' per-item badge
+ * stays accurate (not just "no longer stuck", but correctly
+ * Synced/Failed) after the conflict resolves.
+ */
+export async function resolveQueuedConflict(
+  conflictId: string,
+  resolution: 'keep_mine' | 'keep_eoc',
+): Promise<void> {
+  const db = await getDb();
+  const items = await db.getAll(STORE_NAME);
+  const match = items.find((item) => item.conflict_id === conflictId);
+  if (!match) {
+    // No local row references this conflict_id — e.g. the conflict was
+    // seeded directly against the backend (as this plan's own Playwright
+    // spec does) rather than via THIS device's own offline-queue sync.
+    // Nothing to reconcile locally; not an error.
+    return;
+  }
+  await db.put(STORE_NAME, {
+    ...match,
+    queue_status: resolution === 'keep_mine' ? 'synced' : 'failed',
+  });
+  await notifySubscribers();
+}
+
+/**
  * Subscribes to queue state changes: calls `cb` immediately with the
  * current snapshot, then again on every subsequent queue mutation or
  * online/offline window event. Returns an unsubscribe function.

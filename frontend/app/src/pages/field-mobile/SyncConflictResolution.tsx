@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Button, Skeleton, Alert } from '@epmp/design-system';
 import { apiGet, apiPost } from '../../lib/api-client';
+import { resolveQueuedConflict } from '../../lib/offline-queue';
 import { FieldMobileShell } from '../../lib/field-mobile-shell';
 import './SyncConflictResolution.css';
 
@@ -92,6 +93,17 @@ export function SyncConflictResolution(): JSX.Element {
     setResolving(resolution);
     try {
       await apiPost(`/api/v1/sync-conflicts/${id}/resolve`, { resolution });
+      // Review finding W1: the server-side resolution succeeding is NOT
+      // enough on its own — this device's own local field_reports
+      // IndexedDB row (if the conflict originated from THIS device's own
+      // sync) is still sitting at queue_status:'conflict' until this
+      // explicit local write updates it; without this, SyncStatus (pinned
+      // on every field-mobile screen, including the one we're about to
+      // navigate to) would keep showing a stale 'conflict' state forever,
+      // even though the resolution genuinely committed server-side.
+      if (id) {
+        await resolveQueuedConflict(id, resolution);
+      }
       navigate('/field/queued');
     } catch {
       setResolveError("This resolution didn't go through. Check your connection and try again.");
