@@ -48,3 +48,27 @@
   flex: 1;
   min-width: 0;
 }
+
+/* 04-07: Reports tab's generated-document list. */
+.ep-incident-workspace__report-list {
+  list-style: none;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+}
+
+.ep-incident-workspace__report-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: var(--border-1) solid var(--border);
+}
+
+.ep-incident-workspace__report-row:last-child {
+  border-bottom: none;
+}
+
+.ep-incident-workspace__report-actions {
+  display: flex;
+  gap: var(--space-3);
+}
