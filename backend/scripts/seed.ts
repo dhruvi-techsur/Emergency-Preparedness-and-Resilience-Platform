@@ -145,12 +145,156 @@ async function main() {
     record('role_permissions', result);
   }
 
+  // tasks feature (Phase 3, F4): command-staff/logistics roles get full
+  // create/edit per F4's Process step ("typically PER-02 or PER-03");
+  // field_responder is view-only since task CREATION/reassignment is a
+  // command/logistics action per F6's documented mobile scope (read/
+  // update-your-own-status only, not full task administration).
+  // secops_admin deliberately gets NO explicit 'tasks' row here — same
+  // reasoning as the 'incidents' omission documented above: it already has
+  // blanket admin/platform access scoped to the admin console, not
+  // incident-command operations, and this is intentional, not an oversight.
+  const tasksFullAccessRoles = ['incident_commander', 'eoc_director', 'planning_logistics_chief'] as const;
+
+  for (const roleName of tasksFullAccessRoles) {
+    const result = await findOrInsert(
+      'role_permissions',
+      ['role_id', 'feature'],
+      [roleIds[roleName], 'tasks'],
+      ['role_id', 'feature', 'actions'],
+      [roleIds[roleName], 'tasks', ['view', 'create', 'edit']],
+    );
+    record('role_permissions', result);
+  }
+
+  const tasksViewOnlyPerm = await findOrInsert(
+    'role_permissions',
+    ['role_id', 'feature'],
+    [roleIds['field_responder'], 'tasks'],
+    ['role_id', 'feature', 'actions'],
+    [roleIds['field_responder'], 'tasks', ['view']],
+  );
+  record('role_permissions', tasksViewOnlyPerm);
+
+  // resource_requests feature (Phase 3, F4): planning_logistics_chief is the
+  // FRD's explicitly-named "typically PER-03, logistics function" approver
+  // AND the natural creator/tracker of requests, so it gets the full
+  // view/create/edit/approve set (the `edit` action gates
+  // POST .../fulfill — see resource-requests.ts's requirePermission('resource_requests','edit')
+  // on that route). incident_commander/eoc_director can CREATE a request
+  // ("I need 2 generators") but do NOT get the separate `approve`
+  // action-level — per the FRD's role split, approval is logistics' call,
+  // not command staff's, even though command staff can originate a
+  // request. field_responder is view-only.
+  //
+  // The `approve` action-string here matches 03-04's actual choice exactly
+  // (confirmed via resource-requests.ts: requirePermission('resource_requests','approve')
+  // gates both POST .../approve and POST .../decline — declining is itself
+  // an approval-adjacent decision per 03-04's own inline documentation).
+  const resourceRequestsCommandCreateRoles = ['incident_commander', 'eoc_director'] as const;
+
+  for (const roleName of resourceRequestsCommandCreateRoles) {
+    const result = await findOrInsert(
+      'role_permissions',
+      ['role_id', 'feature'],
+      [roleIds[roleName], 'resource_requests'],
+      ['role_id', 'feature', 'actions'],
+      [roleIds[roleName], 'resource_requests', ['view', 'create']],
+    );
+    record('role_permissions', result);
+  }
+
+  const logisticsResourceRequestsPerm = await findOrInsert(
+    'role_permissions',
+    ['role_id', 'feature'],
+    [roleIds['planning_logistics_chief'], 'resource_requests'],
+    ['role_id', 'feature', 'actions'],
+    [
+      roleIds['planning_logistics_chief'],
+      'resource_requests',
+      ['view', 'create', 'edit', 'approve'],
+    ],
+  );
+  record('role_permissions', logisticsResourceRequestsPerm);
+
+  const resourceRequestsViewOnlyPerm = await findOrInsert(
+    'role_permissions',
+    ['role_id', 'feature'],
+    [roleIds['field_responder'], 'resource_requests'],
+    ['role_id', 'feature', 'actions'],
+    [roleIds['field_responder'], 'resource_requests', ['view']],
+  );
+  record('role_permissions', resourceRequestsViewOnlyPerm);
+
+  // plans feature (Phase 3, F3): planning_logistics_chief is the FRD's
+  // explicit named author role ("A planning user (PER-03)") — gets
+  // view/create/edit. The separate `review` action-level (gating
+  // POST .../review per 03-03's plans.ts) is granted to eoc_director
+  // SPECIFICALLY, not to planning_logistics_chief — per the FRD's
+  // "typically PER-01 or PER-03 with review permission," PER-01 and PER-03
+  // must be DIFFERENT people for the no-self-approval rule to ever be
+  // satisfiable in practice with the seeded role set. Granting `review` to
+  // eoc_director (PER-01), separate from planning_logistics_chief's (PER-03)
+  // authoring grant, is what makes the no-self-approval workflow usable
+  // end-to-end with real seeded accounts — this is deliberate, not an
+  // oversight: getting it wrong would make 03-05/03-08's cross-reviewer
+  // Playwright tests impossible to satisfy against the seeded role set,
+  // since a role holding BOTH create/edit and review on the same feature
+  // could never prove segregation-of-duties with a single seeded identity
+  // per role.
+  const planningChiefPlansPerm = await findOrInsert(
+    'role_permissions',
+    ['role_id', 'feature'],
+    [roleIds['planning_logistics_chief'], 'plans'],
+    ['role_id', 'feature', 'actions'],
+    [roleIds['planning_logistics_chief'], 'plans', ['view', 'create', 'edit']],
+  );
+  record('role_permissions', planningChiefPlansPerm);
+
+  const eocDirectorPlansReviewPerm = await findOrInsert(
+    'role_permissions',
+    ['role_id', 'feature'],
+    [roleIds['eoc_director'], 'plans'],
+    ['role_id', 'feature', 'actions'],
+    [roleIds['eoc_director'], 'plans', ['view', 'review']],
+  );
+  record('role_permissions', eocDirectorPlansReviewPerm);
+
+  // Read-only situational-awareness access per F3's Process step 5: an
+  // incident commander should be able to SEE the plans referenced by their
+  // incident without being able to author/approve them. field_responder
+  // gets the same view-only access for the same reason.
+  const plansViewOnlyRoles = ['incident_commander', 'field_responder'] as const;
+
+  for (const roleName of plansViewOnlyRoles) {
+    const result = await findOrInsert(
+      'role_permissions',
+      ['role_id', 'feature'],
+      [roleIds[roleName], 'plans'],
+      ['role_id', 'feature', 'actions'],
+      [roleIds[roleName], 'plans', ['view']],
+    );
+    record('role_permissions', result);
+  }
+
+  // secops_admin deliberately gets NO explicit 'plans' grant either, for the
+  // identical reason documented above for 'incidents'/'tasks': blanket
+  // admin/platform access from the grants earlier in this file is scoped to
+  // the admin console, not plan authoring/review — intentional, not an
+  // oversight.
+
   // No explicit call to syncRolePermissionsToOpa here: unlike this plan's
   // earlier concern, OPA's data document is re-synced fresh from
   // role_permissions at every server.ts startup (see server.ts's `start()`),
   // so `npm run migrate && npm run seed` followed by a normal app boot is
   // sufficient — the newly-seeded rows reach OPA on the next server start
-  // with no separate sync step needed from this script.
+  // with no separate sync step needed from this script. Confirmed by
+  // reading server.ts's start() function directly (same verification 02-01
+  // performed for the identical question about 'incidents'): it calls
+  // syncRolePermissionsToOpa(allPerms) unconditionally at boot, reading the
+  // FULL current role_permissions table fresh from Postgres — so these new
+  // 'plans'/'tasks'/'resource_requests' rows reach OPA automatically on the
+  // next server start with zero changes needed to server.ts or opa-client.ts.
 
   // 1 admin user (natural key: email, which IS unique in the schema)
   const adminUser = await findOrInsert(
@@ -174,6 +318,19 @@ async function main() {
     // above) — see backend/keycloak/epmp-realm.json's
     // "epmp-incident-commanders" group + "commander@epmp.local" user.
     { idp_group: '/epmp-incident-commanders', role_id: roleIds['incident_commander'] },
+    // Phase 3 (F3, 03-05): two more seeded Keycloak groups/users so this
+    // phase's Playwright suite can sign in as the author
+    // (planning_logistics_chief) and the reviewer (eoc_director) roles —
+    // the DISTINCT roles 03-07's seed deliberately grants `plans`
+    // create/edit vs `plans` review to, so the no-self-approval Plan
+    // Repository/Approval Workflow flow (03-05) and the cross-feature
+    // plan-to-task-materialization flow (03-08) can both be exercised
+    // end-to-end with real, distinct identities — see
+    // backend/keycloak/epmp-realm.json's "epmp-planning-logistics-chiefs"/
+    // "epmp-eoc-directors" groups + "planner@epmp.local"/
+    // "eocdirector@epmp.local" users.
+    { idp_group: '/epmp-planning-logistics-chiefs', role_id: roleIds['planning_logistics_chief'] },
+    { idp_group: '/epmp-eoc-directors', role_id: roleIds['eoc_director'] },
   ];
   const ssoConfig = await findOrInsert(
     'sso_config',
@@ -271,6 +428,11 @@ async function main() {
     },
   ] as const;
 
+  // Captured during the loop below so the UAT Overdue-task fixture
+  // (Phase 3, F4 success criterion 3) can reference a real incident_id
+  // without a second lookup pass.
+  const incidentIdsByName: Record<string, string> = {};
+
   for (const inc of incidentsToSeed) {
     const incidentResult = await findOrInsert(
       'incidents',
@@ -280,6 +442,7 @@ async function main() {
       [inc.name, inc.type, inc.severity, jurisdiction.id, new Date().toISOString(), commanderUser.id],
     );
     record('incidents', incidentResult);
+    incidentIdsByName[inc.name] = incidentResult.id;
 
     // `location` is nullable (see 1700000000002's own documented
     // deviation) and isn't part of findOrInsert's generic insert-column
@@ -330,6 +493,367 @@ async function main() {
         record('incident_command_roles', { id: activeRows.rows[0].id, inserted: false });
       }
     }
+  }
+
+  // Phase 3 (F3, 03-08) UAT fixture: planner@epmp.local and
+  // eocdirector@epmp.local, pre-provisioned with the 'Default Agency'
+  // jurisdiction_scope up front — identical rationale/pattern to
+  // commander@epmp.local's treatment above (02-07's documented gap fix):
+  // sso.ts's JIT provisioning on first-ever Keycloak login sets
+  // jurisdiction_scope = '{}', which would otherwise leave these two
+  // identities unable to see the 'Default Agency' plan/incident data this
+  // seed creates below for them. idp_subject is intentionally left NULL
+  // here — sso.ts's `ON CONFLICT (email) DO UPDATE SET idp_subject = ...`
+  // only ever touches idp_subject/last_login_at on an existing email
+  // match, so a real first login still JIT-resolves the subject exactly
+  // as it would for a genuinely new row; pre-seeding here only fixes the
+  // jurisdiction_scope gap, nothing else.
+  const plannerUser = await findOrInsert(
+    'users',
+    ['email'],
+    ['planner@epmp.local'],
+    ['email', 'name', 'role_id', 'jurisdiction_scope'],
+    ['planner@epmp.local', 'Planning Chief', roleIds['planning_logistics_chief'], [jurisdiction.id]],
+  );
+  record('users', plannerUser);
+  await pool.query(
+    `UPDATE users SET jurisdiction_scope = jurisdiction_scope || $1
+     WHERE email = 'planner@epmp.local' AND NOT ($2 = ANY(jurisdiction_scope))`,
+    [[jurisdiction.id], jurisdiction.id],
+  );
+
+  const eocDirectorUser = await findOrInsert(
+    'users',
+    ['email'],
+    ['eocdirector@epmp.local'],
+    ['email', 'name', 'role_id', 'jurisdiction_scope'],
+    ['eocdirector@epmp.local', 'EOC Director', roleIds['eoc_director'], [jurisdiction.id]],
+  );
+  record('users', eocDirectorUser);
+  await pool.query(
+    `UPDATE users SET jurisdiction_scope = jurisdiction_scope || $1
+     WHERE email = 'eocdirector@epmp.local' AND NOT ($2 = ANY(jurisdiction_scope))`,
+    [[jurisdiction.id], jurisdiction.id],
+  );
+
+  // UAT data-doctor fixture (Phase 3 UAT re-run): at least one Overdue
+  // task, reachable via the Task List's DEFAULT view (no filter applied,
+  // page 1, ORDER BY due_at ASC per tasks.ts's list route) for every role
+  // holding `tasks:edit` (incident_commander, eoc_director,
+  // planning_logistics_chief — all three share 'Default Agency'
+  // jurisdiction_scope and therefore all see this task through
+  // tasks.ts's jurisdiction-scope filter, which leaves it unfiltered for
+  // any of them). due_at is set deliberately far in the past so
+  // ORDER BY due_at ASC sorts it onto page 1 ahead of any
+  // later-due/non-overdue task a human may have since created by hand
+  // through the UI during a prior UAT pass (never overwritten — this
+  // fixture is only ever inserted once, on the first run, per
+  // findOrInsert's natural-key match on title+owner_id below).
+  //
+  // Status is written as 'Overdue' directly (not left 'Open' for
+  // overdue-sweep.ts's 60s scheduler to flip) so the precondition is
+  // deterministically true the instant this script finishes, rather than
+  // depending on a timing race with the background scheduler on a
+  // freshly-booted sandbox. The resulting row is schema-identical to one
+  // overdue-sweep.ts would have produced itself: same task_status_history
+  // audit trail shape (NULL->Open by the creator, then Open->Overdue with
+  // changed_by=NULL marking it system-driven, matching overdue-sweep.ts's
+  // own documented convention), same incident_timeline danger-tone entry.
+  const uatOverdueIncidentId =
+    incidentIdsByName['UAT-ASSIGN-ROLE Default Agency Flood'];
+  const uatOverdueTask = await findOrInsert(
+    'tasks',
+    ['title', 'owner_id'],
+    ['UAT-OVERDUE Verify generator fuel levels', commanderUser.id],
+    [
+      'title',
+      'description',
+      'status',
+      'owner_id',
+      'incident_id',
+      'due_at',
+      'requires_approval',
+      'created_by',
+    ],
+    [
+      'UAT-OVERDUE Verify generator fuel levels',
+      'Confirm pre-positioned generators have adequate fuel reserves.',
+      'Overdue',
+      commanderUser.id,
+      uatOverdueIncidentId,
+      '2026-01-01T00:00:00.000Z', // deliberately far in the past
+      false,
+      commanderUser.id,
+    ],
+  );
+  record('tasks', uatOverdueTask);
+  if (uatOverdueTask.inserted) {
+    await pool.query(
+      `INSERT INTO task_status_history (task_id, from_status, to_status, changed_by)
+       VALUES ($1, NULL, 'Open', $2)`,
+      [uatOverdueTask.id, commanderUser.id],
+    );
+    await pool.query(
+      `INSERT INTO task_status_history (task_id, from_status, to_status, changed_by)
+       VALUES ($1, 'Open', 'Overdue', NULL)`,
+      [uatOverdueTask.id],
+    );
+    await pool.query(
+      `INSERT INTO incident_timeline (incident_id, title, tone, actor_id, source)
+       VALUES ($1, 'Task overdue: UAT-OVERDUE Verify generator fuel levels', 'danger', NULL, 'system')`,
+      [uatOverdueIncidentId],
+    );
+  }
+
+  // Phase 3 (F3/F4, roadmap success criterion 2) UAT fixture: an
+  // already-Approved plan with a linked task template, so a human
+  // tester's UAT walkthrough of "Materialize-Tasks UI Trigger Check"
+  // never has to author+approve a plan from scratch just to reach the
+  // precondition state. Authored by planner@epmp.local (the
+  // planning_logistics_chief role actually holding `plans` create/edit),
+  // reviewed/approved by eocdirector@epmp.local (the eoc_director role
+  // holding the SEPARATE `plans` review action-level) — the identical
+  // cross-reviewer pair 03-08's own plan-to-task-materialization.spec.ts
+  // uses, satisfying chk_no_self_approval for real.
+  //
+  // Natural key: (name, jurisdiction_id), same pattern this file already
+  // uses for incidents above — plans has no UNIQUE constraint on name
+  // alone, so this find-or-insert is scoped the same way.
+  const uatPlan = await findOrInsert(
+    'plans',
+    ['name', 'jurisdiction_id'],
+    ['UAT-MATERIALIZE-READY Generator Pre-Positioning Plan', jurisdiction.id],
+    ['name', 'type', 'jurisdiction_id', 'owner_id', 'status', 'current_version'],
+    [
+      'UAT-MATERIALIZE-READY Generator Pre-Positioning Plan',
+      'EOP',
+      jurisdiction.id,
+      plannerUser.id,
+      'Approved',
+      2, // mirrors plans.ts's review-approve step, which increments current_version on approval
+    ],
+  );
+  record('plans', uatPlan);
+
+  const uatPlanSection = await findOrInsert(
+    'plan_sections',
+    ['plan_id', 'heading'],
+    [uatPlan.id, 'Generator pre-positioning'],
+    ['plan_id', 'heading', 'body', 'sort_order'],
+    [
+      uatPlan.id,
+      'Generator pre-positioning',
+      'Pre-position backup generators at critical facilities ahead of expected outages.',
+      0,
+    ],
+  );
+  record('plan_sections', uatPlanSection);
+
+  const uatTaskTemplate = await findOrInsert(
+    'plan_task_templates',
+    ['plan_section_id', 'default_title'],
+    [uatPlanSection.id, 'Pre-position generators (UAT)'],
+    ['plan_section_id', 'default_title', 'default_owner_role', 'default_due_offset_minutes'],
+    [uatPlanSection.id, 'Pre-position generators (UAT)', 'incident_commander', 120],
+  );
+  record('plan_task_templates', uatTaskTemplate);
+
+  // plan_versions row proving the Approved status actually went through a
+  // real submit->review->approve cycle (version_number=1, the version
+  // active before plans.ts's approval step bumped plans.current_version
+  // to 2 above) — reviewed_by deliberately differs from submitted_by to
+  // satisfy chk_no_self_approval, matching the real no-self-approval
+  // workflow a human tester would have produced by hand.
+  const uatPlanVersion = await findOrInsert(
+    'plan_versions',
+    ['plan_id', 'version_number'],
+    [uatPlan.id, 1],
+    [
+      'plan_id',
+      'version_number',
+      'content_snapshot',
+      'submitted_by',
+      'reviewed_by',
+      'review_action',
+      'reviewed_at',
+    ],
+    [
+      uatPlan.id,
+      1,
+      JSON.stringify([
+        {
+          id: uatPlanSection.id,
+          heading: 'Generator pre-positioning',
+          body: 'Pre-position backup generators at critical facilities ahead of expected outages.',
+          sort_order: 0,
+        },
+      ]),
+      plannerUser.id,
+      eocDirectorUser.id,
+      'approve',
+      new Date().toISOString(),
+    ],
+  );
+  record('plan_versions', uatPlanVersion);
+
+  // UAT data-doctor fixture (Phase 3 UAT re-run, test "Link Plan Section to
+  // Task Template"): a SECOND Approved plan whose one section has ZERO
+  // linked task templates, so the PlanDetail reading view's "Link tasks"
+  // action can be exercised as a genuinely fresh "define new template"
+  // flow — the original UAT-MATERIALIZE-READY plan above deliberately
+  // already has its one section pre-linked (that plan exists specifically
+  // so the Materialize-Tasks test never needs to author a template first),
+  // so re-using it here would only ever show the already-linked state,
+  // never the empty one this test needs to see. Same author/reviewer
+  // pair and same cross-reviewer plan_versions shape as the fixture
+  // above, satisfying chk_no_self_approval identically.
+  const uatUnlinkedPlan = await findOrInsert(
+    'plans',
+    ['name', 'jurisdiction_id'],
+    ['UAT-LINK-TASKS-READY Shelter Activation Plan', jurisdiction.id],
+    ['name', 'type', 'jurisdiction_id', 'owner_id', 'status', 'current_version'],
+    [
+      'UAT-LINK-TASKS-READY Shelter Activation Plan',
+      'EOP',
+      jurisdiction.id,
+      plannerUser.id,
+      'Approved',
+      2,
+    ],
+  );
+  record('plans', uatUnlinkedPlan);
+
+  const uatUnlinkedPlanSection = await findOrInsert(
+    'plan_sections',
+    ['plan_id', 'heading'],
+    [uatUnlinkedPlan.id, 'Shelter activation'],
+    ['plan_id', 'heading', 'body', 'sort_order'],
+    [
+      uatUnlinkedPlan.id,
+      'Shelter activation',
+      'Open and staff emergency shelters ahead of expected displacement.',
+      0,
+    ],
+  );
+  record('plan_sections', uatUnlinkedPlanSection);
+  // Deliberately NO plan_task_templates row created for this section —
+  // that absence IS the precondition this fixture exists to guarantee.
+
+  const uatUnlinkedPlanVersion = await findOrInsert(
+    'plan_versions',
+    ['plan_id', 'version_number'],
+    [uatUnlinkedPlan.id, 1],
+    [
+      'plan_id',
+      'version_number',
+      'content_snapshot',
+      'submitted_by',
+      'reviewed_by',
+      'review_action',
+      'reviewed_at',
+    ],
+    [
+      uatUnlinkedPlan.id,
+      1,
+      JSON.stringify([
+        {
+          id: uatUnlinkedPlanSection.id,
+          heading: 'Shelter activation',
+          body: 'Open and staff emergency shelters ahead of expected displacement.',
+          sort_order: 0,
+        },
+      ]),
+      plannerUser.id,
+      eocDirectorUser.id,
+      'approve',
+      new Date().toISOString(),
+    ],
+  );
+  record('plan_versions', uatUnlinkedPlanVersion);
+
+  // UAT data-doctor fixture (Phase 3 UAT re-run, tests "Resource Request
+  // Lifecycle (create -> approve/decline)" and "Resource Request Visible on
+  // Operating Picture"): a resource request already in 'Awaiting approval'
+  // on a real UAT incident that HAS a location, so:
+  //  - Test 4 (commander@epmp.local or eocdirector@epmp.local creates a
+  //    request; planner@epmp.local approves/declines it) has a request
+  //    already sitting in the exact state planner@epmp.local's
+  //    `resource_requests:approve` permission needs to act on, without a
+  //    human first having to drive the Create-Request form just to reach
+  //    it — and the human can still create an independent NEW request via
+  //    the UI to exercise the create half fresh, since this fixture is
+  //    additive, never a substitute for that flow.
+  //  - Test 5 (Operating Picture map) needs a resource_requests row whose
+  //    status is NOT Fulfilled/Declined (operating-picture.ts's WHERE
+  //    clause) and whose linked incident has a non-NULL `location` — the
+  //    UAT-ASSIGN-ROLE incident seeded above already satisfies both, so
+  //    reusing its id here (rather than minting a third incident) is the
+  //    minimal fixture that makes the triangle resource-marker visible.
+  //
+  // requested_by = commanderUser (incident_commander, which holds
+  // `resource_requests:create` per the grants above) — mirrors who a real
+  // UAT tester would be signed in as for Test 4's "create" half.
+  // requesting_role uses the free-text role-name convention
+  // CreateResourceRequest.tsx's own Select establishes (REQUESTING_ROLE_
+  // OPTIONS maps to role names, not display labels).
+  //
+  // Natural key: (description, incident_id) — resource_requests has no
+  // UNIQUE constraint of its own (same situation as jurisdictions/
+  // sso_config above), so this find-or-insert is scoped the same way,
+  // using the self-describing UAT-prefixed description as the identity.
+  const uatResourceRequestDescription = 'UAT-RESOURCE-REQUEST Portable generators for shelter';
+  const uatResourceRequest = await findOrInsert(
+    'resource_requests',
+    ['description', 'incident_id'],
+    [uatResourceRequestDescription, uatOverdueIncidentId],
+    [
+      'resource_type',
+      'description',
+      'quantity',
+      'status',
+      'incident_id',
+      'requesting_role',
+      'needed_by',
+      'requested_by',
+    ],
+    [
+      'Equipment',
+      uatResourceRequestDescription,
+      2,
+      'Awaiting approval',
+      uatOverdueIncidentId,
+      'incident_commander',
+      new Date(Date.now() + 86_400_000).toISOString(), // due 24h out, mirrors the app's own create-form test fixture convention
+      commanderUser.id,
+    ],
+  );
+  record('resource_requests', uatResourceRequest);
+  if (uatResourceRequest.inserted) {
+    // Mirrors the real POST /api/v1/resource-requests handler's own
+    // two-row history (NULL->Draft, Draft->Awaiting approval) and Timeline
+    // entry, so this fixture is schema-identical to one a human would have
+    // produced by hand through the UI — same "replicate the app's own
+    // invariants" rule this file follows for the UAT-OVERDUE task above.
+    await pool.query(
+      `INSERT INTO resource_request_status_history (resource_request_id, from_status, to_status, changed_by)
+       VALUES ($1, NULL, 'Draft', $2)`,
+      [uatResourceRequest.id, commanderUser.id],
+    );
+    await pool.query(
+      `INSERT INTO resource_request_status_history (resource_request_id, from_status, to_status, changed_by)
+       VALUES ($1, 'Draft', 'Awaiting approval', $2)`,
+      [uatResourceRequest.id, commanderUser.id],
+    );
+    await pool.query(
+      `INSERT INTO incident_timeline (incident_id, title, tone, actor_id, source, detail)
+       VALUES ($1, $2, 'brand', $3, 'EPMP', $4)`,
+      [
+        uatOverdueIncidentId,
+        `Resource request: Equipment (${uatResourceRequestDescription})`,
+        commanderUser.id,
+        JSON.stringify({ resource_request_id: uatResourceRequest.id, quantity: 2 }),
+      ],
+    );
   }
 
   // record_authority_registry baseline rows (natural key: record_type, which IS unique)

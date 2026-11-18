@@ -2,15 +2,16 @@
 pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-last_updated: "2026-11-17T13:23:23.073Z"
-last_activity: "2026-11-17 — Phase 2 complete"
+status: completed
+stopped_at: Completed 03-10-PLAN.md — Phase 3 gap closure done (UAT ref uat:1 closed), Phase 3 fully complete, ready for Phase 4 planning
+last_updated: "2026-11-17T21:48:37Z"
+last_activity: "2026-11-17 — Plan 03-10 complete (gap-closure plan closing UAT ref 'uat:1': the one remaining real UI entry point for POST /api/v1/plans/{id}/materialize-tasks, 03-03's already-hardened backend endpoint. New MaterializeTasksModal.tsx — incident Combobox + optional per-section checkbox narrowing filter, renders {created, skipped} results inline as success/warning Alerts with human skip-reason strings, never raw error codes. PlanDetail.tsx gained a 'Materialize tasks' PageHeader action, gated to plan.status === 'Approved' && at least one section with a linked template — structurally impossible to click into a 404/409. plan-to-task-materialization.spec.ts test 5 rewritten to drive the real button/modal (the phase's own e2e suite had pre-emptively documented this exact gap via a raw page.evaluate() fetch); the now-unused apiPostViaPage helper and its stale doc comments removed. plans.spec.ts gained one negative-gating assertion proving the button is absent on a Review-status, zero-template plan, closing the plan's last untested must_haves truth. Zero deviations. Full e2e suite (11 files, 51 tests) + full backend suite (11 files, 55 tests) green; all three builds (design-system, backend, frontend app) clean. Phase 3 (Plans, Tasks & Resource Requests) remains fully complete, now with its one open UAT gap closed.)"
 progress:
   total_phases: 6
-  completed_phases: 2
-  total_plans: 32
-  completed_plans: 23
-  percent: 33
+  completed_phases: 3
+  total_plans: 33
+  completed_plans: 33
+  percent: 50
 ---
 
 # Project State
@@ -20,24 +21,24 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 2 — Incident Command & Operating Picture (complete, gap-closure done)
+**Current focus:** Phase 3 — Plans, Tasks & Resource Requests (COMPLETE, gap closure done) — ready for Phase 4 planning
 
 ## Current Position
 
-Phase: 2 of 6 (Incident Command & Operating Picture) — COMPLETE (including gap closure)
-Plan: 8 of 8 complete in current phase (02-01, 02-04 — wave 1; 02-02 — wave 2, depends_on 02-01; 02-03, 02-05 — wave 3, depends_on 02-01[+02-02]; 02-06 — wave 4, depends_on 02-01+02-02+02-05; 02-07 — wave 5, depends_on 02-03+02-04+02-06; 02-08 — wave 6, gap_closure:true, no functional depends_on — ALL COMPLETE)
-Status: Phase 2 fully complete, UAT gap ref 2 (blocker: "A user can log in" via preview proxy) closed — ready for Phase 2 UAT re-run (tests 2-5) and Phase 3 planning (Plans, Tasks & Resource Requests)
-Last activity: 2026-11-17 — Plan 02-08 complete (gap-closure: Keycloak OIDC sign-in now reachable through Pivota's preview proxy — same-origin OIDC authority, Vite dev-proxy forwarding Keycloak's browser-facing paths, Keycloak forwarded-header trust, relative realm redirectUris. Proven end-to-end via forged X-Forwarded-* headers through the real :7777 proxy infrastructure, with zero regression on the existing direct-sandbox Playwright SSO suite. 1 auto-fixed Rule 1 deviation discovered during the plan's own reproduction: http-proxy's xfwd:true corrupts the forwarded port in a chained-proxy scenario)
+Phase: 3 of 6 (Plans, Tasks & Resource Requests) — COMPLETE
+Plan: 10 of 10 complete in current phase (03-01 through 03-09 original + 03-10 gap closure — ALL COMPLETE)
+Status: 03-10 complete (gap-closure plan closing UAT ref uat:1 — the "Materialize tasks" UI trigger) — Phase 3 fully done with its one open UAT gap closed, ready for Phase 4 planning
+Last activity: 2026-11-17 — Plan 03-10 complete (gap-closure plan closing UAT ref 'uat:1': the one remaining real UI entry point for POST /api/v1/plans/{id}/materialize-tasks, 03-03's already-hardened backend endpoint. New MaterializeTasksModal.tsx — incident Combobox + optional per-section checkbox narrowing filter, renders {created, skipped} results inline as success/warning Alerts with human skip-reason strings, never raw error codes. PlanDetail.tsx gained a 'Materialize tasks' PageHeader action, gated to plan.status === 'Approved' && at least one section with a linked template — structurally impossible to click into a 404/409. plan-to-task-materialization.spec.ts test 5 rewritten to drive the real button/modal; the now-unused apiPostViaPage helper and its stale doc comments removed. plans.spec.ts gained one negative-gating assertion proving the button is absent on a Review-status, zero-template plan. Zero deviations. Full e2e suite (11 files, 51 tests) + full backend suite (11 files, 55 tests) green; all three builds clean.)
 
-Progress: [███░░░░░░░] 33%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 23
+- Total plans completed: 33
 - Average duration: 23 min
-- Total execution time: 10.1 hours
+- Total execution time: 11.9 hours
 
 **By Phase:**
 
@@ -73,6 +74,16 @@ Progress: [███░░░░░░░] 33%
 - Trend: Phase 1 is now fully complete: all 15 plans (13 original + 2 gap-closure) done. Phase 2 is now ALSO fully complete: all 8 plans done (7 original + 1 gap-closure), with a parallel-wave structure (02-01 and 02-04 both wave 1; 02-02 wave 2 depends_on 02-01; 02-03/02-05 wave 3; 02-06 wave 4; 02-07 wave 5, depends_on 02-03+02-04+02-06; 02-08 wave 6, gap_closure, isolated for infra reasons not a functional dependency). 02-05 shipped the Incident List/Create Incident screens (success criterion 1). 02-06 shipped the Incident Workspace plus the Command Role Assignment and Activation Level Change Modals (success criteria 2 and 3). 02-07 shipped the Operating Picture map screen (success criteria 4 and 5), composing 02-04's MAPS component family over 02-03's markers/layers endpoints, with its Playwright suite proving the page survives a forced GIS outage end-to-end. 02-08 closed UAT gap ref 2 (blocker): Keycloak OIDC sign-in is now reachable through Pivota's preview proxy, not just direct sandbox access — four compounding fixes (same-origin OIDC authority, Vite dev-proxy forwarding Keycloak's browser-facing paths, Keycloak KC_PROXY_HEADERS forwarded-header trust, relative realm redirectUris), proven end-to-end via forged X-Forwarded-* headers through the real :7777 proxy with zero regression on the existing direct-sandbox Playwright suite. Plan 02-01 ran one trivial auto-fixed deviation. Plan 02-04 ran one trivial test-infrastructure-only deviation. Plan 02-02 ran one auto-fixed Rule 1 bug (SAVEPOINT). Plan 02-03 ran clean. Plan 02-05 ran two auto-fixed deviations (Rule 3 Keycloak identity seed, Rule 1 Playwright label fix). Plan 02-06 ran one auto-fixed Rule 3 deviation (GET /api/v1/incidents/personnel). Plan 02-07 ran two auto-fixed deviations, both confined to its own new Playwright spec file (no production code touched): a Rule 3 test-fixture jurisdiction-scope grant for commander@epmp.local (the markers endpoint correctly enforces jurisdiction_scope filtering where the plain incidents-list endpoint doesn't yet — T-02-03) and a Rule 1 marker-overlap selector fix (exact-name aria-label matching instead of `.first()`, plus per-incident lat/lng jitter). Plan 02-08 ran one auto-fixed Rule 1 deviation (http-proxy's xfwd:true port-pollution bug, discovered during the plan's own reproduction, not assumed from documentation). All eight Phase 2 plans' own verify commands (build + full test suite, with 02-01/02-02/02-03/02-05/02-06/02-07/02-08 also running a live-stack integration/Playwright test) passed clean.
 
 *Updated after each plan completion*
+| Phase 03 P01 | 35 min | 3 tasks | 4 files |
+| Phase 03 P02 | 15 min | 3 tasks | 5 files |
+| Phase 03 P04 | 20 min | 2 tasks | 3 files |
+| Phase 03 P07 | 25 min | 2 tasks | 2 files |
+| Phase 03 P03 | 6 min | 3 tasks | 6 files |
+| Phase 03 P05 | 48 min | 3 tasks | 13 files |
+| Phase 03 P06 | 35 min | 3 tasks | 11 files |
+| Phase 03 P08 | 35 min | 2 tasks | 4 files |
+| Phase 03 P09 | 50 min | 2 tasks | 3 files |
+| Phase 03 P10 | 25 min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -140,6 +151,28 @@ Recent decisions affecting current work:
 - [Phase 02-08]: KEYCLOAK_AUTHORITY changed from hardcoded sandbox-internal string to window.location.origin-derived, mirroring the file's own already-correct redirect_uri pattern
 - [Phase 02-08]: Vite Keycloak proxy entries use an explicit configure() forwarded-header hook, not http-proxy's xfwd:true -- xfwd:true unconditionally appends its own listening port to X-Forwarded-Port, corrupting Keycloak's computed issuer in a chained-proxy scenario (discovered during this plan's own reproduction, not assumed)
 - [Phase 02-08]: epmp-app's redirectUris widened to the host-less relative pattern /auth/callback, /auth/callback/* (not a literal preview-domain wildcard, which Keycloak 25.0 empirically rejected) -- validated against both a simulated external preview origin and direct sandbox access
+- [Phase 03-01]: isValidTransition() implemented as a switch on current status with an early reject-Overdue guard rather than a literal transition-table map, so the never-user-settable-to-Overdue rule reads as one line instead of being duplicated across every current-status branch
+- [Phase 03-01]: fetchTaskRow() is parameterized over either the bare query helper or a transaction client, so the pre-PATCH existence/current-state lookup and the post-mutation re-fetch-for-response share one implementation instead of two near-duplicates
+- [Phase 03-02]: overdue-sweep.ts uses one transaction PER flipped task (not one transaction for the whole sweep run) since the sweep spans many independent tasks/incidents and needs per-task fault isolation; closure.ts's per-task audit loop instead runs INSIDE the closure's existing single transaction since all cascaded tasks share one atomic close-the-incident operation that must roll back together on any failure
+- [Phase 03-02]: Confirmed background_jobs_job_type_check is the real constraint name in the migrated database (via pg_constraint query) before finalizing the ALTER migration, per the plan's own verify-before-commit instruction — the default node-pg-migrate naming assumption held, no adjustment needed
+- [Phase 03-04]: Declining a resource request is gated on the 'approve' RBAC action (not 'edit'), since declining is itself an approval-adjacent decision requiring the same permission level as approving
+- [Phase 03-04]: The UX mockup's "Assigned" state is reconciled as a sub-state of 'Approved' (assigned_to IS NOT NULL), not a distinct status enum value — the single POST .../fulfill endpoint handles both the first assign-only call (no status-history row, since assignment is metadata not a transition) and the second true-fulfill call
+- [Phase 03-04]: save_as_draft:true added as a documented extension beyond the FRD's literal request shape, giving Draft a real reachable resting state since the UX mockup's Create/Edit form shows no separate "save as draft" action
+- [Phase 03-07]: resource_requests 'approve' action-level granted ONLY to planning_logistics_chief (not incident_commander/eoc_director) — command staff can create a request but logistics alone approves it, per the FRD's explicit role split
+- [Phase 03-07]: plans 'review' action-level granted to eoc_director specifically, SEPARATE from planning_logistics_chief's create/edit grant — makes the no-self-approval workflow satisfiable with real seeded accounts
+- [Phase 03-03]: materialize-tasks split into its own file (materialize.ts) rather than appended to plans.ts, once plans.ts crossed ~400 lines — Plan's own stated discretion for file organization once the single-file size grows past the plan's 2-3-task budget comfort
+- [Phase 03-05]: LinkTasksModal's "Default owner role" Select offers the 5 real persona role names (what materialize.ts actually resolves against roles.name), not the 6 similarly-named ICS "command role" titles assigned per-incident via CommandRoleModal — a distinct, unrelated concept despite the name overlap
+- [Phase 03-05]: Two new seeded Keycloak identities (planner@epmp.local -> planning_logistics_chief, eocdirector@epmp.local -> eoc_director) added to epmp-realm.json + seed.ts's group_to_role_mapping, following 02-05's exact commander@epmp.local pattern — required since no prior phase seeded distinct author/reviewer accounts for the plans feature's segregation-of-duties rule
+- [Phase 03-05]: ReviewPlanModal shows CURRENT plan sections only (not a full diff against the last Approved content_snapshot) and "View this version" renders a summary-only modal (no full historical text) — both documented as budget-scoped simplifications of the FRD's literal language, not regressions
+- [Phase 03-06]: Added GET /api/v1/tasks/{id} and GET /api/v1/resource-requests/{id} (both embedding status_history) plus PATCH /api/v1/tasks/{id}/owner — TechArch's literal endpoint table has none of the three, but Task/Resource-Request Detail pages and the Task List's bulk-reassign action genuinely need them; same precedent as 03-03/03-05's GET /api/v1/plans/{id}
+- [Phase 03-06]: Task/CreateTask's owner Comboboxes source from GET /api/v1/incidents/personnel, not GET /api/v1/admin/users — confirmed via seed.ts that all 4 roles holding tasks permissions (incident_commander, eoc_director, planning_logistics_chief, field_responder) hold incidents:view but none hold admin:view, same gap CommandRoleModal.tsx already documented and fixed
+- [Phase 03-08]: PlanDetail.tsx gained a 'Link tasks' entry point reusing LinkTasksModal — previously only PlanEditor's Draft-only flow could reach it, which blocked linking a task template to an already-Approved plan through the real UI
+- [Phase 03-08]: CreateResourceRequest.tsx now returns to the originating Incident Workspace when routeIncidentId is present, mirroring CreateTask.tsx's already-correct incident-aware navigate() pattern
+- [Phase 03-09]: resourceStatusToTone's Draft case maps to 'brand' (not a 6th invented tone) since MapMarker's MarkerTone type has no 'neutral' entry — Fulfilled/Declined never reach this function since they're excluded from operating-picture.ts's query WHERE clause entirely
+- [Phase 03-09]: Layer-visibility filtering generalized from a single hardcoded 'incidents' check to a marker-type->layer-id map, fixing a latent bug where toggling the 'incidents' layer would have also hidden resource markers once a second real layer/marker-type existed
+- [Phase 03-09]: Resource-marker MapPopup renders directly from the thin marker object already in the polled markers array (no extra GET /api/v1/resource-requests/{id} fetch) — unlike the incident popup, which needs full detail (jurisdiction name, opened_at) the thin marker shape doesn't carry
+- [Phase 03-10]: Section checkboxes in MaterializeTasksModal are an opt-in NARROWING filter (default: all eligible sections' templates materialize), not a required per-section selection — matches the FRD's one-click framing and the backend's own optional section_ids param
+- [Phase 03-10]: Exactly one new entry point for materialize-tasks (the PlanDetail PageHeader action) — no second affordance on the sections list or version-history sidebar, since per-section "Link tasks" (03-08) is a separate authoring concern from materializing
 
 ### Pending Todos
 
@@ -151,6 +184,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-17T11:13:08.594Z
-Stopped at: Completed 02-08-PLAN.md
+Last session: 2026-11-17T21:48:37Z
+Stopped at: Completed 03-10-PLAN.md — Phase 3 gap closure done (UAT ref uat:1 closed), Phase 3 fully complete, ready for Phase 4 planning
 Resume file: None

@@ -92,7 +92,8 @@ Plans:
 
 ### Phase 3: Plans, Tasks & Resource Requests
 **Goal**: Planning staff can maintain a versioned, approved plan/SOP repository linked to generated tasks, and command/logistics staff can run tasks and resource requests through to closure — replacing manual spreadsheets and phone-based tracking.
-**Status**: Failed
+**Status**: Complete (2026-11-18)
+**Last Updated**: 2026-11-18T05:22:18Z
 **Depends on**: Phase 2
 **Requirements**: F3, F4
 **Success Criteria** (what must be TRUE):
@@ -100,7 +101,7 @@ Plans:
   2. A user can link a plan section to a task template, and when an incident references that plan, the linked template is offered for one-click task creation rather than writing the task from scratch.
   3. A user can create, assign (to a named person or role), approve, track, and close a task, and a task left open past its due time automatically flips to Overdue without any manual status update.
   4. A user can create a resource request linked to an incident or task and move it through Draft → Awaiting approval → Approved → Fulfilled (or Declined with a required reason), with its current status visible on both the operating picture and in reporting without a page reload.
-**Plans:** 9 plans
+**Plans:** 10 plans
 
 Plans:
 - [ ] 03-01-PLAN.md — Backend tasks schema + CRUD + state-machine-enforced status transitions
@@ -112,6 +113,7 @@ Plans:
 - [ ] 03-07-PLAN.md — Seed role-permission grants for plans/tasks/resource_requests features
 - [ ] 03-08-PLAN.md — Integration: wire Tasks/Resources tabs into Incident Workspace, end-to-end plan-to-task materialization proof
 - [ ] 03-09-PLAN.md — Operating-picture resource-request markers (triangle), completing success criterion 4's map-visibility clause
+- [ ] 03-10-PLAN.md — Gap closure (UAT ref 1, major): "Materialize tasks" button + modal on Plan Detail, the missing one-click UI trigger for success criterion 2's plan-section→task-template flow
 
 ### Phase 4: Notifications & Reporting/Learning
 **Goal**: Communications staff can send accountable, approval-gated notifications with tracked delivery and acknowledgment, and planning staff can turn incident activity into ICS output, SITREPs, and after-action reports — closing the preparedness loop so every incident leaves a reusable evidence trail.

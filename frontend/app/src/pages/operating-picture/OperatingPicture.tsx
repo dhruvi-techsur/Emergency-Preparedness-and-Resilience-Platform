@@ -28,10 +28,12 @@ type ActivationLevel = 'Monitoring' | 'Partial' | 'Full';
 
 /** Shape of each entry in GET /api/v1/operating-picture/markers's `markers`
  * array (backend/src/modules/incident-ops/operating-picture.ts). Phase 2
- * only ever produces `type: 'incident'` rows — `shape` is always `'diamond'`
- * for that type, so this page reads `type` (not the redundant `shape`
- * field) to decide `MapCanvas`'s marker shape, matching the design
- * system's own type->shape mapping. */
+ * only ever produced `type: 'incident'` rows; Phase 3 (03-09) adds
+ * `type: 'resource'` rows for in-flight resource_requests (triangle shape,
+ * inheriting their linked incident's location). This page reads `type`
+ * (not the redundant `shape` field) to decide `MapCanvas`'s marker shape,
+ * matching the design system's own type->shape mapping — no change needed
+ * here since that mapping was always generic. */
 interface ApiMarker {
   id: string;
   type: 'incident' | 'facility' | 'resource' | 'shelter';
@@ -112,13 +114,36 @@ const SEVERITY_TONE: Record<Severity, BadgeTone> = {
 
 /** Legend label per marker tone — inverse of operating-picture.ts's
  * severityToTone() mapping, since each severity maps 1:1 onto a distinct
- * tone in Phase 2's incident-only marker set. */
+ * tone in the incident marker set. */
 const TONE_LEGEND_LABEL: Record<string, string> = {
   danger: 'Critical incident',
   warning: 'Elevated incident',
   info: 'Watch incident',
   success: 'Normal incident',
 };
+
+/** Same tone vocabulary 03-06's ResourceRequestList.tsx established for its
+ * own status Badge (Draft/Awaiting approval/Approved are the only statuses
+ * that can ever reach a marker — Fulfilled/Declined are excluded from
+ * operating-picture.ts's query entirely, so they're omitted here).
+ * Duplicated inline rather than imported across page modules — the small
+ * mapping is cheaper to repeat than to colocate/export from a sibling
+ * page's file. */
+const RESOURCE_STATUS_TONE: Record<string, BadgeTone> = {
+  Draft: 'neutral',
+  'Awaiting approval': 'warning',
+  Approved: 'info',
+};
+
+/** operating-picture.ts's resource-marker `label` field is always
+ * `"${quantity} ${resource_type}"` (its own mapping comment documents this
+ * exact format) — split it back into the popup's 2-3 individual facts
+ * rather than refetching full resource-request detail for a popup that
+ * already has everything it needs in the thin marker shape. */
+function parseResourceMarkerLabel(label: string): { quantity: string; resourceType: string } {
+  const [quantity, ...rest] = label.split(' ');
+  return { quantity, resourceType: rest.join(' ') };
+}
 
 function formatTimeHHMM(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, {
@@ -242,16 +267,24 @@ export function OperatingPicture(): JSX.Element {
     refetchInterval: 30_000,
   });
 
+  // Which marker is currently selected, and its type — needed BEFORE the
+  // detail queries below so they only fire for an incident-type selection.
+  // A resource-type selection needs no extra fetch at all: its marker
+  // object already carries everything the popup shows (label/status), per
+  // Task 1's thin MapMarker shape — see popupNode below.
+  const selectedMarker = markersQuery.data?.markers.find((m) => m.id === selectedId);
+  const selectedIsResource = selectedMarker?.type === 'resource';
+
   const selectedIncidentQuery = useQuery({
     queryKey: ['incident', selectedId],
     queryFn: () => apiGet<SelectedIncidentDetail>(`/api/v1/incidents/${selectedId}`),
-    enabled: Boolean(selectedId),
+    enabled: Boolean(selectedId) && !selectedIsResource,
   });
 
   const selectedTimelineQuery = useQuery({
     queryKey: ['incident-timeline', selectedId],
     queryFn: () => apiGet<TimelineResponse>(`/api/v1/incidents/${selectedId}/timeline`),
-    enabled: Boolean(selectedId),
+    enabled: Boolean(selectedId) && !selectedIsResource,
   });
 
   // Phase 2 has exactly one real layer ("incidents") — default every
@@ -274,11 +307,23 @@ export function OperatingPicture(): JSX.Element {
   }, [layersQuery.data]);
 
   const apiMarkers = markersQuery.data?.markers ?? [];
-  // Toggling the "incidents" layer off empties the rendered marker set —
-  // Phase 2's only real layer, per this plan's documented functional
-  // behavior for LayerPanel's onToggle.
-  const incidentsLayerVisible = layerVisibility['incidents'] ?? true;
-  const visibleMarkers = incidentsLayerVisible ? apiMarkers : [];
+  // Each marker type maps to its own layer id (02-03/this plan's backend
+  // `GET .../layers` entries: 'incidents' for type:'incident', 02-03's
+  // original layer; 'resource-requests' for type:'resource', this plan's
+  // addition) — so toggling one layer off filters only its own marker
+  // type, not the whole response. Phase 2's code toggled the entire
+  // response on the single 'incidents' layer's visibility alone, which
+  // would have incorrectly hidden resource markers too now that a second
+  // layer/marker-type exists (Rule 1 fix: generalizing a type==='incident'
+  // assumption Phase 2 had no resource markers to assume against).
+  const MARKER_TYPE_TO_LAYER_ID: Record<string, string> = {
+    incident: 'incidents',
+    resource: 'resource-requests',
+  };
+  const visibleMarkers = apiMarkers.filter((marker) => {
+    const layerId = MARKER_TYPE_TO_LAYER_ID[marker.type] ?? marker.type;
+    return layerVisibility[layerId] ?? true;
+  });
 
   const bbox = React.useMemo(() => computeBbox(visibleMarkers), [visibleMarkers]);
 
@@ -299,14 +344,26 @@ export function OperatingPicture(): JSX.Element {
     [visibleMarkers, bbox],
   );
 
+  // Phase 2's own comment here read "Phase 2 only ever shows
+  // {kind:'marker', type:'incident',...}-style entries since facilities/
+  // resources don't exist yet" — closed by this plan (03-09): resources now
+  // DO exist, so a second entry is appended below whenever at least one
+  // resource marker is present in the current response.
   const legendItems: MapLegendItem[] = React.useMemo(() => {
-    const seenTones = Array.from(new Set(canvasMarkers.map((m) => m.tone)));
-    return seenTones.map((tone) => ({
+    const incidentTones = Array.from(
+      new Set(canvasMarkers.filter((m) => m.type === 'incident').map((m) => m.tone)),
+    );
+    const items: MapLegendItem[] = incidentTones.map((tone) => ({
       kind: 'marker',
       type: 'incident',
       tone,
       label: TONE_LEGEND_LABEL[tone] ?? 'Incident',
     }));
+    const hasResourceMarker = canvasMarkers.some((m) => m.type === 'resource');
+    if (hasResourceMarker) {
+      items.push({ kind: 'marker', type: 'resource', tone: 'warning', label: 'Resource request' });
+    }
+    return items;
   }, [canvasMarkers]);
 
   const layersForPanel: MapLayer[] = (layersQuery.data?.layers ?? []).map((layer) => ({
@@ -357,8 +414,43 @@ export function OperatingPicture(): JSX.Element {
 
   const selectedIncident = selectedIncidentQuery.data;
 
-  const popupNode =
-    selectedId && selectedIncident ? (
+  // Branches on marker.type per this plan's objective: a resource-type
+  // selection renders its popup directly from the thin marker object
+  // already in hand (no extra fetch — see selectedIsResource above),
+  // mirroring the incident-marker popup's structure (title/badge/facts/
+  // deep-link action) but with resource-specific facts and a deep-link to
+  // ResourceRequestDetail (03-06) instead of the Incident Workspace.
+  const popupNode = (() => {
+    if (!selectedId) return null;
+
+    if (selectedIsResource && selectedMarker) {
+      const { quantity, resourceType } = parseResourceMarkerLabel(selectedMarker.label);
+      const tone = RESOURCE_STATUS_TONE[selectedMarker.status] ?? 'neutral';
+      return (
+        <MapPopup
+          title={selectedMarker.label}
+          badge={<Badge tone={tone}>{selectedMarker.status}</Badge>}
+          actions={[
+            <Button
+              key="open"
+              variant="primary"
+              onClick={() => navigate(`/resource-requests/${selectedId}`)}
+            >
+              Open request
+            </Button>,
+          ]}
+          onClose={handleClosePopup}
+        >
+          <p>Resource type: {resourceType}</p>
+          <p>Quantity: {quantity}</p>
+          <p>Status: {selectedMarker.status}</p>
+        </MapPopup>
+      );
+    }
+
+    if (!selectedIncident) return null;
+
+    return (
       <MapPopup
         title={selectedIncident.name}
         badge={<Badge tone={SEVERITY_TONE[selectedIncident.severity]}>{selectedIncident.severity}</Badge>}
@@ -382,7 +474,8 @@ export function OperatingPicture(): JSX.Element {
         <p>Jurisdiction: {selectedIncident.jurisdiction.name}</p>
         <p>Opened: {formatDate(selectedIncident.opened_at)}</p>
       </MapPopup>
-    ) : null;
+    );
+  })();
 
   return (
     <div className="ep-operating-picture">

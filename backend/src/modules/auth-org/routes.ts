@@ -187,8 +187,42 @@ export default async function authOrgRoutes(app: FastifyInstance) {
       // single cross-cutting fix reconciling 02-01's newly-seeded
       // `incidents` permissions with the nav the shell actually renders.
       const hasIncidents = permRows.some((r) => r.feature === 'incidents' && r.actions.length > 0);
+      // Phase 3 (F3): any role holding ANY 'plans' permission (03-07's
+      // seed grants view-only to incident_commander/field_responder,
+      // create/edit to planning_logistics_chief, and view+review to
+      // eoc_director) sees the "Prepare" SideNav group's "Plans &
+      // playbooks" item, per the UX mockup's Navigation Map
+      // (`SideNav → Prepare: "Plans & playbooks"`). Same
+      // role_permissions-driven derivation pattern as `hasIncidents`/
+      // `hasAdmin` above.
+      const hasPlans = permRows.some((r) => r.feature === 'plans' && r.actions.length > 0);
+      // Phase 3 (F4, 03-06): any role holding ANY 'tasks' permission
+      // (03-07's seed grants view-only to field_responder, full
+      // create/edit to incident_commander/eoc_director/
+      // planning_logistics_chief) sees the "Coordinate" SideNav group's
+      // "Tasks" item; any role holding ANY 'resource_requests' permission
+      // sees "Resources" in the SAME group, per the UX mockup's Navigation
+      // Map (`SideNav → Coordinate: "Tasks"` / `SideNav → Coordinate:
+      // "Resources"`). Same role_permissions-driven derivation pattern as
+      // hasPlans/hasIncidents/hasAdmin above. A role might hold one
+      // permission without the other (e.g. a hypothetical view-only-tasks-
+      // but-no-resource-requests role), so each item is independently
+      // gated and the group itself only renders if at least one item
+      // would appear in it.
+      const hasTasks = permRows.some((r) => r.feature === 'tasks' && r.actions.length > 0);
+      const hasResourceRequests = permRows.some(
+        (r) => r.feature === 'resource_requests' && r.actions.length > 0,
+      );
 
       const nav_groups = [
+        ...(hasPlans
+          ? [
+              {
+                label: 'Prepare',
+                items: [{ id: 'plans', label: 'Plans & playbooks', icon: 'file', href: '/plans' }],
+              },
+            ]
+          : []),
         // Phase 2 (F2/F11, 02-07): the operating picture reads incident
         // data and is gated server-side by the SAME 'incidents'/'view'
         // permission as the markers/layers endpoints
@@ -213,6 +247,21 @@ export default async function authOrgRoutes(app: FastifyInstance) {
               {
                 label: 'Activate',
                 items: [{ id: 'incidents', label: 'Incidents', icon: 'flag', href: '/incidents' }],
+              },
+            ]
+          : []),
+        ...(hasTasks || hasResourceRequests
+          ? [
+              {
+                label: 'Coordinate',
+                items: [
+                  ...(hasTasks
+                    ? [{ id: 'tasks', label: 'Tasks', icon: 'check', href: '/tasks' }]
+                    : []),
+                  ...(hasResourceRequests
+                    ? [{ id: 'resource-requests', label: 'Resources', icon: 'truck', href: '/resource-requests' }]
+                    : []),
+                ],
               },
             ]
           : []),

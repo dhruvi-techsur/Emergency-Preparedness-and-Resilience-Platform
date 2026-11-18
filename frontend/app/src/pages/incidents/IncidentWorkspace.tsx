@@ -18,6 +18,8 @@ import { apiGet, ApiRequestError } from '../../lib/api-client';
 import { CommandRoleModal } from './CommandRoleModal';
 import { ActivationModal } from './ActivationModal';
 import { ClosureModal } from './ClosureModal';
+import { TaskList } from '../tasks-resources/TaskList';
+import { ResourceRequestList } from '../tasks-resources/ResourceRequestList';
 import './IncidentWorkspace.css';
 
 type Severity = 'Critical' | 'Elevated' | 'Watch' | 'Normal';
@@ -112,12 +114,21 @@ const WORKSPACE_TABS: TabItem[] = [
 /**
  * F1 S1.3 — Incident Workspace. Routed `/incidents/:id`.
  *
- * `Generate SITREP` and `New task` (PageHeader actions) are deliberate
- * Phase-2 UI placeholders wired to no-op handlers: SITREP generation (F7)
- * and task creation (F4) both ship in later phases. The buttons render
- * per S1.3's exact spec so the workspace's visual/structural contract is
- * complete even though their backends don't exist yet — this is a
- * documented scope boundary, not an oversight.
+ * `Generate SITREP` (PageHeader action) remains a deliberate Phase-2 UI
+ * placeholder wired to a no-op handler: SITREP generation (F7) ships in a
+ * later phase (F7/F9, Phase 4/6 per the roadmap) and is correctly out of
+ * THIS phase's (F3/F4) scope — same reasoning the Reports tab below
+ * documents. `New task`, by contrast, is this phase's own 03-08 fix: it
+ * now navigates to a real pre-filled create-task form instead of 02-06's
+ * no-op handler, since F4 (task creation) is exactly what this phase
+ * ships.
+ *
+ * The Tasks and Resources tabs below render the REAL embedded
+ * `TaskList`/`ResourceRequestList` components (03-06), replacing 02-06's
+ * "ships in a later phase" placeholders — this is 03-08's whole purpose:
+ * proving F3's materialized tasks and F4's resource requests are visible
+ * inside the SAME incident workspace a real user already works in. The
+ * Reports tab's placeholder is intentionally left untouched (see below).
  */
 export function IncidentWorkspace(): JSX.Element {
   const { id } = useParams<{ id: string }>();
@@ -188,12 +199,21 @@ export function IncidentWorkspace(): JSX.Element {
         status={<Badge tone={SEVERITY_TONE[incident.severity]}>{incident.severity}</Badge>}
         subtitle={`${incident.jurisdiction.name} \u00b7 Opened ${formatDate(incident.opened_at)}`}
         actions={[
-          // Phase-2 placeholder: SITREP generation ships with F7/F9.
+          // Phase-2 placeholder, still correctly deferred: SITREP
+          // generation ships with F7/F9 (Phase 4/6), out of this phase's
+          // F3/F4 scope — unchanged by 03-08.
           <Button key="sitrep" variant="secondary" onClick={() => {}}>
             Generate SITREP
           </Button>,
-          // Phase-2 placeholder: task creation ships with F4.
-          <Button key="new-task" variant="primary" onClick={() => {}}>
+          // 03-08 fix: F4 (task creation) IS this phase's scope, so this
+          // now navigates to the real, incident-pre-filled Create Task
+          // form (03-06's CreateTask, routed at
+          // /incidents/{id}/tasks/new) instead of 02-06's no-op handler.
+          <Button
+            key="new-task"
+            variant="primary"
+            onClick={() => navigate(`/incidents/${incident.id}/tasks/new`)}
+          >
             New task
           </Button>,
           // F1 Process step 7 — closure is only offered while the incident
@@ -239,11 +259,14 @@ export function IncidentWorkspace(): JSX.Element {
             aria-labelledby="ep-tab-tasks"
             hidden={activeTab !== 'tasks'}
           >
-            {activeTab === 'tasks' ? (
-              <EmptyState title="Tasks ship in a later phase">
-                Task tracking (F4) is built in Phase 3.
-              </EmptyState>
-            ) : null}
+            {/* 03-08: replaces 02-06's deliberate Phase-2 Tasks-tab
+                placeholder (F4 "built in a later phase" EmptyState) with
+                the real, incident-scoped TaskList (03-06) — the Incident
+                column is omitted automatically since `incidentId` is
+                provided (see TaskList's own prop doc comment). Mounted
+                only while this tab is active, so its own ~30s poll
+                doesn't run against a hidden tab. */}
+            {activeTab === 'tasks' ? <TaskList incidentId={incident.id} /> : null}
           </div>
 
           <div
@@ -252,11 +275,11 @@ export function IncidentWorkspace(): JSX.Element {
             aria-labelledby="ep-tab-resources"
             hidden={activeTab !== 'resources'}
           >
-            {activeTab === 'resources' ? (
-              <EmptyState title="Resources ship in a later phase">
-                Resource requests ship in a later phase.
-              </EmptyState>
-            ) : null}
+            {/* 03-08: replaces 02-06's deliberate Phase-2 Resources-tab
+                placeholder with the real, incident-scoped
+                ResourceRequestList (03-06) — same incidentId-omits-column
+                pattern as TaskList above. */}
+            {activeTab === 'resources' ? <ResourceRequestList incidentId={incident.id} /> : null}
           </div>
 
           <div
@@ -265,6 +288,12 @@ export function IncidentWorkspace(): JSX.Element {
             aria-labelledby="ep-tab-reports"
             hidden={activeTab !== 'reports'}
           >
+            {/* Deliberately UNCHANGED by 03-08: ICS forms/SITREPs (F7/F9)
+                ship in a later phase (Phase 4/6 per the roadmap) — this
+                plan's scope is strictly F3/F4, not F7/F9, so only 2 of
+                the workspace's 4 tab placeholders (Tasks, Resources) are
+                replaced here; this one remains a correct, deliberate
+                placeholder exactly as 02-06 documented it. */}
             {activeTab === 'reports' ? (
               <EmptyState title="Reports ship in a later phase">
                 ICS forms and SITREPs ship in a later phase (F7/F9).

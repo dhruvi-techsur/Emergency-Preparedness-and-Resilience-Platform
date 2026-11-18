@@ -58,3 +58,28 @@ export async function signInThroughKeycloak(page: Page): Promise<void> {
 export async function signInAsIncidentCommander(page: Page): Promise<void> {
   await signInAs(page, KEYCLOAK_COMMANDER_USERNAME, KEYCLOAK_COMMANDER_PASSWORD);
 }
+
+/**
+ * Phase 3 (F3, 03-05): two more seeded identities, added to
+ * backend/keycloak/epmp-realm.json specifically so this phase's plans
+ * Playwright coverage can prove the no-self-approval workflow with real,
+ * DISTINCT seeded accounts — 03-07's seed grants `plans` create/edit to
+ * `planning_logistics_chief` (the author role) and `plans` view/review to
+ * `eoc_director` SPECIFICALLY (the reviewer role), never both to the same
+ * role, which is what makes cross-reviewer approval testable at all.
+ */
+export const KEYCLOAK_PLANNING_CHIEF_USERNAME = 'planner@epmp.local';
+export const KEYCLOAK_PLANNING_CHIEF_PASSWORD = 'devpass123';
+
+export const KEYCLOAK_EOC_DIRECTOR_USERNAME = 'eocdirector@epmp.local';
+export const KEYCLOAK_EOC_DIRECTOR_PASSWORD = 'devpass123';
+
+/** Signs in as the planning_logistics_chief-role seeded user (plan author). */
+export async function signInAsPlanningChief(page: Page): Promise<void> {
+  await signInAs(page, KEYCLOAK_PLANNING_CHIEF_USERNAME, KEYCLOAK_PLANNING_CHIEF_PASSWORD);
+}
+
+/** Signs in as the eoc_director-role seeded user (plan reviewer). */
+export async function signInAsEocDirector(page: Page): Promise<void> {
+  await signInAs(page, KEYCLOAK_EOC_DIRECTOR_USERNAME, KEYCLOAK_EOC_DIRECTOR_PASSWORD);
+}

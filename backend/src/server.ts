@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import authOrgRoutes from './modules/auth-org/routes.js';
 import incidentOpsRoutes from './modules/incident-ops/routes.js';
+import planRoutes from './modules/plans/routes.js';
 import integrationGatewayRoutes from './modules/integration-gateway/routes.js';
 import webhookSubscriptionRoutes from './modules/integration-gateway/webhook-subscriptions.js';
 import openApiRoutes from './openapi/spec.js';
@@ -11,6 +12,7 @@ import healthzRoutes from './modules/platform/healthz.js';
 import staticRoutes from './static.js';
 import { connectNats } from './modules/integration-gateway/nats-client.js';
 import { startWebhookDeliveryWorker } from './modules/integration-gateway/webhook-delivery-worker.js';
+import { startOverdueSweepScheduler } from './modules/incident-ops/overdue-sweep.js';
 import { syncRolePermissionsToOpa, type RolePermissionRow } from './modules/auth-org/opa-client.js';
 import { query } from './db/client.js';
 
@@ -31,6 +33,9 @@ export function buildApp() {
 
   app.register(authOrgRoutes);
   app.register(incidentOpsRoutes);
+  // 03-03 F3 plans module — new module, mounted alongside the existing
+  // auth-org/incident-ops/integration-gateway registrations.
+  app.register(planRoutes);
   app.register(integrationGatewayRoutes);
   app.register(webhookSubscriptionRoutes);
   app.register(platformHealthRoutes);
@@ -85,6 +90,18 @@ async function start() {
     await startWebhookDeliveryWorker();
   } catch (err) {
     app.log.warn(err, 'NATS connection failed at startup — event bus disabled, server continues');
+  }
+
+  // Time-based Overdue sweep (03-02) — same graceful-degradation posture as
+  // the NATS block above: a scheduler-start failure must not crash the
+  // server. startOverdueSweepScheduler() itself never throws synchronously
+  // (setInterval cannot throw), so this try/catch is defensive consistency
+  // with the other internal-service-start blocks above, not a real observed
+  // failure mode — documented here per the plan's own instruction.
+  try {
+    startOverdueSweepScheduler();
+  } catch (err) {
+    app.log.warn(err, 'Overdue sweep scheduler failed to start — automatic Overdue transitions disabled');
   }
 
   try {

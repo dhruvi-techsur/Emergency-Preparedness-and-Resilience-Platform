@@ -36,6 +36,15 @@ import { IncidentList } from './pages/incidents/IncidentList';
 import { CreateIncident } from './pages/incidents/CreateIncident';
 import { IncidentWorkspace } from './pages/incidents/IncidentWorkspace';
 import { OperatingPicture } from './pages/operating-picture/OperatingPicture';
+import { PlanRepository } from './pages/plans/PlanRepository';
+import { PlanDetail } from './pages/plans/PlanDetail';
+import { PlanEditor } from './pages/plans/PlanEditor';
+import { TaskList } from './pages/tasks-resources/TaskList';
+import { CreateTask } from './pages/tasks-resources/CreateTask';
+import { TaskDetail } from './pages/tasks-resources/TaskDetail';
+import { ResourceRequestList } from './pages/tasks-resources/ResourceRequestList';
+import { CreateResourceRequest } from './pages/tasks-resources/CreateResourceRequest';
+import { ResourceRequestDetail } from './pages/tasks-resources/ResourceRequestDetail';
 
 const queryClient = new QueryClient();
 
@@ -71,6 +80,30 @@ root.render(
               <Route path="incidents/new" element={<CreateIncident />} />
               <Route path="incidents/:id" element={<IncidentWorkspace />} />
               <Route path="operating-picture" element={<OperatingPicture />} />
+              <Route path="plans" element={<PlanRepository />} />
+              <Route path="plans/new" element={<PlanEditor />} />
+              <Route path="plans/:id" element={<PlanDetail />} />
+              <Route path="plans/:id/edit" element={<PlanEditor />} />
+              {/* F4 (03-06) — Tasks/Resource-Requests, standalone routes.
+                  Both TaskList/ResourceRequestList also accept an optional
+                  `incidentId` prop for 03-07's Incident Workspace tab
+                  embedding (direct component render, not these routes). */}
+              <Route path="tasks" element={<TaskList />} />
+              <Route path="tasks/new" element={<CreateTask />} />
+              <Route path="tasks/:id" element={<TaskDetail />} />
+              <Route path="incidents/:incidentId/tasks/new" element={<CreateTask />} />
+              <Route path="incidents/:incidentId/tasks/:id" element={<TaskDetail />} />
+              <Route path="resource-requests" element={<ResourceRequestList />} />
+              <Route path="resource-requests/new" element={<CreateResourceRequest />} />
+              <Route path="resource-requests/:id" element={<ResourceRequestDetail />} />
+              <Route
+                path="incidents/:incidentId/resource-requests/new"
+                element={<CreateResourceRequest />}
+              />
+              <Route
+                path="incidents/:incidentId/resource-requests/:id"
+                element={<ResourceRequestDetail />}
+              />
             </Route>
           </Routes>
         </RouteGuard>
