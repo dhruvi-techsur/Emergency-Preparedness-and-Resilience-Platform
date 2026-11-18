@@ -388,6 +388,23 @@ export default async function authOrgRoutes(app: FastifyInstance) {
         // URL directly (the exact condition 05-04's own must-have truth
         // rules out).
         //
+        // review finding (post-B3 regression): the desktop Coordinate
+        // group's pre-existing `{id:'tasks', label:'Tasks', href:'/tasks'}`
+        // (03-06) and this Field group's `{id:'field-tasks', href:
+        // '/field/tasks'}` both rendered the exact label "Tasks" for any
+        // role holding BOTH `tasks` and `field_reports` permissions (e.g.
+        // incident_commander), producing two ambiguous identically-
+        // labeled SideNav links to two different screens. The mockup
+        // itself only ever names this screen "My Tasks (field view)" /
+        // component `MyTasksField` — its own Navigation Map and screen
+        // heading never call it bare "Tasks" outside the bottom-bar's
+        // space-constrained 4-icon mobile mockup glyph, which this
+        // desktop-rendered SideNav item isn't bound to reproduce
+        // verbatim. Relabeling to "My Tasks" (matching the screen's own
+        // documented name everywhere else) disambiguates the two items
+        // without touching either href — `/field/tasks` remains reachable
+        // (B3 stays fixed) and `/tasks` is untouched.
+        //
         // "Profile" still has no dedicated screen anywhere in this phase
         // or prior phases — no F6 screen spec defines one — so it
         // continues to route to `/field` (Claude's discretion,
@@ -402,7 +419,7 @@ export default async function authOrgRoutes(app: FastifyInstance) {
               {
                 label: 'Field',
                 items: [
-                  { id: 'field-tasks', label: 'Tasks', icon: 'flag', href: '/field/tasks' },
+                  { id: 'field-tasks', label: 'My Tasks', icon: 'flag', href: '/field/tasks' },
                   { id: 'field-report', label: 'Report', icon: 'send', href: '/field/report' },
                   { id: 'field-map-nav', label: 'Map', icon: 'map', href: '/field/map' },
                   { id: 'field-profile', label: 'Profile', icon: 'users', href: '/field' },
