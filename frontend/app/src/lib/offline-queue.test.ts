@@ -6,6 +6,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 vi.mock('./api-client', () => ({
   apiPost: vi.fn(),
+  apiPatch: vi.fn(),
 }));
 
 import { apiPost } from './api-client';
@@ -34,8 +35,12 @@ async function clearQueueStore(): Promise<void> {
   // creates it via offline-queue.ts's own getDb()) before trying to clear.
   await getQueueSnapshot();
 
+  // DB_VERSION bumped 1 -> 2 (05-03 added the tasks_status object store) —
+  // this MUST open at the same version offline-queue.ts's own getDb() last
+  // opened, or fake-indexeddb throws VersionError ("a lower version than
+  // the existing version").
   await new Promise<void>((resolve, reject) => {
-    const openReq = indexedDB.open(DB_NAME, 1);
+    const openReq = indexedDB.open(DB_NAME, 2);
     openReq.onsuccess = () => {
       const db = openReq.result;
       const tx = db.transaction(STORE_NAME, 'readwrite');

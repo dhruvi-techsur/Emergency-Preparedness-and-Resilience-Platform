@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import { apiPost } from './api-client';
+import { apiPost, apiPatch } from './api-client';
 
 /**
  * EPMP field-mobile offline queue.
@@ -42,9 +42,31 @@ export type SyncStatusState = 'online' | 'syncing' | 'offline' | 'conflict';
 
 export interface QueueSnapshot {
   state: SyncStatusState;
-  /** Count of queue_status==='pending' items — what SyncStatus's `detail` renders as "N queued". */
+  /**
+   * Count of queue_status==='pending' items across BOTH object stores
+   * (field_reports + tasks_status) — what SyncStatus's `detail` renders as
+   * "N queued". A task-status update queued while offline must increment
+   * this count exactly like a field report does, per the FRD's "SyncStatus
+   * queued count increments immediately" rule — there is only one queued
+   * count in the UI, not two independently-tracked ones.
+   */
   queuedCount: number;
   items: QueuedFieldReport[];
+}
+
+/** Matches backend tasks.ts's TaskStatus enum (incident-ops/tasks.ts). */
+export type TaskStatusValue = 'Open' | 'In progress' | 'Awaiting approval' | 'Done' | 'Overdue';
+
+export interface QueuedTaskStatusChange {
+  task_id: string;
+  new_status: TaskStatusValue;
+  /** ISO timestamp set at the MOMENT of local capture — same idempotency
+   * shape as field_reports' captured_at (FRD: "idempotent by task_id +
+   * client captured_at"). */
+  captured_at: string;
+  queue_status: 'pending' | 'syncing' | 'synced' | 'failed';
+  /** Local enqueue timestamp, same purpose as QueuedFieldReport's. */
+  created_at: string;
 }
 
 interface FieldQueueDB extends DBSchema {
@@ -52,19 +74,38 @@ interface FieldQueueDB extends DBSchema {
     key: string;
     value: QueuedFieldReport;
   };
+  tasks_status: {
+    key: [string, string];
+    value: QueuedTaskStatusChange;
+  };
 }
 
 const DB_NAME = 'epmp-field-queue';
-const DB_VERSION = 1;
+// Version bump (1 -> 2): 05-03 adds a SECOND object store to this SAME
+// IndexedDB database (not a new separate database) for queued task-status
+// changes — one offline-queue mechanism, not two, per this plan's own
+// documented decision. idb's standard upgrade-callback pattern handles the
+// in-place schema migration for anyone who already has a v1 database from
+// 05-02.
+const DB_VERSION = 2;
 const STORE_NAME = 'field_reports';
+const TASKS_STORE_NAME = 'tasks_status';
 
 let dbPromise: Promise<IDBPDatabase<FieldQueueDB>> | null = null;
 
 function getDb(): Promise<IDBPDatabase<FieldQueueDB>> {
   if (!dbPromise) {
     dbPromise = openDB<FieldQueueDB>(DB_NAME, DB_VERSION, {
-      upgrade(db) {
-        db.createObjectStore(STORE_NAME, { keyPath: 'client_report_id' });
+      upgrade(db, oldVersion) {
+        if (oldVersion < 1) {
+          db.createObjectStore(STORE_NAME, { keyPath: 'client_report_id' });
+        }
+        if (oldVersion < 2) {
+          // Composite key (task_id + captured_at) — matches the FRD's
+          // idempotency shape for task-status updates exactly, the same
+          // way client_report_id is field_reports' idempotency key.
+          db.createObjectStore(TASKS_STORE_NAME, { keyPath: ['task_id', 'captured_at'] });
+        }
       },
     });
   }
@@ -122,7 +163,10 @@ export async function enqueueFieldReport(
 export async function getQueueSnapshot(): Promise<QueueSnapshot> {
   const db = await getDb();
   const items = await db.getAll(STORE_NAME);
-  const queuedCount = items.filter((item) => item.queue_status === 'pending').length;
+  const taskStatusItems = await db.getAll(TASKS_STORE_NAME);
+  const queuedCount =
+    items.filter((item) => item.queue_status === 'pending').length +
+    taskStatusItems.filter((item) => item.queue_status === 'pending').length;
 
   let state: SyncStatusState;
   if (items.some((item) => item.queue_status === 'conflict')) {
@@ -136,6 +180,33 @@ export async function getQueueSnapshot(): Promise<QueueSnapshot> {
   }
 
   return { state, queuedCount, items };
+}
+
+/**
+ * Queues a task status change (offline path for My Tasks' one-tap Start/
+ * Mark done). Persists IMMEDIATELY to the SAME IndexedDB database's
+ * tasks_status object store, before any network attempt — identical
+ * queue-first guarantee to enqueueFieldReport.
+ */
+export async function enqueueTaskStatusChange(
+  taskId: string,
+  newStatus: TaskStatusValue,
+): Promise<void> {
+  const db = await getDb();
+  const row: QueuedTaskStatusChange = {
+    task_id: taskId,
+    new_status: newStatus,
+    captured_at: new Date().toISOString(),
+    queue_status: 'pending',
+    created_at: new Date().toISOString(),
+  };
+  await db.put(TASKS_STORE_NAME, row);
+
+  await notifySubscribers();
+
+  if (navigator.onLine) {
+    void syncQueueNow();
+  }
 }
 
 /**
@@ -184,34 +255,65 @@ export async function syncQueueNow(): Promise<void> {
     .filter((item) => item.queue_status === 'pending')
     .sort((a, b) => a.created_at.localeCompare(b.created_at));
 
-  if (pending.length === 0) {
+  const pendingTaskChanges = (await db.getAll(TASKS_STORE_NAME))
+    .filter((item) => item.queue_status === 'pending')
+    .sort((a, b) => a.created_at.localeCompare(b.created_at));
+
+  if (pending.length === 0 && pendingTaskChanges.length === 0) {
     return;
   }
 
   syncInFlight = true;
   await notifySubscribers();
 
-  try {
-    const response = await apiPost<SyncBatchResponse>('/api/v1/field-reports/sync-batch', {
-      reports: pending.map(({ queue_status: _queueStatus, created_at: _createdAt, conflict_id: _conflictId, ...rest }) => rest),
-    });
-
-    const byId = new Map(response.results.map((result) => [result.client_report_id, result]));
-
-    for (const item of pending) {
-      const result = byId.get(item.client_report_id);
-      if (!result) continue;
-      await db.put(STORE_NAME, {
-        ...item,
-        queue_status: result.status,
-        conflict_id: result.conflict_id,
+  if (pending.length > 0) {
+    try {
+      const response = await apiPost<SyncBatchResponse>('/api/v1/field-reports/sync-batch', {
+        reports: pending.map(({ queue_status: _queueStatus, created_at: _createdAt, conflict_id: _conflictId, ...rest }) => rest),
       });
+
+      const byId = new Map(response.results.map((result) => [result.client_report_id, result]));
+
+      for (const item of pending) {
+        const result = byId.get(item.client_report_id);
+        if (!result) continue;
+        await db.put(STORE_NAME, {
+          ...item,
+          queue_status: result.status,
+          conflict_id: result.conflict_id,
+        });
+      }
+    } catch (err) {
+      // A totally-failed request (not a per-item failure) — every attempted
+      // item stays 'pending' and is retried on the next reconnect. Never
+      // throws uncaught.
+      console.warn('offline-queue: sync-batch request failed, will retry on next reconnect', err);
     }
-  } catch (err) {
-    // A totally-failed request (not a per-item failure) — every attempted
-    // item stays 'pending' and is retried on the next reconnect. Never
-    // throws uncaught.
-    console.warn('offline-queue: sync-batch request failed, will retry on next reconnect', err);
+  }
+
+  // After processing field_reports, also process pending tasks_status rows
+  // — PATCHed one by one to /api/v1/tasks/{id}/status — appended to this
+  // SAME function rather than a duplicate reconnect-listener, per this
+  // plan's "one offline-queue mechanism, not two" decision.
+  try {
+    for (const change of pendingTaskChanges) {
+      try {
+        await apiPatch(`/api/v1/tasks/${change.task_id}/status`, {
+          new_status: change.new_status,
+        });
+        await db.put(TASKS_STORE_NAME, { ...change, queue_status: 'synced' });
+      } catch (itemErr) {
+        // Per-item failure (e.g. 409 INVALID_STATUS_TRANSITION) — leave
+        // 'pending' unchanged on a network-level failure the same way
+        // field_reports does; a genuine rejection from the server still
+        // never silently vanishes since the row stays visible in
+        // Queued Submissions until explicitly retried/deleted.
+        console.warn(
+          `offline-queue: tasks_status sync failed for task_id=${change.task_id}, will retry on next reconnect`,
+          itemErr,
+        );
+      }
+    }
   } finally {
     syncInFlight = false;
     await notifySubscribers();
