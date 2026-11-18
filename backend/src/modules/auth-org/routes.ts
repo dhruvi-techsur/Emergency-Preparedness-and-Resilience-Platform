@@ -240,6 +240,19 @@ export default async function authOrgRoutes(app: FastifyInstance) {
       // wave)'s "Coordinate" append is possible — each plan's Task 3
       // appends only to the groups/keys it actually owns.
       const hasReporting = permRows.some((r) => r.feature === 'reporting' && r.actions.length > 0);
+      // Phase 5 (F6, 05-04): any role holding ANY 'field_reports'
+      // permission (05-05's seed grants view/create/resolve to
+      // field_responder, view+resolve to incident_commander/eoc_director,
+      // and view-only to planning_logistics_chief) sees the field-mobile
+      // 4-item bottom bar, per the UX mockup's Navigation Map. This is
+      // the FIRST plan to actually populate/read role_landing_config's
+      // intended field-mobile destination set — the schema has existed
+      // since Phase 1's migration (01-01) but nothing consumed it until
+      // now. Same role_permissions-driven derivation pattern as
+      // hasIncidents/hasAdmin/hasReporting above.
+      const hasFieldReports = permRows.some(
+        (r) => r.feature === 'field_reports' && r.actions.length > 0,
+      );
 
       const nav_groups = [
         ...(hasPlans
@@ -347,6 +360,33 @@ export default async function authOrgRoutes(app: FastifyInstance) {
                     icon: 'layers',
                     href: '/reports/analytics',
                   },
+                ],
+              },
+            ]
+          : []),
+        // Phase 5 (F6, 05-04): the field-mobile bottom bar's 4 fixed
+        // destinations, per the mockup's Field Home screen layout
+        // (`[Tasks][Report][Map][Profile]`). "Tasks" maps to `/field`
+        // (the Field Home/landing screen) per the Navigation Map's own
+        // "Field Home ... Nav element: Bottom bar: 'Tasks' (landing)"
+        // entry, not to `/field/tasks` (My Tasks). "Profile" has no
+        // dedicated screen anywhere in this phase or prior phases — no
+        // F6 screen spec defines one — so it also routes to `/field`
+        // (Claude's discretion): the bottom-bar's `SideNavItem` shape
+        // requires an `href`, not an onClick handler, and the real
+        // profile menu remains reachable via AppShell's own header
+        // Avatar/profileMenuOpen toggle (visible at every breakpoint,
+        // including below bp-md) — simpler than inventing a fake 5th
+        // screen just to satisfy the href requirement.
+        ...(hasFieldReports
+          ? [
+              {
+                label: 'Field',
+                items: [
+                  { id: 'field-tasks', label: 'Tasks', icon: 'flag', href: '/field' },
+                  { id: 'field-report', label: 'Report', icon: 'send', href: '/field/report' },
+                  { id: 'field-map-nav', label: 'Map', icon: 'map', href: '/field/map' },
+                  { id: 'field-profile', label: 'Profile', icon: 'users', href: '/field' },
                 ],
               },
             ]

@@ -57,6 +57,9 @@ import { AnalyticsDashboard } from './pages/reporting/AnalyticsDashboard';
 import { FieldHome } from './pages/field-mobile/FieldHome';
 import { MyTasksField } from './pages/field-mobile/MyTasksField';
 import { ReportObservation } from './pages/field-mobile/ReportObservation';
+import { QueuedSubmissions } from './pages/field-mobile/QueuedSubmissions';
+import { SyncConflictResolution } from './pages/field-mobile/SyncConflictResolution';
+import { FieldMap } from './pages/field-mobile/FieldMap';
 
 const queryClient = new QueryClient();
 
@@ -168,6 +171,14 @@ root.render(
               <Route path="field" element={<FieldHome />} />
               <Route path="field/tasks" element={<MyTasksField />} />
               <Route path="field/report" element={<ReportObservation />} />
+              {/* 05-04 (this plan) — the 3 remaining field-mobile routes,
+                  appended after 05-03's own 3 per the SAME
+                  append-not-overwrite discipline documented above. All 6
+                  field-mobile screens are now reachable via the route
+                  tree. */}
+              <Route path="field/queued" element={<QueuedSubmissions />} />
+              <Route path="field/conflicts/:id" element={<SyncConflictResolution />} />
+              <Route path="field/map" element={<FieldMap />} />
             </Route>
           </Routes>
         </RouteGuard>
