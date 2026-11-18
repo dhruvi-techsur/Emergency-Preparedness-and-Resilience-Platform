@@ -2,16 +2,16 @@
 pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 04-09-PLAN.md
-last_updated: "2026-11-18T12:43:53.000Z"
-last_activity: "2026-11-18 — Plan 04-09 complete (RBAC error-message accuracy gap closure — see 04-09-SUMMARY.md for full detail). Closed UAT gap ref 4 (cosmetic): requirePermission()'s checkPermission()-false branch now returns a new PERMISSION_DENIED error_code/message (\"your role doesn't include this action\") instead of the misleading ROLE_UNRESOLVED (\"isn't assigned a role yet\"), for the common case of a resolved role simply lacking one specific action grant (e.g. incident_commander attempting reporting:edit). ROLE_UNRESOLVED left unchanged, confirmed still exclusively used by the SSO callback's genuine role-resolution-failure path. New dedicated rbac.test.ts (3 tests) proves the distinction against real OPA policy evaluation; one pre-existing notifications.test.ts assertion updated to match. Full backend suite green at 70/70 tests across 14 files; tsc --noEmit and backend build clean. Phase 4's 04-08 gap-closure plan remains in progress independently (uncommitted working tree changes, no SUMMARY yet) — not part of this plan's scope."
+status: Plan 04-08 (Notifications landing / deep-link return-path / AAR button explanation gap closure) closed UAT gap refs 2, 3, and 5 — all 9 plans in Phase 4 (7 original + 04-08 + 04-09 gap closures) are now complete.
+stopped_at: Completed 04-08-PLAN.md
+last_updated: "2026-11-18T12:53:10Z"
+last_activity: 2026-11-18 — Plan 04-08 complete (see 04-08-SUMMARY.md for full detail), run in parallel with 04-09. New /notifications landing page (NotificationsLanding.tsx) with its own primary Compose-notification action, satisfying the UX mockup's two-reach-path OR-requirement alongside 04-07's Incident Workspace action; SideNav's 'Notification groups' item repointed/renamed to 'Notifications'. oidc-config.ts's signIn(returnPath?) now forwards the pre-redirect path via oidc-client-ts's own `state` param; RouteGuard forwards location.pathname+search; SignInCallback reads oidcUser.state back (type-guarded) and navigates there instead of the old hardcoded '/' — closing the fresh-tab deep-link-drops-to-home gap, proven by a new Playwright spec using a same-browser-context second page() (not browser.newContext(), which would test the wrong thing). IncidentWorkspace's disabled "Generate AAR" button now carries both a title attribute and an always-visible caption explaining the Closed-incident requirement. Full Playwright suite (76 tests) green with zero regression; tsc --noEmit clean on both frontend/app and backend; full 3-workspace build green; backend (70) and design-system (51) unit suites green.
 progress:
   total_phases: 6
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 57
-  completed_plans: 41
-  percent: 50
+  completed_plans: 42
+  percent: 67
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 4 — Notifications, Reporting & Learning (gap closure in progress) — all 7 original plans shipped plus one gap-closure plan this session (04-09); a second gap-closure plan (04-08) remains independently in progress with no SUMMARY yet.
+**Current focus:** Phase 4 — Notifications, Reporting & Learning — COMPLETE. All 9 plans shipped (7 original + 2 gap-closure plans, 04-08 and 04-09, run in parallel this session). UAT gap refs 2, 3, 4, and 5 all closed. Ready for Phase 5 planning.
 
 ## Current Position
 
-Phase: 4 of 6 (Notifications, Reporting & Learning) — gap closure in progress (04-08 still open independently)
-Plan: 9 plans present in phase dir, 8 have SUMMARYs (04-01 through 04-07 original + 04-09 gap closure this session); 04-08 gap closure still in progress, not part of this plan's scope
-Status: Plan 04-09 (RBAC error-message accuracy gap closure) closed UAT gap ref 4 — requirePermission()'s denial branch now returns PERMISSION_DENIED instead of the misleading ROLE_UNRESOLVED for a resolved role missing one specific action.
-Last activity: 2026-11-18 — Plan 04-09 complete (see 04-09-SUMMARY.md for full detail). New PERMISSION_DENIED error_code/message in rbac.ts, returned by requirePermission()'s checkPermission()-false branch; ROLE_UNRESOLVED left unchanged and confirmed still exclusively used by the SSO callback's genuine role-resolution-failure path. New dedicated rbac.test.ts (3 tests) proves the distinction against real OPA policy evaluation. Full backend suite green at 70/70 tests across 14 files; tsc --noEmit and backend build clean.
+Phase: 4 of 6 (Notifications, Reporting & Learning) — COMPLETE (all 9 plans)
+Plan: 9 of 9 complete in current phase (04-01 through 04-07 original; 04-08 and 04-09 gap-closure plans, run in parallel this session)
+Status: Plan 04-08 (Notifications landing / deep-link return-path / AAR button explanation gap closure) closed UAT gap refs 2, 3, and 5. Combined with 04-09 (RBAC error-message accuracy, gap ref 4), every open UAT gap for Phase 4 is now closed.
+Last activity: 2026-11-18 — Plan 04-08 complete (see 04-08-SUMMARY.md for full detail), run in parallel with 04-09. New /notifications landing page gives Compose Notification a standalone reach-path (satisfying the UX mockup's OR-requirement alongside 04-07's Incident Workspace action); oidc-client-ts's own `state` param now threads a deep link's return path through the full sign-in redirect+callback round-trip (RouteGuard → oidc-config → SignInCallback), proven by a new Playwright spec using the correct same-browser-context-second-page isolation primitive; the disabled "Generate AAR" button now explains itself via both a title attribute and an always-visible caption. Full Playwright suite (76 tests), backend suite (70 tests), and design-system suite (51 tests) all green with zero regression; tsc --noEmit clean; full 3-workspace build green.
 
-Progress: [█████░░░░░] 50%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -92,6 +92,7 @@ Progress: [█████░░░░░] 50%
 | Phase 04 P06 | 70 min | 3 tasks | 7 files |
 | Phase 04 P07 | 45 min | 2 tasks | 3 files |
 | Phase 04 P09 | 15 min | 2 tasks | 3 files |
+| Phase 04 P08 | 35 min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -203,6 +204,10 @@ Recent decisions affecting current work:
 - [Phase 04-07]: Fixed a real pre-existing bug in evidence-log.ts: action_type/record_type filters referenced their own SELECT-list output alias (`action`) in the incident_timeline half of the UNION's WHERE clause, which Postgres cannot resolve (it.title is the real column, not a column literally named action) — every such filtered request was silently 500ing, surfaced client-side as a generic "Could not load the evidence log" error
 - [Phase 04-07]: incident-to-evidence-trail.spec.ts uses TWO identities (incident_commander, planning_logistics_chief), not a single-identity shortcut — reporting:edit (gating SITREP save-as-draft and AAR finalize) is held only by planning_logistics_chief per 04-04's seed, discovered when the spec's own first single-identity draft produced false-positive passing assertions
 - [Phase 04-09]: requirePermission()'s checkPermission()-false branch now returns a new PERMISSION_DENIED error_code/message, not ROLE_UNRESOLVED — ROLE_UNRESOLVED stays reserved exclusively for the SSO callback's genuine role-resolution-failure path, since users.role_id is NOT NULL REFERENCES roles(id) and can never be unresolved once a users row exists at all; a resolved role lacking an action gets the SAME PERMISSION_DENIED response whether it holds zero or some-but-not-this grants on the feature
+- [Phase 04-08]: signIn(returnPath?) forwards the pre-redirect deep-link path via oidc-client-ts's own ExtraSigninRequestArgs.state param (read back off User.state on the callback) rather than a custom sessionStorage/localStorage return-path mechanism — the library already carries state through the full authorization-code redirect+callback round-trip with no extra storage key or threat surface
+- [Phase 04-08]: SignInCallback's state type-guard requires a non-empty string starting with '/' AND explicitly rejects '/auth/callback' itself, not just non-string values — closes both the open-redirect vector (any absolute URL falls through to the existing '/' fallback) and a pathological self-redirect loop
+- [Phase 04-08]: AAR button explanation ships BOTH a title attribute (hover/screen-reader, matching SideNav.tsx's own interim no-Tooltip-yet pattern) AND an always-visible caption — a title-only tooltip is not reliably discoverable on touch devices or without hover
+- [Phase 04-08]: auth-deep-link-return-path.spec.ts uses page.context().newPage() (a second page in the SAME browser context, sharing cookies but with independent sessionStorage) to reproduce the gap, NOT browser.newContext() (a separate cookie jar that would hit a real Keycloak login form instead of the silent SSO round-trip the gap is actually about) — and issues a SINGLE navigation directly to the deep link rather than a preliminary visit to '/' first, since '/' is itself unauthenticated and would kick off a second, racing OIDC round-trip with the wrong return path
 
 ### Pending Todos
 
@@ -214,6 +219,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-18T12:43:53.000Z
-Stopped at: Completed 04-09-PLAN.md
+Last session: 2026-11-18T12:54:19.562Z
+Stopped at: Completed 04-08-PLAN.md
 Resume file: None
