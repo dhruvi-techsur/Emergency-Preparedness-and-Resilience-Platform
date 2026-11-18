@@ -92,3 +92,11 @@ export type { LayerPanelProps, MapLayer } from './maps/LayerPanel';
 // PRODUCT PATTERNS
 export { Provenance } from './product-patterns/Provenance';
 export type { ProvenanceProps } from './product-patterns/Provenance';
+
+// DATA VISUALIZATION
+export { LineChart } from './data/LineChart';
+export type { LineChartProps, LineChartSeries, LineChartThreshold } from './data/LineChart';
+export { BarChart } from './data/BarChart';
+export type { BarChartProps, BarChartSeries } from './data/BarChart';
+export { DonutChart } from './data/DonutChart';
+export type { DonutChartProps, DonutSegment, DonutTone } from './data/DonutChart';
