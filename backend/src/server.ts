@@ -4,6 +4,7 @@ import authOrgRoutes from './modules/auth-org/routes.js';
 import incidentOpsRoutes from './modules/incident-ops/routes.js';
 import planRoutes from './modules/plans/routes.js';
 import commsReportingRoutes from './modules/comms-reporting/routes.js';
+import aiAssistRoutes from './modules/ai-assist/routes.js';
 import integrationGatewayRoutes from './modules/integration-gateway/routes.js';
 import webhookSubscriptionRoutes from './modules/integration-gateway/webhook-subscriptions.js';
 import openApiRoutes from './openapi/spec.js';
@@ -42,6 +43,14 @@ export function buildApp() {
   // 04-02's reporting routes register inside this SAME plugin alongside
   // notificationsRoutes, not as a separate server.ts registration.
   app.register(commsReportingRoutes);
+  // 06-03 F9 ai-assist module (ai-drafts request/approve/discard) — new
+  // module, registered alongside commsReportingRoutes. These three routes
+  // previously lived inline inside commsReportingRoutes's notifications.ts
+  // (04-01) and were relocated here, not duplicated — see
+  // ai-assist/ai-drafts.ts's own inline note for the full cross-phase
+  // collision history. 06-04 (signal triage) appends signalsRoutes into
+  // THIS SAME plugin registration, not a second server.ts line.
+  app.register(aiAssistRoutes);
   app.register(integrationGatewayRoutes);
   app.register(webhookSubscriptionRoutes);
   app.register(platformHealthRoutes);
