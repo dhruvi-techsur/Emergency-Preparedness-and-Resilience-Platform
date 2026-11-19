@@ -60,6 +60,8 @@ import { ReportObservation } from './pages/field-mobile/ReportObservation';
 import { QueuedSubmissions } from './pages/field-mobile/QueuedSubmissions';
 import { SyncConflictResolution } from './pages/field-mobile/SyncConflictResolution';
 import { FieldMap } from './pages/field-mobile/FieldMap';
+import { EocDashboard } from './pages/dashboard/EocDashboard';
+import { MyWorkDashboard } from './pages/dashboard/MyWorkDashboard';
 
 const queryClient = new QueryClient();
 
@@ -179,6 +181,18 @@ root.render(
               <Route path="field/queued" element={<QueuedSubmissions />} />
               <Route path="field/conflicts/:id" element={<SyncConflictResolution />} />
               <Route path="field/map" element={<FieldMap />} />
+              {/* F18 (06-06) — PER-01's EOC Dashboard and PER-03's My Work
+                  Dashboard, the two genuinely NEW persona landing pages
+                  this plan builds (PER-02's landing, /incidents, already
+                  exists from Phase 2). This plan is always the FIRST to
+                  append routes in this phase (06-07, wave 6, carries an
+                  explicit depends_on this plan specifically because both
+                  plans touch this file) — 06-07's own routes append AFTER
+                  these two, following the SAME append-not-overwrite
+                  discipline every other multi-plan shared-file edit in
+                  this route tree already established. */}
+              <Route path="dashboard" element={<EocDashboard />} />
+              <Route path="my-work" element={<MyWorkDashboard />} />
             </Route>
           </Routes>
         </RouteGuard>
