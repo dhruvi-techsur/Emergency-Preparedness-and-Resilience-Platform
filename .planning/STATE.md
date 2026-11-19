@@ -3,15 +3,15 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06-07-PLAN.md
-last_updated: "2026-11-19T13:44:20.119Z"
-last_activity: 2026-11-19 -- Plan 06-07 complete (see 06-07-SUMMARY.md for full detail). AppShell.tsx's forcedBottomBar + FacetToggle (PER-04/PER-05), new ExecutiveDashboard.tsx (/executive). F18's all-5-personas and executive-briefing success criteria are now both fully satisfied across this phase's plans.
+stopped_at: Completed 06-08-PLAN.md
+last_updated: "2026-11-19T13:55:58.800Z"
+last_activity: 2026-11-19 -- Plan 06-08 complete (see 06-08-SUMMARY.md for full detail). New IcsFormEditor.tsx embeds AIDraft over the ics_forms backend; single-click governance cascade proven end-to-end via Playwright with a direct-API-bypass rejection proof.
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 58
-  completed_plans: 55
-  percent: 86
+  completed_plans: 56
+  percent: 83
 ---
 
 # Project State
@@ -21,15 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 6 — Persona Dashboards & AI Assistance — IN PROGRESS. Plan 06-01 shipped the F9 AI-governance substrate (schema + shared assertAiOriginApproved guard) and its first real governed consumer (ICS Form Editor draft/approve); Plan 06-05 shipped the AIDraft design-system component; Plan 06-02 populated role_landing_config and shipped GET /api/v1/me/landing-config; Plan 06-03 shipped the AI-drafts request/approve/discard backend lifecycle; Plan 06-04 shipped the Signal Triage Queue backend (real clustering + promote/dismiss); Plan 06-06 shipped PER-01's EOC Dashboard and PER-03's My Work Dashboard, plus RouteGuard's reusable landing-config redirect mechanism; Plan 06-07 shipped PER-04's bottom-bar-only AppShell override and PER-05's dual-facet (Admin/Executive) experience, completing F18's all-5-personas success criterion. Phase 5 (Mobile Field Operations) is COMPLETE (all 6 plans shipped, incl. gap-closure plan 05-06).
+**Current focus:** Phase 6 — Persona Dashboards & AI Assistance — IN PROGRESS. Plan 06-01 shipped the F9 AI-governance substrate (schema + shared assertAiOriginApproved guard) and its first real governed consumer (ICS Form Editor draft/approve); Plan 06-05 shipped the AIDraft design-system component; Plan 06-02 populated role_landing_config and shipped GET /api/v1/me/landing-config; Plan 06-03 shipped the AI-drafts request/approve/discard backend lifecycle; Plan 06-04 shipped the Signal Triage Queue backend (real clustering + promote/dismiss); Plan 06-06 shipped PER-01's EOC Dashboard and PER-03's My Work Dashboard, plus RouteGuard's reusable landing-config redirect mechanism; Plan 06-07 shipped PER-04's bottom-bar-only AppShell override and PER-05's dual-facet (Admin/Executive) experience, completing F18's all-5-personas success criterion; Plan 06-08 shipped the ICS Form Editor, the first real reachable consumer of 06-01's ics_forms backend wired to 06-05's AIDraft component, proving F9's governance cascade end-to-end via Playwright including a direct-API-bypass rejection proof. Phase 5 (Mobile Field Operations) is COMPLETE (all 6 plans shipped, incl. gap-closure plan 05-06).
 
 ## Current Position
 
 Phase: 6 of 6 (Persona Dashboards & AI Assistance) — IN PROGRESS
 
-Plan: 7 of 10 complete in current phase (06-01, 06-02, 06-03, 06-04, 06-05, 06-06, 06-07 done; 06-08..06-10 not yet executed)
-Status: Phase 6 (Persona Dashboards & AI Assistance) in progress. Plan 06-07 (Wave 6, depends_on 06-02+06-06) shipped PER-04's AppShell-level bottom-bar-only override (field_responder never renders the desktop SideNav rail, at any viewport width) and PER-05's explicit FacetToggle (Admin/Executive, defaults fresh to 'admin' on every mount, never persisted across reload) plus the new ExecutiveDashboard.tsx at /executive (exactly 3 hardcoded display-scale KPIs, zero charts). This plan's own Task 1 (Field Home) was superseded by discovery: Phase 5's field-mobile/FieldHome.tsx already exists at the identical /field route with the exact S18.4 content Task 1 would have duplicated — the duplicate file was reverted, and S18.4's real (non-duplicated) deliverable, the AppShell enforcement, was built as specified. Two Rule-1 bugs surfaced only once AppShell started actually reading landing-config's mobile_bottom_bar_items (a stale seeded row, and a regression spec's stale rail-visible assertion) — both fixed. One Rule-2 fix: secops_admin was missing 'incidents' view permission entirely, which would have 403'd its own new ExecutiveDashboard landing. New persona-dashboards-per04-per05.spec.ts (5 tests) proves all 4 must-have truths end-to-end. Full backend suite (19 files, 108 tests) green with zero regression; tsc --noEmit and both builds clean; 25/25 Playwright across this plan's spec plus every adjacent regression spec.
-Last activity: 2026-11-19 -- Plan 06-07 complete (see 06-07-SUMMARY.md for full detail). AppShell.tsx's forcedBottomBar + FacetToggle (PER-04/PER-05), new ExecutiveDashboard.tsx (/executive). F18's all-5-personas and executive-briefing success criteria are now both fully satisfied across this phase's plans.
+Plan: 8 of 10 complete in current phase (06-01, 06-02, 06-03, 06-04, 06-05, 06-06, 06-07, 06-08 done; 06-09, 06-10 not yet executed)
+Status: Phase 6 (Persona Dashboards & AI Assistance) in progress. Plan 06-08 (Wave 7, depends_on 06-01+06-03+06-05+06-07) shipped the ICS Form Editor (ICS-201), the frontend half of 06-01's ics_forms backend, embedding 06-05's AIDraft component exactly per the mockup: "Draft with AI" never touches the narrative field's own state, the AIDraft panel renders as a separate sibling directly below the field, and a single AIDraft "Approve" click cascades through 06-03's ai-drafts approve, an ics_forms create, and 06-01's ics-forms-level approve (the Timeline write) — all in that one user action. A separate "Approve form" button covers only the manual-no-draft path. IncidentWorkspace's Reports tab gained a real "Open ICS-201 form" button, closing the last ics_forms-specific orphan-page gap. New ics-form-aidraft.spec.ts proves the full flow end-to-end, including the plan's explicit criterion-4 requirement: a raw fetch bypassing the UI's own Approve button against a never-approved draft is still rejected 400 AIDRAFT_UNAPPROVED_WRITE_BLOCKED by 06-01's server-side assertAiOriginApproved guard. Zero deviations — all four integration contracts (06-01, 06-03, 06-05, 06-07) matched their documented shapes exactly. Full backend suite (19 files, 108 tests) green with zero regression; tsc --noEmit and both builds (backend + frontend/app) clean; 7/7 Playwright (1 new spec + 6/6 incident-workspace.spec.ts regression).
+Last activity: 2026-11-19 -- Plan 06-08 complete (see 06-08-SUMMARY.md for full detail). New IcsFormEditor.tsx embeds AIDraft over the ics_forms backend; single-click governance cascade proven end-to-end via Playwright with a direct-API-bypass rejection proof.
+
+Plan 06-07 (prior, this phase): see 06-07-SUMMARY.md for full detail. Shipped PER-04's AppShell-level bottom-bar-only override (field_responder never renders the desktop SideNav rail, at any viewport width) and PER-05's explicit FacetToggle (Admin/Executive, defaults fresh to 'admin' on every mount, never persisted across reload) plus the new ExecutiveDashboard.tsx at /executive (exactly 3 hardcoded display-scale KPIs, zero charts). Completed F18's all-5-personas and executive-briefing success criteria across this phase's plans. New persona-dashboards-per04-per05.spec.ts (5 tests).
 
 Plan 06-06 (prior, this phase): see 06-06-SUMMARY.md for full detail. New EocDashboard.tsx (PER-01, /dashboard) and MyWorkDashboard.tsx (PER-03, /my-work) -- the phase's two genuinely new persona landing pages at that point. RouteGuard's new one-time landing-config redirect is the general mechanism 06-07 reused. nav-config's Monitor group gained a RBAC-gated Signals item. Reused Phase 3's existing eoc_director/planning_logistics_chief Keycloak identities rather than seeding duplicates (Rule-1 fix against a stale plan assumption). New persona-dashboards.spec.ts (4/4 passing) proves both landings end-to-end. Full backend suite (108/108), both tsc --noEmit checks, and both builds (backend + frontend/app) all green with zero regression.
 
@@ -56,7 +58,7 @@ Plan 05-02 (prior): shipped the client-side half of F6 — SyncStatus design-sys
 
 Plan 05-01 (prior, backend): shipped the F6 backend data layer and API surface — field_reports/field_report_photos/sync_conflicts tables plus idempotent-submit/ordered-batch-sync/photo-upload/conflict-resolve endpoints, every incident-touching write wrapped in the shared withTimelineTransaction invariant. Integration test (4 cases) + full backend suite (15 files, 74 tests) green with zero regression; tsc --noEmit and backend build both clean.
 
-Progress: [████████░░] 86%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
@@ -132,6 +134,7 @@ Progress: [████████░░] 86%
 | Phase 06 P04 | 25 min | 3 tasks | 5 files |
 | Phase 06 P06 | 35 min | 3 tasks | 8 files |
 | Phase 06 P07 | 55 min | 3 tasks | 8 files |
+| Phase 06 P08 | 8 min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -283,6 +286,9 @@ Recent decisions affecting current work:
 - [Phase 06-07]: AppShell forcedBottomBar override: PER-04 renders the bottom-bar SideNav variant at every viewport width via a persona_id check layered onto the existing viewport-driven branch, not a replacement of it
 - [Phase 06-07]: secops_admin granted view-only incidents role_permissions -- the only role reaching the new ExecutiveDashboard needed it to avoid a 403 on its own landing view
 - [Phase 06-07]: Did not build a second FieldHome.tsx at a new path -- Phase 5's own field-mobile/FieldHome.tsx already satisfies S18.4's exact contract at the same /field route
+- [Phase 06-08]: ics_forms has no PATCH endpoint (06-01's own scope) -- each narrative edit after the first create re-POSTs a new ics_forms row rather than updating in place, a documented Phase-6 simplification
+- [Phase 06-08]: "Approve form" button covers only the manual-no-draft path -- a single click of AIDraft's own Approve already completes the full ai-drafts+ics-forms cascade, so this is never a required second click
+- [Phase 06-08]: A fresh page visit never auto-creates an ics_forms row -- POST only fires on first explicit save (AIDraft's Approve cascade or the manual "Save draft" button), avoiding empty draft rows from mere navigation
 
 ### Pending Todos
 
@@ -294,6 +300,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-19T13:44:11.809Z
-Stopped at: Completed 06-07-PLAN.md
+Last session: 2026-11-19T13:55:58.798Z
+Stopped at: Completed 06-08-PLAN.md
 Resume file: None
