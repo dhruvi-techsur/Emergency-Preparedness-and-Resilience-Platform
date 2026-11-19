@@ -35,6 +35,7 @@ import { RecordAuthority } from './pages/admin/RecordAuthority';
 import { IncidentList } from './pages/incidents/IncidentList';
 import { CreateIncident } from './pages/incidents/CreateIncident';
 import { IncidentWorkspace } from './pages/incidents/IncidentWorkspace';
+import { IcsFormEditor } from './pages/incidents/IcsFormEditor';
 import { OperatingPicture } from './pages/operating-picture/OperatingPicture';
 import { PlanRepository } from './pages/plans/PlanRepository';
 import { PlanDetail } from './pages/plans/PlanDetail';
@@ -202,6 +203,16 @@ root.render(
                   runs strictly before this plan (wave 6), with an
                   explicit depends_on edge for exactly this file. */}
               <Route path="executive" element={<ExecutiveDashboard />} />
+              {/* F9 (06-08) — the ICS Form Editor, S9.3's "Draft with AI"
+                  embedded in a real official-record target. Wave 7,
+                  strictly after 06-07's /field and /executive routes
+                  above (explicit depends_on edge for this exact file) —
+                  appended last, following the SAME append-not-overwrite
+                  discipline every other multi-plan shared-file edit in
+                  this route tree already established. 06-09 (next plan)
+                  depends_on this one and appends its own routes after
+                  this line. */}
+              <Route path="incidents/:incidentId/forms/:formId" element={<IcsFormEditor />} />
             </Route>
           </Routes>
         </RouteGuard>
