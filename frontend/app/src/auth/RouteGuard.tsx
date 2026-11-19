@@ -1,10 +1,22 @@
 import * as React from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Skeleton } from '@epmp/design-system';
 import { signIn } from './oidc-config';
 import { getSessionToken, clearSessionToken } from './session-storage';
 import { AuthContext, type EpmpUser } from './auth-context';
 import { RoleUnresolved } from '../pages/RoleUnresolved';
+import { apiGet } from '../lib/api-client';
+
+/** Matches backend/src/modules/auth-org/landing-config.ts's success-path
+ * response shape. The `error_code: 'ROLE_VIEW_UNMAPPED'` fallback case
+ * (also a 200, never a 404/500 — see that file's own doc comment) is
+ * handled by checking for the optional `error_code` field below rather
+ * than a separate type, since both shapes share the same `default_route`
+ * field and TypeScript can narrow on the extra property's presence. */
+interface LandingConfigResponse {
+  default_route: string;
+  error_code?: 'ROLE_VIEW_UNMAPPED';
+}
 
 type GuardState =
   | { status: 'pending' }
@@ -47,6 +59,7 @@ export function RouteGuard({ children }: { children: React.ReactNode }): JSX.Ele
   // /auth/callback after a successful sign-in, bypassing session
   // resolution forever and rendering a blank page.
   const location = useLocation();
+  const navigate = useNavigate();
   const isCallbackRoute = location.pathname === CALLBACK_PATH;
   const [state, setState] = React.useState<GuardState>({ status: 'pending' });
   // Declared unconditionally (Rules of Hooks) even though it's only ever
@@ -79,6 +92,65 @@ export function RouteGuard({ children }: { children: React.ReactNode }): JSX.Ele
     // via setThemePreference from context).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.status === 'resolved' ? state.user.id : null]);
+
+  // F18 (06-06) — redirect a bare post-sign-in '/' to the resolved role's
+  // own default landing route, via GET /api/v1/me/landing-config (06-02).
+  //
+  // This redirect lives HERE, not in AppShell, because RouteGuard is the
+  // ONLY place that already distinguishes "freshly resolved" from
+  // "already resolved and navigating around normally" via its own
+  // `state.status` transitions (pending -> resolved happens exactly once
+  // per session). AppShell has no equivalent one-time-ness guard — it
+  // re-renders on every route change — so placing this fetch-and-redirect
+  // there would re-fire on every navigation back to a route that happens
+  // to render AppShell, which risks a redirect loop the instant a user
+  // tries to navigate anywhere else after landing.
+  //
+  // `hasRedirectedRef` is a ref (not state), the SAME one-time-guard
+  // technique SignInCallback.tsx's own `hasStartedRef` uses (see that
+  // file's doc comment) to survive React.StrictMode's synthetic
+  // mount->cleanup->mount double-invoke without re-running a non-
+  // idempotent side effect (a second navigate() mid-flight, here, rather
+  // than SignInCallback's non-reusable OAuth code).
+  const hasRedirectedRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (state.status !== 'resolved') return;
+    if (hasRedirectedRef.current) return;
+    // Only ever redirect away from the bare '/' landing — not any other
+    // path the user may have already navigated to (including a deep link
+    // restored by SignInCallback's own returnPath handling). This is what
+    // makes the redirect a ONE-TIME "where do I land" decision rather than
+    // something that fights the user's own subsequent navigation: once
+    // this effect has run once for this resolved session (whether it
+    // redirected or not — see below), it never runs again.
+    hasRedirectedRef.current = true;
+    if (location.pathname !== '/') return;
+
+    let cancelled = false;
+    async function redirectToLanding() {
+      try {
+        const config = await apiGet<LandingConfigResponse>('/api/v1/me/landing-config');
+        // ROLE_VIEW_UNMAPPED (the FRD's documented "role with no mapped
+        // default view" case) or a fetch failure: do NOT redirect, leave
+        // the user on '/' — AppShell's Outlet with no matched child route
+        // renders an empty area, an acceptable degraded state per the
+        // FRD's own documented edge case, not a new failure mode this
+        // redirect introduces.
+        if (cancelled) return;
+        if (config.error_code === 'ROLE_VIEW_UNMAPPED') return;
+        navigate(config.default_route, { replace: true });
+      } catch {
+        // Fetch failure — same "leave the user on '/'" fallback as above.
+      }
+    }
+
+    void redirectToLanding();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.status]);
 
   React.useEffect(() => {
     if (isCallbackRoute) return undefined;
