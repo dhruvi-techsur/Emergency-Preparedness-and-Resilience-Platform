@@ -438,6 +438,20 @@ export function IncidentWorkspace(): JSX.Element {
                   >
                     Generate AAR
                   </Button>
+                  {/* 06-08: F9's ICS Form Editor is now a real, reachable
+                      page — the UX mockup's own Navigation Map names this
+                      exact reach-path ("ICS Form / Checklist Editor...
+                      Reached from: Incident Workspace -> Reports tab").
+                      This replaces the no-orphan-pages placeholder this
+                      tab previously had for ICS forms specifically;
+                      SITREP/AAR generation above are already real (04-06/
+                      04-07). */}
+                  <Button
+                    variant="primary"
+                    onClick={() => navigate(`/incidents/${incident.id}/forms/new`)}
+                  >
+                    Open ICS-201 form
+                  </Button>
                 </div>
                 {/* A `title` tooltip alone is not reliably discoverable
                     (hover-only, unavailable on touch) — this always-visible
