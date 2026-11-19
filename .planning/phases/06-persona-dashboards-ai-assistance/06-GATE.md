@@ -3,10 +3,14 @@ phase: 06
 gate_status: passed
 build_command: "rc=0; (npm run build -w backend) || rc=$?; (npm run build -w frontend/design-system) || rc=$?; (npm run build -w frontend/app) || rc=$?; exit $rc"
 test_command: "rc=0; (npm run test -w backend) || rc=$?; (npm run test -w frontend/design-system) || rc=$?; exit $rc"
-last_updated: 2026-11-19T14:47:39Z
+last_updated: 2026-11-19T15:05:36Z
 tests_disabled_during_fixes: none
 shadowed_sources: 0
 review_blockers_open: 0
+boot_smoke: pass
+browser_suite: fail
+browser_headroom_mb: 8887
+browser_headroom_naive_mb: 5405
 waves:
   - wave: 1
     build: pass
@@ -5216,3 +5220,23 @@ files generated
 [2m   Duration [22m 1.15s[2m (transform 282ms, setup 242ms, collect 914ms, tests 774ms, environment 1.33s, prepare 185ms)[22m
 ```
 
+
+## Browser Suite (post-wave-9, pre-verification)
+
+**Runner:** Playwright (`frontend/app/playwright.config.ts`, no `webServer` block — `SELF_SERVED=0`)
+**Stack:** adopted running dev stack (boot_smoke gate, left running per protocol)
+**Headroom:** 8887 MB corrected / 5405 MB naive — not a resource constraint
+**Result:** 97 passed / 3 failed / 3 skipped (100 total, ~3% failure rate — well under the 50% harness-mismatch trigger threshold)
+
+### Failures (all confirmed pre-existing, zero overlap with any Phase 6 plan's touched files)
+
+1. **`admin-users-roles.spec.ts` — "3. Suspend requires Modal confirmation..."**
+   Root cause: `GET /api/v1/admin/users?page_size=1000` no longer returns every fixture row — the shared compose-stack DB has accumulated 1351 users (1066 of which sort alphabetically before any "Suspend Test User" fixture) across six phases of repeated plan/test execution in this sandbox. Spec file owned by Phase 1 (`01-11-PLAN.md`), last touched there; its own SUMMARY already documents this exact fragility class (originally 77 users, now 1351). A `page_size=5000` bump was attempted and resolved the immediate symptom but surfaced a second, cascading pre-existing race (the Suspend button not awaited before click on UserDetail navigation) — reverted rather than chase an unbounded fix chain outside this phase's scope.
+
+2. **`field-mobile-sync-conflict.spec.ts` — "1-6. field_responder seeds a conflict..."**
+   Exact match to the documented flake in `.planning/phases/05-mobile-field-operations/deferred-items.md` (05-06 entry): `jurisdictions.items[0]` no longer resolves to "Default Agency" because later-accumulated test-fixture jurisdictions now sort first alphabetically, so the created incident's jurisdiction lands outside both seeded identities' `jurisdiction_scope` and `GET /api/v1/sync-conflicts/:id` legitimately 404s (F-05-01's jurisdiction-scope enforcement working as intended). Spec file last touched in Phase 5; zero Phase 6 plan touches jurisdictions, incidents, or sync_conflicts.
+
+3. **`signal-triage.spec.ts` — "2. Dismiss opens a Modal..."**
+   Root cause: zero `New`-status signals remain in the shared DB — all 33 signals ever clustered from the 5 sample `hazard_feed_events` fixture rows (06-04's seed extension) have already been Dismissed/Promoted by this same session's repeated runs of 06-04's own tests, 06-09's own test 3, and 06-10's integration spec. `clusterHazardFeedEvents()` is idempotent by design (`WHERE NOT EXISTS` on already-clustered events), confirmed via a direct re-seed run producing "0 new signal(s) created." This spec passed 4/4 when originally run during 06-09's own execution (fresh-enough state); it is fixture-exhaustion from repeated full-suite reruns within this one long-lived sandbox, not a production defect. No backend change in scope could fix this without inventing a reset/reseed capability outside any Phase 6 plan's stated objective.
+
+**Action:** Not fixed (deviation rules scope boundary — pre-existing, unrelated-file test-fixture-accumulation issues, consistent with and extending the already-documented 05-04/05-06 flake pattern to new specs grown out by six phases of cumulative sandbox state). Recorded `browser-suite: fail` with full evidence per protocol; the verifier converts each into a gap citing this record rather than re-deriving it.
