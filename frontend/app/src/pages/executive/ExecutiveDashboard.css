@@ -1,0 +1,38 @@
+/*
+ * F18 S18.5 / Screen-01 — Executive-briefing dashboard layout. The
+ * mockup's own text is explicit: "No charts, no Card grid, no additional
+ * panels" — this file intentionally has NO border/shadow/background
+ * treatment anywhere (no card chrome), matching that "decoration-free"
+ * requirement. Token-only spacing, same convention every other page's
+ * CSS uses.
+ */
+
+.ep-executive-dashboard__kpi-row {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-8);
+  margin-top: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.ep-executive-dashboard__kpi {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  text-align: center;
+  max-width: 280px;
+}
+
+.ep-executive-dashboard__footer {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-8);
+}
+
+@media (max-width: 767px) {
+  .ep-executive-dashboard__kpi-row {
+    flex-direction: column;
+    align-items: center;
+  }
+}

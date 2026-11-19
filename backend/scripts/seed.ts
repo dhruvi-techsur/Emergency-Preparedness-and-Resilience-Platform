@@ -116,13 +116,28 @@ async function main() {
   // so they get view/create/edit. planning_logistics_chief and
   // field_responder get read-only view access for situational awareness —
   // Phase 2's RBAC model grants no incident-mutation rights to either role.
-  // secops_admin deliberately gets NO explicit 'incidents' row here: it
-  // already has blanket admin/platform access from the grants above, and
-  // that access is scoped to the admin console (user/role/SSO/audit
-  // management), not incident-command operations — omitting it is
-  // intentional, not an oversight.
+  //
+  // [Rule 2 - Missing Critical, 06-07] secops_admin ORIGINALLY got no
+  // explicit 'incidents' row at all (admin/platform access is scoped to
+  // the admin console, not incident-command operations) — correct for
+  // Phases 1-5, since nothing secops_admin-facing ever read incident data.
+  // That changed with THIS plan's S18.5 executive-briefing facet
+  // (ExecutiveDashboard.tsx, PER-05's own screen): it reads
+  // GET /api/v1/dashboard/summary (active_incidents) and
+  // GET /api/v1/incidents (closed-incident count), both gated
+  // requirePermission('incidents','view') — without this grant the ONLY
+  // role that ever reaches this screen would 403 immediately on its own
+  // landing view, not a cosmetic gap but a broken core dashboard. Adding
+  // `view`-only (read-only situational awareness, same narrow grant
+  // planning_logistics_chief/field_responder already hold below) is the
+  // minimal fix; no mutation rights are added, preserving the "admin
+  // console only" boundary for create/edit/approve.
   const incidentsFullAccessRoles = ['incident_commander', 'eoc_director'] as const;
-  const incidentsViewOnlyRoles = ['planning_logistics_chief', 'field_responder'] as const;
+  const incidentsViewOnlyRoles = [
+    'planning_logistics_chief',
+    'field_responder',
+    'secops_admin',
+  ] as const;
 
   // Phase 6 (06-01, F9): 'approve' added to incident_commander/
   // eoc_director's existing grant — the ICS-form approve route
