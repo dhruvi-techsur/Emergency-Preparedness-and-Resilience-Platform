@@ -2,16 +2,15 @@
 pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase 5 (Mobile Field Operations) complete — gap closure plan 05-06 shipped, both UAT gaps (ref 8 blocker, ref 1 major) closed. Ready for Phase 6.
-stopped_at: Completed 05-06-PLAN.md
-last_updated: "2026-11-19T10:58:36.000Z"
-last_activity: "2026-11-19 — Plan 05-06 complete (see 05-06-SUMMARY.md for full detail), a gap-closure plan for Phase 5's UAT round. Closed UAT-8 (blocker): AppShell.tsx's mobile bottom-bar now selects the Field nav group specifically by a new stable nav_groups[].id (backend, routes.ts), not by flattening+slicing the whole nav array — a field_responder's broad Phase 1-4 view-only grants no longer push the wrong 4 items into the bottom bar. Closed UAT-1 (major): the Field group's 4th SideNav item relabeled 'Profile' -> 'Field home', making the combined tasks+Report-button landing screen discoverable. F-05-01 security finding re-confirmed fixed (16/16 tests), untouched by this plan. Full backend suite (87/87), design-system suite, and all 3 project builds (backend/frontend-app/design-system) green; this plan's own new Playwright spec (2/2) plus app-shell.spec.ts (4/4) and field-mobile-report.spec.ts (1/1) regression-pass. One pre-existing, unrelated test-isolation flake in field-mobile-sync-conflict.spec.ts (jurisdiction-ordering drift from other phases' accumulated test fixtures) logged to deferred-items.md, confirmed unrelated to this plan's changes."
+status: planning
+last_updated: "2026-11-19T12:04:29.185Z"
+last_activity: "2026-11-19 — Phase 5 complete"
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 58
-  completed_plans: 49
-  percent: 84
+  completed_plans: 48
+  percent: 83
 ---
 
 # Project State
