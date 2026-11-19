@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   PageHeader,
@@ -69,13 +69,36 @@ interface FieldError {
  * on `GET /api/v1/jurisdictions`, added in this plan's incidents.ts module
  * (see that file's own doc comment) since every incident-creation flow
  * needs it and no earlier plan owns it.
+ *
+ * Phase 6 (06-09) addition — ADDITIVE ONLY: an optional pre-fill read from
+ * router state (`navigate('/incidents/new', { state: { prefill } })`,
+ * 06-09's Signal Triage Queue/Detail's Promote action). Router state is a
+ * purely client-side, same-origin navigation mechanism — it cannot be
+ * injected from an external URL or a different origin, and the pre-filled
+ * values are only ever USED as `useState` lazy-initializer defaults for
+ * fields the user can freely edit before submitting; they carry no
+ * elevated trust and bypass none of this form's own existing validation.
+ * A user arriving at `/incidents/new` with NO router state (the normal
+ * Phase-2 flow) behaves EXACTLY as before — this is the ONLY change to
+ * this Phase-2 file, non-breaking to Phase 2's own existing
+ * incident-list-create.spec.ts Playwright suite.
  */
 export function CreateIncident(): JSX.Element {
   const navigate = useNavigate();
+  const location = useLocation();
+  const prefill = (
+    location.state as {
+      prefill?: { name_suggestion: string; type_suggestion: string; severity_suggestion: string };
+    } | null
+  )?.prefill;
 
-  const [name, setName] = React.useState('');
-  const [type, setType] = React.useState<IncidentType>('Flood');
-  const [severity, setSeverity] = React.useState<Severity>('Normal');
+  const [name, setName] = React.useState(() => prefill?.name_suggestion ?? '');
+  const [type, setType] = React.useState<IncidentType>(
+    () => (prefill?.type_suggestion as IncidentType) ?? 'Flood',
+  );
+  const [severity, setSeverity] = React.useState<Severity>(
+    () => (prefill?.severity_suggestion as Severity) ?? 'Normal',
+  );
   const [jurisdictionId, setJurisdictionId] = React.useState('');
   const [description, setDescription] = React.useState('');
   const [openedAt, setOpenedAt] = React.useState(() => defaultOpenedAt());
