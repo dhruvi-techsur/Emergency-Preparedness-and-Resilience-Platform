@@ -254,6 +254,17 @@ export default async function authOrgRoutes(app: FastifyInstance) {
       const hasFieldReports = permRows.some(
         (r) => r.feature === 'field_reports' && r.actions.length > 0,
       );
+      // Phase 6 (F18/F9, 06-06): any role holding ANY 'ai_assist' permission
+      // (06-03's seed grants the full view/create/approve/discard set to
+      // incident_commander/eoc_director/planning_logistics_chief — the same
+      // 3 roles `hasIncidents` already covers, PLUS incident_commander who
+      // also already holds `hasIncidents`) sees a "Signals" item in the
+      // Monitor SideNav group, per the UX mockup's Navigation Map
+      // (`SideNav → Monitor: "Signals"`). Same role_permissions-driven
+      // derivation pattern as hasIncidents/hasAdmin/hasFieldReports above.
+      const hasAiAssist = permRows.some(
+        (r) => r.feature === 'ai_assist' && r.actions.length > 0,
+      );
 
       const nav_groups = [
         ...(hasPlans
@@ -274,13 +285,35 @@ export default async function authOrgRoutes(app: FastifyInstance) {
         // inventing a new one. Per the UX mockup's Navigation Map
         // ("Reached from: SideNav → Monitor: 'Operating picture'"), this
         // is its own "Monitor" group, distinct from "Activate".
-        ...(hasIncidents
+        //
+        // Phase 6 (F18/F9, 06-06): the "Signals" item (Signal Triage Queue,
+        // 06-04's backend) is independently gated on `hasAiAssist` and
+        // appended to this SAME group. The group wrapper below is widened
+        // from `hasIncidents` alone to `hasIncidents || hasAiAssist` so a
+        // hypothetical future role holding `ai_assist` but not `incidents`
+        // would still see the group (today's 3 ai_assist-holding roles all
+        // ALSO hold `incidents`, per 06-03's seed overlapping exactly with
+        // 02-01's, so this widening has no observable effect on any role
+        // seeded today — it only matters for that future case).
+        ...(hasIncidents || hasAiAssist
           ? [
               {
                 id: 'monitor',
                 label: 'Monitor',
                 items: [
-                  { id: 'operating-picture', label: 'Operating picture', icon: 'map', href: '/operating-picture' },
+                  ...(hasIncidents
+                    ? [
+                        {
+                          id: 'operating-picture',
+                          label: 'Operating picture',
+                          icon: 'map',
+                          href: '/operating-picture',
+                        },
+                      ]
+                    : []),
+                  ...(hasAiAssist
+                    ? [{ id: 'signals', label: 'Signals', icon: 'broadcast', href: '/signals' }]
+                    : []),
                 ],
               },
             ]
