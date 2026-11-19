@@ -2339,6 +2339,75 @@ async function main() {
       source: 'NOAA',
       issued_at: hazardFeedEventHoursAgoIso(5),
     },
+    // Second round of UAT data-doctor fixtures (gap closure 06-11, GATE.md's
+    // "browser_suite: fail" blocker, failure #3): the same fixture-exhaustion
+    // pattern documented at UAT-SIGNAL-NWS-003/NOAA-004 above recurred after
+    // further repeated full-suite Playwright runs drained those two as well.
+    // 6 more isolated, mutually-distinct events — each a different type, far
+    // apart in geometry from every other entry in this array — give
+    // clusterHazardFeedEvents() 6 more fresh Medium-confidence 'New' signals
+    // every time `npm run seed` runs. Safe to append a third round again
+    // later following this exact pattern if the queue is ever drained again.
+    {
+      feed_name: 'NOAA',
+      external_event_id: 'UAT-SIGNAL-NOAA-005',
+      type: 'Tornado Watch',
+      severity: 'Elevated',
+      lng: -96.80,
+      lat: 32.78,
+      source: 'NOAA',
+      issued_at: hazardFeedEventHoursAgoIso(7),
+    },
+    {
+      feed_name: 'NWS',
+      external_event_id: 'UAT-SIGNAL-NWS-006',
+      type: 'Heat Advisory',
+      severity: 'Watch',
+      lng: -112.07,
+      lat: 33.45,
+      source: 'NWS',
+      issued_at: hazardFeedEventHoursAgoIso(8),
+    },
+    {
+      feed_name: 'USGS',
+      external_event_id: 'UAT-SIGNAL-USGS-007',
+      type: 'Volcanic Activity Advisory',
+      severity: 'Watch',
+      lng: -121.76,
+      lat: 46.85,
+      source: 'USGS',
+      issued_at: hazardFeedEventHoursAgoIso(9),
+    },
+    {
+      feed_name: 'NOAA',
+      external_event_id: 'UAT-SIGNAL-NOAA-008',
+      type: 'Red Flag Warning',
+      severity: 'Elevated',
+      lng: -119.42,
+      lat: 36.73,
+      source: 'NOAA',
+      issued_at: hazardFeedEventHoursAgoIso(10),
+    },
+    {
+      feed_name: 'NWS',
+      external_event_id: 'UAT-SIGNAL-NWS-009',
+      type: 'Dense Fog Advisory',
+      severity: 'Watch',
+      lng: -72.68,
+      lat: 41.76,
+      source: 'NWS',
+      issued_at: hazardFeedEventHoursAgoIso(11),
+    },
+    {
+      feed_name: 'USGS',
+      external_event_id: 'UAT-SIGNAL-USGS-010',
+      type: 'Landslide Advisory',
+      severity: 'Watch',
+      lng: -122.68,
+      lat: 45.52,
+      source: 'USGS',
+      issued_at: hazardFeedEventHoursAgoIso(12),
+    },
   ] as const;
 
   for (const e of hazardFeedEventDefs) {
