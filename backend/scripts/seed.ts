@@ -2072,17 +2072,32 @@ async function main() {
     {
       // PER-04, S18.4. `nav_groups: []` is deliberate per S18.4 — "No
       // desktop SideNav variant is offered to this role by default." This
-      // role only ever sees the bottom-bar variant (06-06's FieldLanding
-      // page renders AppShell's mobile-bottom-bar path unconditionally for
-      // this role, not just at the bp-md breakpoint).
+      // role only ever sees the bottom-bar variant (06-07's AppShell.tsx
+      // `forcedBottomBar` override renders it unconditionally for this
+      // role, not just at the bp-md breakpoint).
+      //
+      // [Rule 1 - Bug, 06-07] This row's labels/hrefs originally drifted
+      // from the Field group's own CANONICAL item set (routes.ts's
+      // `hasFieldReports` nav-config block) — that block was corrected by
+      // Phase 5's gap-closure plan (05-06, UAT gap refs 8/1) to relabel
+      // "Tasks"→"My Tasks" and "Profile"→"Field home" (routing to `/field`,
+      // not a nonexistent `/profile`), but this seed's own
+      // mobile_bottom_bar_items literal was never updated to match,
+      // leaving it stale. 06-07's AppShell.tsx now prefers THIS row over
+      // nav-config's own Field-group derivation whenever non-empty (its
+      // own doc comment, Task 2) — wiring it up surfaced this
+      // pre-existing mismatch via field-mobile-bottom-nav.spec.ts's
+      // regression failure (expected "My Tasks"/"Field home", got the
+      // stale "Tasks"/"Profile"). Field exactly matches routes.ts's own
+      // array (id, label, icon, href) so both sources agree.
       roleName: 'field_responder',
       default_landing_route: '/field',
       nav_groups: [] as unknown[],
       mobile_bottom_bar_items: [
-        { id: 'field-tasks', label: 'Tasks', icon: 'flag', href: '/field/tasks' },
-        { id: 'field-report', label: 'Report', icon: 'edit', href: '/field/report' },
-        { id: 'field-map', label: 'Map', icon: 'map', href: '/field/map' },
-        { id: 'profile', label: 'Profile', icon: 'users', href: '/profile' },
+        { id: 'field-tasks', label: 'My Tasks', icon: 'flag', href: '/field/tasks' },
+        { id: 'field-report', label: 'Report', icon: 'send', href: '/field/report' },
+        { id: 'field-map-nav', label: 'Map', icon: 'map', href: '/field/map' },
+        { id: 'field-profile', label: 'Field home', icon: 'home', href: '/field' },
       ],
     },
     {

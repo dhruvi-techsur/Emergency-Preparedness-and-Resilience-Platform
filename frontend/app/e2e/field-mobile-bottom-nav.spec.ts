@@ -40,20 +40,33 @@ test.describe('Field-mobile bottom-nav + desktop label (UAT gap refs 8, 1)', () 
     }
   });
 
-  test('2. Desktop viewport: Field group\'s 4th item reads "Field home" (not "Profile") and routes to /field', async ({
+  test('2. Desktop viewport: Field group\'s 4th item reads "Field home" and routes to /field — rendered in the bottom bar, per 06-07\'s S18.4 override', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
 
     await signInAsFieldResponder(page);
 
+    // [Rule 1 - Bug, 06-07] This test originally asserted a desktop RAIL
+    // was visible for field_responder — correct for Phase 5, but F18 S18.4
+    // (this plan, Task 2's `forcedBottomBar` override) deliberately makes
+    // PER-04 NEVER see the desktop SideNav rail at any viewport width ("No
+    // desktop SideNav variant is offered to this role by default... ,
+    // regardless of viewport" — the FRD's own literal text). The rail
+    // assertion below is updated to its bottom-bar equivalent; the actual
+    // regression this test still guards (no stale "Profile" label, correct
+    // href) is unchanged in substance, just re-targeted at the bar that
+    // now renders instead of the rail that no longer does for this role.
+    const bottomBar = page.locator('nav[aria-label="Primary"].ep-sidenav--bottom-bar');
+    await expect(bottomBar).toBeVisible({ timeout: 10_000 });
+
     const railNav = page.locator('nav[aria-label="Primary"].ep-sidenav--rail');
-    await expect(railNav).toBeVisible({ timeout: 10_000 });
+    await expect(railNav).toHaveCount(0);
 
     // The old "Profile" label must be gone from the Field group entirely.
-    await expect(railNav.getByText('Profile', { exact: true })).toHaveCount(0);
+    await expect(bottomBar.getByText('Profile', { exact: true })).toHaveCount(0);
 
-    const fieldHomeLink = railNav.getByRole('link', { name: 'Field home' });
+    const fieldHomeLink = bottomBar.getByRole('link', { name: 'Field home' });
     await expect(fieldHomeLink).toBeVisible();
     await expect(fieldHomeLink).toHaveAttribute('href', '/field');
 
