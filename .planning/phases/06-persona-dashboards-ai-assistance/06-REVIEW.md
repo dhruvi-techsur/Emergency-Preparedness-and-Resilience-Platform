@@ -3,84 +3,63 @@ phase: 6
 status: clean
 blockers: 0
 warnings: 0
-files_reviewed: 46
+files_reviewed: 5
 files_reviewed_list:
-  - backend/migrations/1700000000011_persona-ai-signal-schema.js
   - backend/scripts/seed.ts
-  - backend/src/modules/ai-assist/ai-drafts.test.ts
-  - backend/src/modules/ai-assist/ai-drafts.ts
-  - backend/src/modules/ai-assist/governance.ts
-  - backend/src/modules/ai-assist/routes.ts
-  - backend/src/modules/ai-assist/signal-clustering.ts
-  - backend/src/modules/ai-assist/signals.test.ts
-  - backend/src/modules/ai-assist/signals.ts
-  - backend/src/modules/auth-org/landing-config.test.ts
-  - backend/src/modules/auth-org/landing-config.ts
-  - backend/src/modules/auth-org/routes.ts
-  - backend/src/modules/comms-reporting/notifications.test.ts
-  - backend/src/modules/comms-reporting/notifications.ts
-  - backend/src/modules/incident-ops/dashboard.ts
-  - backend/src/modules/incident-ops/ics-forms.test.ts
-  - backend/src/modules/incident-ops/ics-forms.ts
-  - backend/src/modules/incident-ops/routes.ts
-  - backend/src/server.ts
-  - frontend/app/e2e/field-mobile-bottom-nav.spec.ts
-  - frontend/app/e2e/ics-form-aidraft.spec.ts
-  - frontend/app/e2e/persona-dashboards-integration.spec.ts
-  - frontend/app/e2e/persona-dashboards-per04-per05.spec.ts
-  - frontend/app/e2e/persona-dashboards.spec.ts
-  - frontend/app/e2e/signal-triage.spec.ts
-  - frontend/app/src/app-shell/AppShell.tsx
-  - frontend/app/src/app-shell/FacetToggle.tsx
-  - frontend/app/src/auth/RouteGuard.tsx
-  - frontend/app/src/main.tsx
-  - frontend/app/src/pages/dashboard/EocDashboard.css
   - frontend/app/src/pages/dashboard/EocDashboard.tsx
-  - frontend/app/src/pages/dashboard/MyWorkDashboard.css
-  - frontend/app/src/pages/dashboard/MyWorkDashboard.tsx
-  - frontend/app/src/pages/executive/ExecutiveDashboard.css
-  - frontend/app/src/pages/executive/ExecutiveDashboard.tsx
-  - frontend/app/src/pages/incidents/CreateIncident.tsx
-  - frontend/app/src/pages/incidents/IcsFormEditor.css
-  - frontend/app/src/pages/incidents/IcsFormEditor.tsx
-  - frontend/app/src/pages/incidents/IncidentWorkspace.tsx
-  - frontend/app/src/pages/signals/SignalDetail.tsx
-  - frontend/app/src/pages/signals/SignalTriage.css
-  - frontend/app/src/pages/signals/SignalTriageQueue.tsx
-  - frontend/design-system/src/index.ts
-  - frontend/design-system/src/product-patterns/AIDraft.css
-  - frontend/design-system/src/product-patterns/AIDraft.tsx
-  - frontend/design-system/test/product-patterns.test.tsx
-reviewed_at: 2026-11-19T15:10:00Z
+  - frontend/app/e2e/persona-dashboards.spec.ts
+  - frontend/app/src/app-shell/AppShell.tsx
+  - frontend/app/e2e/signal-triage.spec.ts
+reviewed_at: 2026-11-19T23:59:00Z
 iteration: 1
 ---
 
 # Phase 6 Code Review
 
+**Scope note:** This iteration supersedes the prior `06-REVIEW.md` (which reviewed the original 10-plan wave, pre-`62aa761`). This review covers ONLY the gap-closure wave executed under `--gaps-only` (commits `62aa761..HEAD`: plans 06-11, 06-12, 06-13), per the task's explicit scope.
+
 ## BLOCKERs
 
-None found.
+None.
 
 ## WARNINGs
 
-None found.
+None.
+
+## Findings detail (all candidates refuted)
+
+### Candidate: seed.ts's 6 new hazard_feed_events rows might collide with an existing grid cell and under-produce signals
+- **File:** backend/scripts/seed.ts:2351-2410
+- **Check performed:** Simulated the exact `(type, ST_SnapToGrid(geometry, 0.5))` grouping key `clusterHazardFeedEvents()` (backend/src/modules/ai-assist/signal-clustering.ts:67) uses, against all 13 fixture rows in `hazardFeedEventDefs` (7 pre-existing + 6 new). Result: each of the 6 new rows (Tornado Watch/-96.80,32.78; Heat Advisory/-112.07,33.45; Volcanic Activity Advisory/-121.76,46.85; Red Flag Warning/-119.42,36.73; Dense Fog Advisory/-72.68,41.76; Landslide Advisory/-122.68,45.52) lands in its own unique `(type, grid-cell)` bucket, distinct from every other row (old and new). Confirmed: produces exactly 6 new isolated Medium-confidence signals on a drained-queue reseed, as claimed by 06-11-SUMMARY.md.
+- **Verdict:** Not a defect.
+
+### Candidate: `hazard_feed_events.severity` CHECK constraint might reject new values ('Watch' used repeatedly)
+- **File:** backend/migrations/1700000000011_persona-ai-signal-schema.js:66
+- **Check performed:** `severity VARCHAR(50)` — no CHECK constraint on this column (only `confidence` and `status`-style columns elsewhere have CHECKs). 'Watch'/'Elevated' are free-text, already used by pre-existing rows in the same array.
+- **Verdict:** Not a defect.
+
+### Candidate: EocDashboard.tsx doc-comment/hint removal might not match the real backend response
+- **File:** frontend/app/src/pages/dashboard/EocDashboard.tsx:17-57, 113-126
+- **Check performed:** Read backend/src/modules/incident-ops/dashboard.ts directly. `open_tasks` and `pending_resource_requests` are genuine `COUNT(*)` SQL queries scoped by jurisdiction; `notifications_pending_ack` is a hardcoded `0` with an inline comment explaining the schema has no per-recipient `user_id` column. The frontend's corrected doc comment and the hint removal on the first two tiles (keeping the hint on only the third) exactly matches this backend reality.
+- **Verdict:** Not a defect — fix is correct and the claim is accurate.
+
+### Candidate: AppShell's new `.ep` class might duplicate a reset already applied elsewhere, or might not be the real activator
+- **File:** frontend/app/src/app-shell/AppShell.tsx:201
+- **Check performed:** Grepped the whole frontend tree for `.ep` (bare class, not `.ep-*`) — the only CSS rule matching is `frontend/design-system/tokens/tokens.css:352-354` (`.ep, .ep * { box-sizing: border-box; }`), loaded globally via `main.tsx`'s `import '@epmp/design-system/tokens/tokens.css'`. Before this change, no app-code element anywhere in `frontend/app/src` carried the bare `.ep` class (confirmed via grep across all page components) — `index.html`'s `#root` div also doesn't carry it. AppShell is the single top-level wrapper rendered for every routed page (`main.tsx`'s `<Route path="/*" element={<AppShell />}>`), so this is the correct, sole, non-duplicated activation point.
+- **Verdict:** Not a defect — fix is correctly scoped and genuinely new.
+
+### Candidate: new signal-triage.spec.ts test 2b's geometry assertions might be tautological or rely on an untested selector
+- **File:** frontend/app/e2e/signal-triage.spec.ts:105-138
+- **Check performed:** Read `SignalTriageQueue.tsx`'s Dismiss Modal markup (Modal + TextField with `label="Reason"` `multiline`) and `Modal.tsx`/`Modal.css`/`TextField.css`. The `TextField`'s textarea is `width: 100%` with its own `border`+`padding`, nested inside `.ep-modal`'s own `padding: var(--space-6)` — exactly the box-sizing-dependent composition the gap's diagnosis describes. The assertion (`reasonBox.x + reasonBox.width <= modalBox.x + modalBox.width + 1`) is a real geometry check, not tautological; it would fail under `content-box` sizing (padding/border added on top of the 100%-width basis, causing overflow) and passes under `border-box`. Test 2b additionally cancels via the `Cancel` button rather than confirming, correctly preserving the shared fixture pool for tests 3-5 in the same `.serial` block — verified this doesn't consume a `New`-status signal.
+- **Verdict:** Not a defect — real regression coverage, correctly scoped.
 
 ## Cross-file seams checked
 
-- `c-gap api frontend/app/src/pages/SignInCallback.tsx:65 GET /api/v1/auth/sso/callback` — **Refuted, confirmed false positive.** Read both files directly: `SignInCallback.tsx:65` is `fetch('/api/v1/auth/sso/callback', { method: 'POST', ... })` and `backend/src/modules/auth-org/routes.ts:72` declares `app.post<...>('/api/v1/auth/sso/callback', ...)`. Real method is POST on both sides; the scanner mislabeled the call site as GET. This file was last functionally touched in Phase 1 — zero Phase 6 plan modifies it. No finding recorded.
-- `c-adv api frontend/app/src/lib/api-client.ts:121 GET /api/v1/field-reports/${fieldReportId}/photos` — Confirmed `api-client.ts` has zero diff in the Phase 6 commit range (`git diff <phase-start>^ HEAD -- frontend/app/src/lib/api-client.ts` produces no output). Pre-existing code from Phase 5, out of this phase's review scope. No finding recorded.
-- `governance.ts` (ai-assist) → `comms-reporting/notifications.ts`'s `assertAiOriginApproved`/`AiOriginNotApprovedError` — re-export only, confirmed byte-identical single source of truth; both `ics-forms.ts` and `notifications.ts`'s own `/send` route call the same function. OK.
-- `ics_forms`/`ai_drafts`/`signals`/`signal_source_events`/`hazard_feed_*` DDL — migration `1700000000011` correctly renumbered (collision with 05-01's `1700000000010_field-operations-schema.js` avoided) and correctly skips re-creating `ai_drafts` (already created by `1700000000008_notifications-schema.js`, confirmed byte-identical DDL). `ics_forms.ai_draft_id` FK resolves against the pre-existing table. OK.
-- `ics-forms.ts` approve route → `requirePermission('incidents','approve')` → `seed.ts`'s `incidentsFullAccessRoles` grant (`['view','create','edit','approve']` for `incident_commander`/`eoc_director`) — confirmed grant present; `planning_logistics_chief`/`field_responder` remain view-only, verified both by seed.ts inspection and `ics-forms.test.ts`'s explicit 403 case. OK.
-- `ai-drafts.ts` routes (relocated from `notifications.ts`) → `server.ts`'s `aiAssistRoutes` registration → `seed.ts`'s new `ai_assist` feature-permission (`incident_commander`/`eoc_director`/`planning_logistics_chief`) — old inline routes fully removed from `notifications.ts` (no `FST_ERR_DUPLICATE_ROUTE` risk), `notifications.test.ts` updated in lockstep (200 not 201, new `ai_assist` test-local grant). OK.
-- `IcsFormEditor.tsx` → `POST /api/v1/ai-drafts` (`approver_id`) and `POST /api/v1/incidents/{id}/ics-forms/{formId}/approve` (`approved_by`) — field names match each backend route's own `Body` type exactly (not swapped). OK.
-- `SignalTriageQueue.tsx`/`SignalDetail.tsx` → `POST /api/v1/signals/{id}/promote` response shape (`prefill.{name_suggestion,type_suggestion,severity_suggestion,source_signal_id}`) → `CreateIncident.tsx`'s router-state consumption — field names match; `CreateIncident.tsx`'s `resolveTypeSuggestion()` correctly guards against `signal-clustering.ts`'s free-text hazard-type vocabulary (e.g. "Hurricane Watch") not being a member of the `incidents.type` CHECK-constraint enum, falling back to `'Other'`. OK.
-- `signals.ts`'s `GET /api/v1/signals` response (`source_feeds`, `source_events`) → `SignalTriageQueue.tsx` and `SignalDetail.tsx` consumption — both interfaces match the backend's actual additive fields. OK.
-- `landing-config.ts` (`GET /api/v1/me/landing-config`) → `RouteGuard.tsx`'s redirect logic and `AppShell.tsx`'s `mobile_bottom_bar_items` consumption — response shape (`default_route`, `nav_groups`, `mobile_bottom_bar_items`, optional `error_code: 'ROLE_VIEW_UNMAPPED'`) matches both consumers' local interfaces exactly; `requirePermission('platform','view')` resolves for every seeded role (seed.ts grants `platform:view` to all 5 personas). OK.
-- `routes.ts`'s `hasAiAssist`-gated "Signals" nav item → `seed.ts`'s `aiAssistRoles` (`incident_commander`/`eoc_director`/`planning_logistics_chief`) — matches; verified end-to-end in `persona-dashboards.spec.ts` test 3 and `persona-dashboards-integration.spec.ts` test 3.
-- `AIDraft.tsx` (design system) → `IcsFormEditor.tsx` embedding — `onApprove`'s single callback is the only path draft text can reach the narrative field; confirmed no `onChange`/`onDraftTextUpdate` prop exists that could bypass this. Matches `ics-form-aidraft.spec.ts`'s e2e assertions.
-- `dashboard.ts`'s `DashboardSummary` shape → `EocDashboard.tsx` and `ExecutiveDashboard.tsx` consumption — both frontend interfaces match the backend's 4-field response exactly; `tasks`/`resource_requests` schema columns referenced in the SQL (`status`, `incident_id`) confirmed to exist via Phase 3's migration.
-- `main.tsx` route registration order (06-06 → 06-07 → 06-08 → 06-09) — confirmed each plan's routes append strictly after the prior plan's, no overwrites; `IncidentWorkspace.tsx`'s "Open ICS-201 form" button navigates to `/incidents/{id}/forms/new`, which resolves against the registered `/incidents/:incidentId/forms/:formId` route (`formId` param literally `"new"`, consistent with the component's own "no existing form found → create on first explicit save" hydration logic).
-- TypeScript: `cd backend && npx tsc --noEmit` → exit 0; `cd frontend/app && npx tsc --noEmit` → exit 0. No type drift across the module boundary.
-
-All cross-phase collision stories (ai_drafts table ownership, assertAiOriginApproved guard ownership, migration-number renumbering, ai-drafts route relocation) were independently verified against the actual committed artifacts, not merely taken on the PLAN/SUMMARY's word — each checks out.
+- `c-gap` SignInCallback.tsx:65 / auth-org/routes.ts:72 — **Confirmed OK, no new finding.** Verified via `git log --all -- frontend/app/src/pages/SignInCallback.tsx`: the file's last commit predates `62aa761` entirely (last touched in Phase 1); zero commits in this gap-closure wave (`62aa761..HEAD`) touch it. The prior review's refutation (scanner mislabeled a real `POST`/`POST` pair as `GET`) stands unchanged — carried forward, not re-derived.
+- `c-adv` api-client.ts:121 dynamic path `/api/v1/field-reports/${fieldReportId}/photos` — **Confirmed informational only.** Backend route exists at `backend/src/modules/incident-ops/field-reports.ts:316` (`POST /api/v1/field-reports/:id/photos`). This file is also unchanged in this gap-closure wave (not in the `62aa761..HEAD` diff stat). No action needed.
+- `EocDashboard.tsx` Stat tiles ↔ `dashboard.ts` `GET /api/v1/dashboard/summary` response shape — OK, verified field-for-field (active_incidents/open_tasks/pending_resource_requests/notifications_pending_ack all match, hint placement matches real-vs-structural-zero split).
+- `persona-dashboards.spec.ts`'s new hint-string assertions ↔ `EocDashboard.tsx`'s actual rendered strings — OK, exact string match confirmed (`'Tasks module ships in a later phase'`, `'Resource requests module ships in a later phase'` both absent; `'Per-recipient acknowledgment ships in a later phase'` present).
+- `signal-triage.spec.ts`'s new bounding-box assertions ↔ `SignalTriageQueue.tsx`'s Modal+TextField DOM structure ↔ `AppShell.tsx`'s new `.ep` class ↔ `tokens.css`'s box-sizing reset — OK, full chain traced and confirmed consistent (see Findings detail above).
+- `seed.ts`'s 6 new `hazardFeedEventDefs` rows ↔ `hazard_feed_events` table's `UNIQUE(feed_id, external_event_id)` constraint ↔ `clusterHazardFeedEvents()`'s grid-snap grouping query — OK, no natural-key collision with existing rows, no accidental re-clustering into an existing group (verified by simulation).
+- `seed.ts`'s new rows' `severity` values (`'Elevated'`/`'Watch'`) ↔ `hazard_feed_events.severity` column — OK, column has no CHECK constraint restricting these values.
+</content>
