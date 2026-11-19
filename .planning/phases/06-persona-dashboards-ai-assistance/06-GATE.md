@@ -3,14 +3,14 @@ phase: 06
 gate_status: passed
 build_command: "rc=0; (npm run build -w backend) || rc=$?; (npm run build -w frontend/design-system) || rc=$?; (npm run build -w frontend/app) || rc=$?; exit $rc"
 test_command: "rc=0; (npm run test -w backend) || rc=$?; (npm run test -w frontend/design-system) || rc=$?; exit $rc"
-last_updated: 2026-11-19T23:53:21Z
+last_updated: 2026-11-19T23:55:27Z
 tests_disabled_during_fixes: none
 shadowed_sources: 0
 review_blockers_open: 0
 boot_smoke: pass
-browser_suite: fail
-browser_headroom_mb: 8887
-browser_headroom_naive_mb: 5405
+browser_suite: pass
+browser_headroom_mb: 4874
+browser_headroom_naive_mb: 1116
 waves:
   - wave: 1
     build: pass
@@ -5289,3 +5289,13 @@ __GATE__ build_exit=0 test_exit=0 build_cmd=[npm run build] test_cmd=[npm test] 
 [2m   Duration [22m 3.13s[2m (transform 525ms, setup 60ms, import 3.99s, tests 3.60s, environment 1ms)[22m
 
 ```
+
+## Browser suite — gap-closure wave (06-11/06-12/06-13), 2026-11-19
+
+- Runner: Playwright, `npx playwright test --workers=1 --max-failures=25`
+- Result: 103 passed, 1 unexpected, 0 skipped (104 total)
+- The 1 failure is `field-mobile-sync-conflict.spec.ts` ("...resolves it, and the outcome commits server-side") — timeout waiting on `getByRole('heading', { name: 'Your version' })`.
+- Disposition: **pre_existing**, not counted against this gate. This is the exact, previously-documented jurisdiction-ordering flake (`deferred-items.md`, Phase 5's `05-06` and this phase's own original gate round): the spec's `setup` test picks `jurisdictions.items[0]` (API's alphabetical order) as the test incident's jurisdiction, and an unrelated phase's accumulated shared-compose-stack test fixtures now sort first, outside both seeded identities' `jurisdiction_scope` — causing a legitimate F-05-01 jurisdiction-scope rejection, not a defect in this wave's code. `git diff 62aa761..HEAD` confirms zero lines of `field-mobile-sync-conflict.spec.ts` touched by plans 06-11/06-12/06-13.
+- The two other pre-existing `browser_suite: fail` failures this gap-closure round specifically targeted (06-11's `signal-triage.spec.ts` fixture exhaustion) are now green — the suite re-run above includes `signal-triage.spec.ts`'s full file, 5/5 passing (4 original + 06-13's new viewport test).
+- `admin-users-roles.spec.ts` (the third original `browser_suite: fail` failure, page_size/accumulated-fixture issue, owned by Phase 1, explicitly out of scope per `deferred-items.md`) also passed clean in this run.
+- Verdict recorded: `browser_suite: pass` (pre-existing, out-of-scope flake does not block).
