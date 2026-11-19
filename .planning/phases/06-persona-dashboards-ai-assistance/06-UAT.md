@@ -1,9 +1,9 @@
 ---
-status: complete
+status: diagnosed
 phase: 06-persona-dashboards-ai-assistance
 source: [06-06-SUMMARY.md, 06-07-SUMMARY.md, 06-08-SUMMARY.md, 06-09-SUMMARY.md, 06-10-SUMMARY.md]
 started: 2026-11-19T15:30:40Z
-updated: 2026-11-19T22:34:59Z
+updated: 2026-11-19T22:41:15Z
 ---
 
 ## Current Test
@@ -130,13 +130,14 @@ browser_suite: fail (execute) — 97/100 Playwright, 3 failures, all cited from 
   test: 1
   source: user
   confidence: proven
-  root_cause: "frontend/app/src/pages/dashboard/EocDashboard.tsx:106-115 — the `hint` prop on the Open tasks / Pending resource requests Stat tiles is a hardcoded string claiming the feature isn't tracked yet, written when 06-05-PLAN.md's premise assumed dashboard.ts would return hardcoded zeros. 06-01's own execution deviated from that premise (dashboard.ts actually computes real COUNT(*) queries, confirmed in 06-01-SUMMARY.md's own Deviations section), but EocDashboard.tsx's hint text was never updated to match — it still unconditionally shows the stale explanation even when `summary.open_tasks`/`summary.pending_resource_requests` is a genuine nonzero value."
+  root_cause: "frontend/app/src/pages/dashboard/EocDashboard.tsx:109,114 hardcode hint=\"Tasks module ships in a later phase\" / \"Resource requests module ships in a later phase\" on the Open tasks / Pending resource requests Stat tiles UNCONDITIONALLY — the hint is a plain string with no connection to the summary value fetched from the API. Written under the premise that dashboard.ts would return hardcoded zeros; 06-01's own execution correctly deviated from that premise (Phase 3's real tasks/resource_requests tables already existed, so hardcoding zero would have been a regression — confirmed in 06-01-SUMMARY.md's own Deviations section), but EocDashboard.tsx was never reconciled with that already-landed backend deviation. The file's own active_incidents tile (also a real computed value) has NO hint at all, establishing the in-file precedent that a real value needs no caveat — and a survey of all 26 other hint= call sites across frontend/app confirms the codebase-wide convention: a 'ships later'/'not tracked' hint is used ONLY when the value is genuinely limited/zero, never on a proven real count. Only notifications_pending_ack remains a genuine structural zero and correctly keeps its hint."
   artifacts:
     - path: "frontend/app/src/pages/dashboard/EocDashboard.tsx"
-      issue: "Lines 106-115: hint text hardcoded to 'ships in a later phase' regardless of the actual (real, nonzero) value received from the backend"
+      issue: "Lines 109,114: hint prop hardcoded to 'ships in a later phase' text unconditionally, even though summary.open_tasks/summary.pending_resource_requests are real, correctly-jurisdiction-scoped COUNT(*) values from dashboard.ts. Lines 36-47's doc comment is also stale, claiming '3 of 4 tiles are structural zeros' when only 1 (notifications_pending_ack) actually is."
   missing:
-    - "Make the hint conditional: only show 'Tasks module ships in a later phase' / 'Resource requests module ships in a later phase' styled language when the value is genuinely unanswerable (there is none such for these two fields anymore, per 06-01) — otherwise show a correct, real caption (or no hint at all) for a field the backend actually counts. The only field that still deserves a 'ships in a later phase'-style caption is notifications_pending_ack, which dashboard.ts documents as a genuine structural zero (no per-recipient user_id column in this schema)."
-  debug_session: ""
+    - "Remove the hint prop entirely from the Open tasks and Pending resource requests Stat tiles (lines 109,114) — mirror active_incidents (line 105), which already has no hint for the same reason: a real value needs no caveat. No conditional logic needed; these two fields will always be real integers going forward, so a legitimate 0 (e.g. zero actual open tasks) is not a 'data unavailable' case any more than active_incidents showing 0 would be."
+    - "Update the file's stale top-of-component doc comment (lines 36-47) to state only notifications_pending_ack remains a genuine structural zero, preventing recurrence."
+  debug_session: ".planning/debug/eoc-dashboard-stale-hint-text.md"
 
 - truth: "The Dismiss-signal confirmation Modal's Reason text box renders fully inside the Modal's bounds, at any viewport"
   status: failed
@@ -144,10 +145,12 @@ browser_suite: fail (execute) — 97/100 Playwright, 3 failures, all cited from 
   severity: cosmetic
   test: 8
   source: user
-  confidence: hypothesis
-  root_cause: ""
+  confidence: proven
+  root_cause: "The design system's base CSS reset — `.ep, .ep * { box-sizing: border-box }` (frontend/design-system/tokens/tokens.css:352-355) — is scoped to only apply inside an element carrying the literal class `ep`. The design system's own test harnesses wrap every fixture in `<div className=\"ep\">` to get this reset, confirming that's the intended integration contract. The real app (frontend/app/src/main.tsx → AppShell.tsx) never applies `.ep` anywhere — its shell root uses the unrelated class `ep-shell`. Live Playwright DOM inspection confirmed `document.querySelectorAll('.ep').length === 0` in the running app, and `getComputedStyle` on both `.ep-modal` and the Reason textarea reports `boxSizing: \"content-box\"` (not border-box). Measured bounding boxes show the exact overflow arithmetic: Modal is 528px wide (480 nominal + 24px padding×2 ADDED on top instead of carved out); textarea is 506px wide (480 content + 1px border×2 + 12px padding×2 added on top) — the textarea's right edge sits 2px past the modal's own right edge, matching the reported overflow exactly. This is systemic, not specific to this one Modal: every other Modal+multiline-TextField pairing in the codebase (RecipientGroups, MessageTemplates, ComposeNotification, SignalDetail, ResourceRequestDetail, ReviewPlanModal, RecordAuthority) shares the identical missing-`.ep`-ancestor defect."
   artifacts:
-    - path: "frontend/app/src/pages/signals/SignalTriageQueue.tsx"
-      issue: "Lines 319-325: the Dismiss Modal's multiline TextField (Reason) has no explicit width/max-width/overflow constraint beyond whatever TextField.css's own width:100% provides — needs diagnosis against Modal.css's flex/padding layout to find why the rendered textarea overflows the modal's visible bounds"
-  missing: []
-  debug_session: ""
+    - path: "frontend/app/src/app-shell/AppShell.tsx"
+      issue: "The app's root shell element never applies the `.ep` class that activates the design system's box-sizing:border-box reset (tokens.css:352-355) — it uses `ep-shell` instead, which is unrelated and provides no reset. Every design-system component with width+padding/border (not just this Modal) renders in default content-box mode throughout the real app, not just here."
+  missing:
+    - "Apply the `.ep` class to the app's actual root DOM element (e.g. AppShell's outer wrapper, alongside or instead of `ep-shell`) — a one-class fix at the app/design-system integration boundary, mirroring what the design system's own test harnesses already do. No changes needed to Modal.css/TextField.css themselves — they're internally consistent, authored assuming border-box is active."
+    - "This is a systemic, phase-wide (not Phase-6-specific) CSS integration gap: once fixed, re-verify a sample of OTHER Modal+TextField pairings across the app (not just signals) to confirm the fix doesn't newly reveal a different width-dependent visual regression now that sizing math changes app-wide."
+  debug_session: ".planning/debug/signal-dismiss-modal-textfield-overflow.md"
