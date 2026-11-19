@@ -5,6 +5,7 @@ import * as React from 'react';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { SyncStatus, type SyncStatusState } from '../src/product-patterns/SyncStatus';
+import { AIDraft } from '../src/product-patterns/AIDraft';
 
 afterEach(cleanup);
 
@@ -12,10 +13,9 @@ afterEach(cleanup);
 // test/maps.test.tsx: inject the actual tokens.css + this component's own
 // stylesheet, since jsdom/vitest does not auto-inject component CSS imports.
 //
-// NOTE: this file is SyncStatus-only. Provenance (the other existing
-// product-patterns/ component) has no dedicated test file today — its
-// rendering is exercised only indirectly via test/maps.test.tsx's
-// LayerPanel coverage. This file is not a retroactive Provenance test.
+// NOTE: this file originally covered SyncStatus only; AIDraft's own test
+// group (below) was added in 06-05, injecting its own + Provenance's CSS
+// alongside the existing SyncStatus stylesheet injection.
 beforeAll(() => {
   const tokensCssPath = resolve(__dirname, '../tokens/tokens.css');
   const tokensCss = readFileSync(tokensCssPath, 'utf-8');
@@ -28,6 +28,18 @@ beforeAll(() => {
   const syncStatusStyle = document.createElement('style');
   syncStatusStyle.textContent = syncStatusCss;
   document.head.appendChild(syncStatusStyle);
+
+  const aiDraftCssPath = resolve(__dirname, '../src/product-patterns/AIDraft.css');
+  const aiDraftCss = readFileSync(aiDraftCssPath, 'utf-8');
+  const aiDraftStyle = document.createElement('style');
+  aiDraftStyle.textContent = aiDraftCss;
+  document.head.appendChild(aiDraftStyle);
+
+  const provenanceCssPath = resolve(__dirname, '../src/product-patterns/Provenance.css');
+  const provenanceCss = readFileSync(provenanceCssPath, 'utf-8');
+  const provenanceStyle = document.createElement('style');
+  provenanceStyle.textContent = provenanceCss;
+  document.head.appendChild(provenanceStyle);
 });
 
 function withTheme(theme: 'light' | 'dark' | 'contrast', ui: React.ReactElement) {
@@ -85,5 +97,122 @@ describe('SyncStatus', () => {
   it('renders a plain <span> with no button role when onClick is absent', () => {
     render(withTheme('light', <SyncStatus state="conflict" />));
     expect(screen.queryByRole('button')).toBeNull();
+  });
+});
+
+describe('AIDraft', () => {
+  it('renders the persistent "Not issued" badge and one Provenance chip per source', () => {
+    render(
+      withTheme(
+        'light',
+        <AIDraft
+          draftText="Flooding has affected 3 shelters"
+          sources={[{ source: 'Incident Timeline', time: '08:30', confidence: 'High' }]}
+          onApprove={vi.fn()}
+          onEdit={vi.fn()}
+          onDiscard={vi.fn()}
+        />,
+      ),
+    );
+
+    expect(screen.getByText('Not issued')).toBeInTheDocument();
+    const { container } = render(
+      withTheme(
+        'light',
+        <AIDraft
+          draftText="Flooding has affected 3 shelters"
+          sources={[{ source: 'Incident Timeline', time: '08:30', confidence: 'High' }]}
+          onApprove={vi.fn()}
+          onEdit={vi.fn()}
+          onDiscard={vi.fn()}
+        />,
+      ),
+    );
+    const chips = container.querySelectorAll('.ep-provenance');
+    expect(chips).toHaveLength(1);
+    expect(chips[0].textContent).toContain('Incident Timeline');
+  });
+
+  it('renders zero Provenance chips and the no-source statement when sources is empty (never fabricates a chip)', () => {
+    const { container } = render(
+      withTheme(
+        'light',
+        <AIDraft
+          draftText="No source available for this draft. Review carefully before using it."
+          sources={[]}
+          onApprove={vi.fn()}
+          onEdit={vi.fn()}
+          onDiscard={vi.fn()}
+        />,
+      ),
+    );
+
+    expect(screen.getByText(/No source available/)).toBeInTheDocument();
+    expect(container.querySelectorAll('.ep-provenance')).toHaveLength(0);
+  });
+
+  it('calls onApprove with the exact draftText in non-editing mode', async () => {
+    const user = userEvent.setup();
+    const onApprove = vi.fn();
+    render(
+      withTheme(
+        'light',
+        <AIDraft
+          draftText="Flooding has affected 3 shelters"
+          sources={[]}
+          onApprove={onApprove}
+          onEdit={vi.fn()}
+          onDiscard={vi.fn()}
+        />,
+      ),
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Approve' }));
+
+    expect(onApprove).toHaveBeenCalledTimes(1);
+    expect(onApprove).toHaveBeenCalledWith('Flooding has affected 3 shelters');
+  });
+
+  it('calls onApprove with the editingValue (not the original draftText) when editing=true', async () => {
+    const user = userEvent.setup();
+    const onApprove = vi.fn();
+    render(
+      withTheme(
+        'light',
+        <AIDraft
+          draftText="Original draft text"
+          sources={[]}
+          onApprove={onApprove}
+          onEdit={vi.fn()}
+          onDiscard={vi.fn()}
+          editing
+          editingValue="Edited text"
+        />,
+      ),
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Approve' }));
+
+    expect(onApprove).toHaveBeenCalledTimes(1);
+    expect(onApprove).toHaveBeenCalledWith('Edited text');
+  });
+
+  it('renders exactly 3 footer buttons — Discard, Edit, Approve — in that DOM order', () => {
+    render(
+      withTheme(
+        'light',
+        <AIDraft
+          draftText="Some draft text"
+          sources={[]}
+          onApprove={vi.fn()}
+          onEdit={vi.fn()}
+          onDiscard={vi.fn()}
+        />,
+      ),
+    );
+
+    const buttons = screen.getAllByRole('button');
+    expect(buttons).toHaveLength(3);
+    expect(buttons.map((b) => b.textContent)).toEqual(['Discard', 'Edit', 'Approve']);
   });
 });
