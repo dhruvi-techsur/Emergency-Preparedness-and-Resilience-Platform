@@ -1972,6 +1972,169 @@ async function main() {
     record('record_authority_registry', result);
   }
 
+  // Phase 6 (06-02, F18): role_landing_config rows for all 5 persona roles
+  // (PER-01..PER-05) — the table 01-01's migration created but explicitly
+  // left unpopulated, scoped as Phase 6/F18 work (see that migration's own
+  // inline NOTE). role_id IS UNIQUE on this table (the migration's own
+  // `role_id UUID NOT NULL REFERENCES roles(id) UNIQUE`), so findOrInsert's
+  // natural-key match below is exactly role_id, matching the file's own
+  // established idempotent pattern.
+  //
+  // PER-05 (secops_admin) is modeled as ONE row carrying only the DEFAULT
+  // (admin) facet's nav_groups — S18.5's distinct executive-facet SideNav
+  // (Executive dashboard, Reports) is NOT stored here, since
+  // role_landing_config's role_id UNIQUE constraint allows exactly one row
+  // per role and there is no schema field for a second facet. 06-07's
+  // ExecutiveDashboard page hardcodes the executive-facet nav_groups
+  // client-side as a static two-item array — a documented, budget-scoped
+  // simplification, not an oversight.
+  //
+  // Each entry below is re-asserted via an explicit UPDATE immediately
+  // after findOrInsert (same "re-assert idempotently" pattern this file's
+  // sso_config/group_to_role_mapping block already uses above), since
+  // findOrInsert's INSERT-only-on-first-creation behavior would otherwise
+  // leave a stale landing-config payload in place across this phase's own
+  // repeated development seed runs.
+  const roleLandingConfigs = [
+    {
+      roleName: 'eoc_director', // PER-01, S18.1
+      default_landing_route: '/dashboard',
+      nav_groups: [
+        { label: 'Prepare', items: [{ id: 'plans', label: 'Plans & playbooks', icon: 'file', href: '/plans' }] },
+        {
+          label: 'Monitor',
+          items: [
+            { id: 'operating-picture', label: 'Operating picture', icon: 'map', href: '/operating-picture' },
+            { id: 'signals', label: 'Signals', icon: 'broadcast', href: '/signals' },
+          ],
+        },
+        { label: 'Activate', items: [{ id: 'incidents', label: 'Incidents', icon: 'flag', href: '/incidents' }] },
+        {
+          label: 'Coordinate',
+          items: [{ id: 'notifications', label: 'Notifications', icon: 'bell', href: '/notifications/compose' }],
+        },
+        { label: 'Improve', items: [{ id: 'reports', label: 'Reports', icon: 'file', href: '/reports/analytics' }] },
+      ],
+      mobile_bottom_bar_items: [
+        { id: 'dashboard', label: 'Dashboard', icon: 'home', href: '/dashboard' },
+        { id: 'incidents', label: 'Incidents', icon: 'flag', href: '/incidents' },
+        { id: 'operating-picture', label: 'Map', icon: 'map', href: '/operating-picture' },
+        { id: 'profile', label: 'Profile', icon: 'users', href: '/profile' },
+      ],
+    },
+    {
+      // PER-02, S18.2. `default_landing_route` is `/incidents` (the list)
+      // not a specific incident id, per S18.2's own spec ("Incident List
+      // if none is active") — a literal "currently active incident"
+      // redirect would need a server-side "most recent active incident"
+      // resolution this plan's own 2-3 task budget doesn't include;
+      // 06-05's frontend wraps this with the active-incident-redirect
+      // logic client-side using data it already fetches.
+      roleName: 'incident_commander',
+      default_landing_route: '/incidents',
+      nav_groups: [
+        { label: 'Activate', items: [{ id: 'incidents', label: 'Incidents', icon: 'flag', href: '/incidents' }] },
+        {
+          label: 'Coordinate',
+          items: [{ id: 'notifications', label: 'Notifications', icon: 'bell', href: '/notifications/compose' }],
+        },
+        {
+          label: 'Monitor',
+          items: [{ id: 'operating-picture', label: 'Operating picture', icon: 'map', href: '/operating-picture' }],
+        },
+      ],
+      mobile_bottom_bar_items: [
+        { id: 'incidents', label: 'Incidents', icon: 'flag', href: '/incidents' },
+        { id: 'operating-picture', label: 'Map', icon: 'map', href: '/operating-picture' },
+        { id: 'notifications', label: 'Notify', icon: 'bell', href: '/notifications/compose' },
+        { id: 'profile', label: 'Profile', icon: 'users', href: '/profile' },
+      ],
+    },
+    {
+      roleName: 'planning_logistics_chief', // PER-03, S18.3
+      default_landing_route: '/my-work',
+      nav_groups: [
+        { label: 'Prepare', items: [{ id: 'plans', label: 'Plans & playbooks', icon: 'file', href: '/plans' }] },
+        {
+          label: 'Coordinate',
+          items: [{ id: 'notifications', label: 'Notifications', icon: 'bell', href: '/notifications/compose' }],
+        },
+        { label: 'Improve', items: [{ id: 'reports', label: 'Reports', icon: 'file', href: '/reports/analytics' }] },
+      ],
+      mobile_bottom_bar_items: [
+        { id: 'my-work', label: 'My work', icon: 'home', href: '/my-work' },
+        { id: 'plans', label: 'Plans', icon: 'file', href: '/plans' },
+        { id: 'reports', label: 'Reports', icon: 'file', href: '/reports/analytics' },
+        { id: 'profile', label: 'Profile', icon: 'users', href: '/profile' },
+      ],
+    },
+    {
+      // PER-04, S18.4. `nav_groups: []` is deliberate per S18.4 — "No
+      // desktop SideNav variant is offered to this role by default." This
+      // role only ever sees the bottom-bar variant (06-06's FieldLanding
+      // page renders AppShell's mobile-bottom-bar path unconditionally for
+      // this role, not just at the bp-md breakpoint).
+      roleName: 'field_responder',
+      default_landing_route: '/field',
+      nav_groups: [] as unknown[],
+      mobile_bottom_bar_items: [
+        { id: 'field-tasks', label: 'Tasks', icon: 'flag', href: '/field/tasks' },
+        { id: 'field-report', label: 'Report', icon: 'edit', href: '/field/report' },
+        { id: 'field-map', label: 'Map', icon: 'map', href: '/field/map' },
+        { id: 'profile', label: 'Profile', icon: 'users', href: '/profile' },
+      ],
+    },
+    {
+      // PER-05, S18.5 — see the function-level comment above for why this
+      // is one row carrying only the admin (default) facet.
+      roleName: 'secops_admin',
+      default_landing_route: '/admin/platform-monitoring',
+      nav_groups: [
+        {
+          label: 'Admin',
+          items: [
+            { id: 'users', label: 'Users', icon: 'users', href: '/admin/users' },
+            { id: 'roles', label: 'Roles & permissions', icon: 'shield', href: '/admin/roles' },
+            { id: 'audit-log', label: 'Audit log', icon: 'file', href: '/admin/audit-log' },
+            { id: 'integration-health', label: 'Integration health', icon: 'activity', href: '/admin/integration-health' },
+            { id: 'platform-monitoring', label: 'Platform monitoring', icon: 'gauge', href: '/admin/platform-monitoring' },
+          ],
+        },
+      ],
+      mobile_bottom_bar_items: null as unknown[] | null,
+    },
+  ];
+
+  for (const cfg of roleLandingConfigs) {
+    const roleId = roleIds[cfg.roleName];
+    // `mobile_bottom_bar_items` is a nullable JSONB column with a
+    // chk_bottom_bar_max CHECK that reads `IS NULL OR
+    // jsonb_array_length(...) <= 4` — JSON.stringify(null) produces the
+    // STRING "null", which Postgres happily stores as a JSONB scalar
+    // `null` value, NOT a SQL NULL. That scalar fails the CHECK's `IS
+    // NULL` branch (it isn't SQL NULL) and then explodes on
+    // jsonb_array_length("a scalar"). Passing the actual JS `null` (not
+    // its JSON.stringify'd string) as the bound parameter is what makes
+    // pg write a true SQL NULL into the column, matching the CHECK
+    // constraint's own first branch. PER-05's row is the only one in this
+    // seed that exercises the null case; found via this task's own first
+    // seed run exploding with "cannot get array length of a scalar".
+    const mobileBottomBarParam =
+      cfg.mobile_bottom_bar_items === null ? null : JSON.stringify(cfg.mobile_bottom_bar_items);
+    const result = await findOrInsert(
+      'role_landing_config',
+      ['role_id'],
+      [roleId],
+      ['role_id', 'default_landing_route', 'nav_groups', 'mobile_bottom_bar_items'],
+      [roleId, cfg.default_landing_route, JSON.stringify(cfg.nav_groups), mobileBottomBarParam],
+    );
+    record('role_landing_config', result);
+    await pool.query(
+      `UPDATE role_landing_config SET default_landing_route = $2, nav_groups = $3, mobile_bottom_bar_items = $4 WHERE role_id = $1`,
+      [roleId, cfg.default_landing_route, JSON.stringify(cfg.nav_groups), mobileBottomBarParam],
+    );
+  }
+
   console.log(
     'Seed summary: ' +
       Object.entries(summary)
