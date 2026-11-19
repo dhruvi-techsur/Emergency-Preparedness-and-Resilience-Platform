@@ -3,14 +3,14 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06-06-PLAN.md
-last_updated: "2026-11-19T13:11:49.404Z"
-last_activity: 2026-11-19 -- Plan 06-06 complete (see 06-06-SUMMARY.md for full detail). New EocDashboard.tsx (PER-01, /dashboard) and MyWorkDashboard.tsx (PER-03, /my-work) -- the phase's two genuinely new persona landing pages. RouteGuard's new one-time landing-config redirect is the general mechanism 06-07 (PER-04/05) will reuse. nav-config's Monitor group gained a RBAC-gated Signals item. Reused Phase 3's existing eoc_director/planning_logistics_chief Keycloak identities rather than seeding duplicates (Rule-1 fix against a stale plan assumption). New persona-dashboards.spec.ts (4/4 passing) proves both landings end-to-end. Full backend suite (108/108), both tsc --noEmit checks, and both builds (backend + frontend/app) all green with zero regression.
+stopped_at: Completed 06-07-PLAN.md
+last_updated: "2026-11-19T13:44:20.119Z"
+last_activity: 2026-11-19 -- Plan 06-07 complete (see 06-07-SUMMARY.md for full detail). AppShell.tsx's forcedBottomBar + FacetToggle (PER-04/PER-05), new ExecutiveDashboard.tsx (/executive). F18's all-5-personas and executive-briefing success criteria are now both fully satisfied across this phase's plans.
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 58
-  completed_plans: 54
+  completed_plans: 55
   percent: 86
 ---
 
@@ -21,15 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 6 — Persona Dashboards & AI Assistance — IN PROGRESS. Plan 06-01 shipped the F9 AI-governance substrate (schema + shared assertAiOriginApproved guard) and its first real governed consumer (ICS Form Editor draft/approve); Plan 06-05 shipped the AIDraft design-system component; Plan 06-02 populated role_landing_config and shipped GET /api/v1/me/landing-config; Plan 06-03 shipped the AI-drafts request/approve/discard backend lifecycle; Plan 06-04 shipped the Signal Triage Queue backend (real clustering + promote/dismiss); Plan 06-06 shipped PER-01's EOC Dashboard and PER-03's My Work Dashboard, plus RouteGuard's reusable landing-config redirect mechanism. Phase 5 (Mobile Field Operations) is COMPLETE (all 6 plans shipped, incl. gap-closure plan 05-06).
+**Current focus:** Phase 6 — Persona Dashboards & AI Assistance — IN PROGRESS. Plan 06-01 shipped the F9 AI-governance substrate (schema + shared assertAiOriginApproved guard) and its first real governed consumer (ICS Form Editor draft/approve); Plan 06-05 shipped the AIDraft design-system component; Plan 06-02 populated role_landing_config and shipped GET /api/v1/me/landing-config; Plan 06-03 shipped the AI-drafts request/approve/discard backend lifecycle; Plan 06-04 shipped the Signal Triage Queue backend (real clustering + promote/dismiss); Plan 06-06 shipped PER-01's EOC Dashboard and PER-03's My Work Dashboard, plus RouteGuard's reusable landing-config redirect mechanism; Plan 06-07 shipped PER-04's bottom-bar-only AppShell override and PER-05's dual-facet (Admin/Executive) experience, completing F18's all-5-personas success criterion. Phase 5 (Mobile Field Operations) is COMPLETE (all 6 plans shipped, incl. gap-closure plan 05-06).
 
 ## Current Position
 
 Phase: 6 of 6 (Persona Dashboards & AI Assistance) — IN PROGRESS
 
-Plan: 6 of 10 complete in current phase (06-01, 06-02, 06-03, 06-04, 06-05, 06-06 done; 06-07..06-10 not yet executed)
-Status: Phase 6 (Persona Dashboards & AI Assistance) in progress. Plan 06-06 (Wave 5, depends_on 06-01+06-02+06-04) shipped PER-01's EOC Dashboard (/dashboard, 4 Stat tiles reading real GET /api/v1/dashboard/summary data with honest hints on the 3 documented-zero fields) and PER-03's My Work Dashboard (/my-work, 3 named primary actions + 3 honest EmptyState cards for Phase-3-unbuilt aggregation). RouteGuard.tsx gained a one-time, StrictMode-safe landing-config-driven redirect (GET /api/v1/me/landing-config) that every remaining persona plan reuses -- includes a live-pathname re-check closing a real navigate-mid-fetch race. nav-config's Monitor group gained an RBAC-gated "Signals" item (hasAiAssist). A Rule-1 deviation: the plan's "seed 2 new Keycloak users/groups" instruction was based on a stale assumption -- 03-05 had already seeded eocdirector@epmp.local/planner@epmp.local with exactly the needed roles/permissions/jurisdiction_scope and matching sign-in helpers, so those were reused instead of creating duplicate Keycloak groups that would have collided with 03-05's existing ones on realm import. New persona-dashboards.spec.ts (4 tests) proves both landings + the RBAC nav-visibility proof pattern 06-07 will reuse. Full backend suite (19 files, 108 tests) green with zero regression (one pre-existing, unrelated test-isolation flake confirmed via isolated re-run); tsc --noEmit and both builds clean.
-Last activity: 2026-11-19 -- Plan 06-06 complete (see 06-06-SUMMARY.md for full detail). New EocDashboard.tsx (PER-01, /dashboard) and MyWorkDashboard.tsx (PER-03, /my-work) -- the phase's two genuinely new persona landing pages. RouteGuard's new one-time landing-config redirect is the general mechanism 06-07 (PER-04/05) will reuse. nav-config's Monitor group gained a RBAC-gated Signals item. Reused Phase 3's existing eoc_director/planning_logistics_chief Keycloak identities rather than seeding duplicates (Rule-1 fix against a stale plan assumption). New persona-dashboards.spec.ts (4/4 passing) proves both landings end-to-end. Full backend suite (108/108), both tsc --noEmit checks, and both builds (backend + frontend/app) all green with zero regression.
+Plan: 7 of 10 complete in current phase (06-01, 06-02, 06-03, 06-04, 06-05, 06-06, 06-07 done; 06-08..06-10 not yet executed)
+Status: Phase 6 (Persona Dashboards & AI Assistance) in progress. Plan 06-07 (Wave 6, depends_on 06-02+06-06) shipped PER-04's AppShell-level bottom-bar-only override (field_responder never renders the desktop SideNav rail, at any viewport width) and PER-05's explicit FacetToggle (Admin/Executive, defaults fresh to 'admin' on every mount, never persisted across reload) plus the new ExecutiveDashboard.tsx at /executive (exactly 3 hardcoded display-scale KPIs, zero charts). This plan's own Task 1 (Field Home) was superseded by discovery: Phase 5's field-mobile/FieldHome.tsx already exists at the identical /field route with the exact S18.4 content Task 1 would have duplicated — the duplicate file was reverted, and S18.4's real (non-duplicated) deliverable, the AppShell enforcement, was built as specified. Two Rule-1 bugs surfaced only once AppShell started actually reading landing-config's mobile_bottom_bar_items (a stale seeded row, and a regression spec's stale rail-visible assertion) — both fixed. One Rule-2 fix: secops_admin was missing 'incidents' view permission entirely, which would have 403'd its own new ExecutiveDashboard landing. New persona-dashboards-per04-per05.spec.ts (5 tests) proves all 4 must-have truths end-to-end. Full backend suite (19 files, 108 tests) green with zero regression; tsc --noEmit and both builds clean; 25/25 Playwright across this plan's spec plus every adjacent regression spec.
+Last activity: 2026-11-19 -- Plan 06-07 complete (see 06-07-SUMMARY.md for full detail). AppShell.tsx's forcedBottomBar + FacetToggle (PER-04/PER-05), new ExecutiveDashboard.tsx (/executive). F18's all-5-personas and executive-briefing success criteria are now both fully satisfied across this phase's plans.
+
+Plan 06-06 (prior, this phase): see 06-06-SUMMARY.md for full detail. New EocDashboard.tsx (PER-01, /dashboard) and MyWorkDashboard.tsx (PER-03, /my-work) -- the phase's two genuinely new persona landing pages at that point. RouteGuard's new one-time landing-config redirect is the general mechanism 06-07 reused. nav-config's Monitor group gained a RBAC-gated Signals item. Reused Phase 3's existing eoc_director/planning_logistics_chief Keycloak identities rather than seeding duplicates (Rule-1 fix against a stale plan assumption). New persona-dashboards.spec.ts (4/4 passing) proves both landings end-to-end. Full backend suite (108/108), both tsc --noEmit checks, and both builds (backend + frontend/app) all green with zero regression.
 
 Plan 06-04 (prior, this phase): see 06-04-SUMMARY.md for full detail. Shipped the Signal Triage Queue backend: clusterHazardFeedEvents() groups unclustered hazard_feed_events by a real (type, 0.5-degree grid cell) rule via one SQL GROUP BY query -- not a 1:1 passthrough -- producing qualitative High/Medium confidence labels with stated reasons; GET /api/v1/signals (status/confidence-filtered list); POST .../promote returns SignalPromotePrefill only, with the route file containing zero incidents-table write statements anywhere (a structural, not just runtime, guarantee it can never create an incident); POST .../dismiss (422 on empty/missing reason). seed.ts extended with sample NOAA/NWS/USGS hazard-feed events and a clusterHazardFeedEvents() call in main(), verified idempotent.
 
@@ -129,6 +131,7 @@ Progress: [████████░░] 86%
 | Phase 06 P03 | 28 min | 3 tasks | 7 files |
 | Phase 06 P04 | 25 min | 3 tasks | 5 files |
 | Phase 06 P06 | 35 min | 3 tasks | 8 files |
+| Phase 06 P07 | 55 min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -277,6 +280,9 @@ Recent decisions affecting current work:
 - [Phase 06-04]: Signal triage routes reuse 06-03's ai_assist feature-permission rather than inventing a new permission string — signal triage and AIDraft are both F9 sub-features with no documented narrower split
 - [Phase 06-06]: Reused 03-05's existing eocdirector@epmp.local/planner@epmp.local Keycloak identities instead of seeding new ones (plan's instruction was based on a stale assumption that no such identities existed)
 - [Phase 06-06]: RouteGuard's landing-config redirect re-checks a live pathname ref at async resolution time (not just at effect-start) to avoid overriding a user's own in-flight navigation
+- [Phase 06-07]: AppShell forcedBottomBar override: PER-04 renders the bottom-bar SideNav variant at every viewport width via a persona_id check layered onto the existing viewport-driven branch, not a replacement of it
+- [Phase 06-07]: secops_admin granted view-only incidents role_permissions -- the only role reaching the new ExecutiveDashboard needed it to avoid a 403 on its own landing view
+- [Phase 06-07]: Did not build a second FieldHome.tsx at a new path -- Phase 5's own field-mobile/FieldHome.tsx already satisfies S18.4's exact contract at the same /field route
 
 ### Pending Todos
 
@@ -288,6 +294,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-19T13:11:49.402Z
-Stopped at: Completed 06-06-PLAN.md
+Last session: 2026-11-19T13:44:11.809Z
+Stopped at: Completed 06-07-PLAN.md
 Resume file: None
