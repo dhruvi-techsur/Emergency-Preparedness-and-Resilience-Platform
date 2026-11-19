@@ -32,18 +32,28 @@ interface JurisdictionsResponse {
 /**
  * F18 S18.1 — PER-01 (eoc_director)'s EOC Dashboard. Routed `/dashboard`,
  * reached the moment this persona signs in via RouteGuard's
- * landing-config-driven redirect (Task 2 of this plan).
+ * landing-config-driven redirect (Task 2 of 06-06's plan).
  *
- * Only 1 of the 4 Stat tiles (`active_incidents`) reads a value this phase's
- * schema can genuinely answer with a jurisdiction-scoped query — the other
- * 3 are documented, honest structural zeros per dashboard.ts's own inline
- * comments (Phase 3/4 tables exist but their business meaning for THIS
- * exact metric doesn't, or — for `notifications_pending_ack` — the schema
- * has no per-recipient user_id column at all). Each zero-valued tile's
- * `hint` states that plainly rather than letting a bare "0" look like
- * either a bug or "nothing is happening" — directly satisfying F0's
- * "every data point states its source/limitation" rule rather than hiding
- * the gap behind a confident-looking number.
+ * 3 of the 4 Stat tiles (`active_incidents`, `open_tasks`,
+ * `pending_resource_requests`) read real, jurisdiction-scoped values from
+ * GET /api/v1/dashboard/summary — Phase 3's `tasks`/`resource_requests`
+ * tables already existed by the time 06-01 shipped this endpoint, so those
+ * two fields were implemented as genuine COUNT(*) queries rather than the
+ * hardcoded zeros an earlier plan draft assumed (06-01-SUMMARY.md documents
+ * this as an intentional, correct deviation). Only
+ * `notifications_pending_ack` remains a documented, honest structural zero
+ * — this schema's `notification_recipients` table has no per-recipient
+ * `user_id` column, so "pending acknowledgment for the signed-in EOC
+ * director specifically" has no literal meaning to query yet; its `hint`
+ * states that plainly. The 3 real-valued tiles carry NO hint, matching F0's
+ * convention (confirmed across all other `hint=` call sites in this
+ * codebase) that a "ships later"/"not tracked" caveat is used ONLY when the
+ * value is genuinely limited, never on a tile backed by a real, correct
+ * count — this fix (gap closure 06-12, UAT ref 1) corrected a prior
+ * oversight where the Open tasks/Pending resource requests tiles kept a
+ * stale "feature not built yet" hint from before `dashboard.ts`'s own
+ * deviation landed, directly contradicting the real nonzero values those
+ * tiles had already been showing.
  */
 export function EocDashboard(): JSX.Element {
   const navigate = useNavigate();
@@ -103,15 +113,10 @@ export function EocDashboard(): JSX.Element {
       ) : (
         <div className="ep-eoc-dashboard__stat-row">
           <Stat label="Active incidents" value={summary?.active_incidents ?? 0} />
-          <Stat
-            label="Open tasks"
-            value={summary?.open_tasks ?? 0}
-            hint="Tasks module ships in a later phase"
-          />
+          <Stat label="Open tasks" value={summary?.open_tasks ?? 0} />
           <Stat
             label="Pending resource requests"
             value={summary?.pending_resource_requests ?? 0}
-            hint="Resource requests module ships in a later phase"
           />
           <Stat
             label="Notifications pending ack"
