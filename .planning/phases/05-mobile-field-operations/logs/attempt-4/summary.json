@@ -1,0 +1,25 @@
+{
+  "duration_secs": 1751.0,
+  "token_usage": {
+    "input": 214,
+    "output": 56205,
+    "total": 20982045,
+    "cache_read": 20443692,
+    "cache_write": 481934,
+    "cost": 5.8560514
+  },
+  "model": "claude-sonnet-5",
+  "files_changed": [
+    ".pivota/uat-shots/1-desktop-sidenav.png",
+    ".pivota/uat-shots/1-field-home.png",
+    ".pivota/uat-shots/2-my-tasks.png",
+    ".pivota/uat-shots/8-field-map.png",
+    ".planning/phases/05-mobile-field-operations/05-UAT.md",
+    ".planning/phases/05-mobile-field-operations/05-UAT.summary.json"
+  ],
+  "verification_status": "passed",
+  "error_message": null,
+  "attempt_number": 4,
+  "created_at": "2026-11-19T11:32:53.899439+00:00",
+  "completed_at": "2026-11-19T12:02:05.860681776+00:00"
+}
