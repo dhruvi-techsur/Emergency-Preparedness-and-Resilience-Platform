@@ -28,3 +28,9 @@
 .ep-signal-triage__summary-link:hover {
   text-decoration: underline;
 }
+
+.ep-signal-detail__provenance-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}

@@ -6,6 +6,11 @@ import type { Severity } from '../incident-ops/incidents.js';
 export type ConfidenceLabel = 'High' | 'Medium' | 'Low';
 export type SignalStatus = 'New' | 'Dismissed' | 'Promoted';
 
+interface SignalSourceEventRow {
+  source: string;
+  occurred_at: string;
+}
+
 interface SignalListRow {
   id: string;
   summary: string;
@@ -14,6 +19,7 @@ interface SignalListRow {
   detected_at: string;
   status: SignalStatus;
   source_feeds: string[] | null;
+  source_events: SignalSourceEventRow[] | null;
 }
 
 interface SignalRow {
@@ -81,7 +87,9 @@ export default async function signalsRoutes(app: FastifyInstance) {
 
       const rows = await query<SignalListRow>(
         `SELECT s.id, s.summary, s.confidence_label, s.confidence_reason, s.detected_at, s.status,
-                (SELECT array_agg(DISTINCT source) FROM signal_source_events WHERE signal_id = s.id) AS source_feeds
+                (SELECT array_agg(DISTINCT source) FROM signal_source_events WHERE signal_id = s.id) AS source_feeds,
+                (SELECT json_agg(json_build_object('source', sse.source, 'occurred_at', sse.occurred_at) ORDER BY sse.occurred_at)
+                   FROM signal_source_events sse WHERE sse.signal_id = s.id) AS source_events
          FROM signals s
          WHERE ($1::text IS NULL OR s.status = $1)
            AND ($2::text IS NULL OR s.confidence_label = $2)
@@ -90,9 +98,17 @@ export default async function signalsRoutes(app: FastifyInstance) {
       );
 
       // TechArch's literal Signal interface (id, summary, confidence_label,
-      // confidence_reason, detected_at, status) plus source_feeds as a
-      // documented, additive, non-breaking extension the frontend's Table
-      // column needs to show which feeds corroborate a signal.
+      // confidence_reason, detected_at, status) plus source_feeds and
+      // source_events as documented, additive, non-breaking extensions:
+      // source_feeds is the de-duplicated feed-name list the Queue's own
+      // Table column needs; source_events is the full per-event list (one
+      // row per signal_source_events member) 06-09's Signal Detail screen
+      // needs to render one Provenance chip per clustered source event —
+      // the aggregated source_feeds alone can't distinguish individual
+      // events sharing the same feed name. No dedicated single-id GET
+      // route exists for a signal (06-04's own documented scope), so this
+      // list response carries everything Signal Detail needs; 06-09
+      // filters client-side by id, per this plan's own fallback note.
       return reply.code(200).send({ items: rows });
     },
   );
