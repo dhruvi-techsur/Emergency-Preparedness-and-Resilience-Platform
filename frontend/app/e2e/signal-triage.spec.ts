@@ -74,6 +74,22 @@ test.describe.serial('Signal Triage Queue + Signal Detail — Promote never crea
     await expect(confirmButton).toBeDisabled();
 
     await modal.getByLabel('Reason', { exact: false }).fill('False positive — confirmed via manual review.');
+
+    // Gap closure 06-13 (UAT ref 8, cosmetic) regression guard: the
+    // multiline Reason textarea must render fully inside the Modal's own
+    // bounding box, not overflow its right edge (the exact reported defect
+    // — root cause was AppShell.tsx missing the `.ep` box-sizing:border-box
+    // reset class, fixed in this same plan's Task 1).
+    const modalBox = await modal.boundingBox();
+    const reasonField = modal.getByLabel('Reason', { exact: false });
+    const reasonBox = await reasonField.boundingBox();
+    expect(modalBox).toBeTruthy();
+    expect(reasonBox).toBeTruthy();
+    if (modalBox && reasonBox) {
+      expect(reasonBox.x).toBeGreaterThanOrEqual(modalBox.x);
+      expect(reasonBox.x + reasonBox.width).toBeLessThanOrEqual(modalBox.x + modalBox.width + 1);
+    }
+
     await expect(confirmButton).toBeEnabled();
 
     await confirmButton.click();
@@ -84,6 +100,41 @@ test.describe.serial('Signal Triage Queue + Signal Detail — Promote never crea
     await expect(table.locator('.ep-badge', { hasText: 'Dismissed' }).first()).toBeVisible({
       timeout: 10_000,
     });
+  });
+
+  test('2b. Dismiss Modal\u2019s Reason textarea stays inside the Modal bounds at a narrow (390px) viewport too (UAT gap ref 8 regression)', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await signInAsEocDirector(page);
+    await page.goto('/signals');
+
+    const table = page.locator('table.ep-table');
+    await expect(table).toBeVisible({ timeout: 10_000 });
+
+    const newRow = table.locator('tbody tr', { has: page.locator('.ep-badge', { hasText: 'New' }) }).first();
+    await expect(newRow).toBeVisible({ timeout: 10_000 });
+
+    await newRow.getByRole('button', { name: 'Dismiss' }).click();
+
+    const modal = page.locator('.ep-modal', { hasText: 'Dismiss this signal?' });
+    await expect(modal).toBeVisible({ timeout: 5_000 });
+
+    const modalBox = await modal.boundingBox();
+    const reasonField = modal.getByLabel('Reason', { exact: false });
+    const reasonBox = await reasonField.boundingBox();
+    expect(modalBox).toBeTruthy();
+    expect(reasonBox).toBeTruthy();
+    if (modalBox && reasonBox) {
+      expect(reasonBox.x).toBeGreaterThanOrEqual(modalBox.x);
+      expect(reasonBox.x + reasonBox.width).toBeLessThanOrEqual(modalBox.x + modalBox.width + 1);
+    }
+
+    // Close without dismissing — this test only verifies layout, and
+    // leaving the signal in 'New' status preserves the fixture pool for
+    // every other test in this serial block that still needs one.
+    await modal.getByRole('button', { name: 'Cancel' }).click();
+    await expect(modal).not.toBeVisible({ timeout: 5_000 });
   });
 
   test('3-5. Promote navigates to the pre-filled Create Incident form WITHOUT creating an incident; only the human\u2019s own submit does', async ({
