@@ -162,7 +162,7 @@ Plans:
 
 ### Phase 6: Persona Dashboards & AI Assistance
 **Goal**: Every named persona lands on a dashboard scoped to their job the moment they sign in, and planning/communications staff get governed AI drafting and signal-triage assistance that accelerates their work without ever bypassing human accountability.
-**Status**: In progress
+**Status**: Failed
 **Depends on**: Phase 1, Phase 2, Phase 4, Phase 5
 **Requirements**: F9, F18
 **Success Criteria** (what must be TRUE):
@@ -197,4 +197,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 3. Plans, Tasks & Resource Requests | 9/9 | Complete | 2026-11-18 |
 | 4. Notifications & Reporting/Learning | 7/7 | Complete | 2026-11-18 |
 | 5. Mobile Field Operations | 0/TBD | Complete | 2026-11-19 |
-| 6. Persona Dashboards & AI Assistance | 0/10 | In progress | - |
+| 6. Persona Dashboards & AI Assistance | 0/10 | Failed | - |
