@@ -1,0 +1,36 @@
+/*
+ * F6 S6.1 — Field Home. Single-column field-mobile layout with a
+ * sticky bottom action bar holding the one primary "Report observation"
+ * button, per the mockup's "bottom action bar, single primary button"
+ * layout spec. Token-only — no raw px/hex literals.
+ */
+
+.ep-field-home {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  padding-bottom: var(--space-16);
+}
+
+.ep-field-home__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ep-field-home__card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.ep-field-home__action-bar {
+  position: sticky;
+  bottom: 0;
+  padding: var(--space-4);
+  background: var(--bg);
+  border-top: var(--border-1) solid var(--border);
+  z-index: var(--z-sticky);
+}

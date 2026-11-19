@@ -157,6 +157,73 @@ describe('auth-org routes', () => {
     expect(res.body.nav_groups).toEqual([]);
   });
 
+  it('GET /api/v1/me/nav-config: every group carries a stable id, and the Field group is labeled "Field home" not "Profile" (UAT gap refs 8/1 regression)', async () => {
+    // Grant field_reports:view to the existing test role so a Field group
+    // actually appears in this response. The grant + assertions run inside a
+    // try/finally so the restore step below ALWAYS runs — even if an
+    // assertion throws — preventing cross-test pollution of the shared
+    // testRoleId (the earlier "nav-config returns []" test depends on this
+    // role having no field_reports permission on a fresh/subsequent run).
+    try {
+      const existingFieldReportsPerm = await query<{ id: string }>(
+        `SELECT id FROM role_permissions WHERE role_id = $1 AND feature = $2`,
+        [testRoleId, 'field_reports'],
+      );
+      if (!existingFieldReportsPerm[0]) {
+        await query(
+          `INSERT INTO role_permissions (role_id, feature, actions) VALUES ($1, $2, $3)`,
+          [testRoleId, 'field_reports', ['view']],
+        );
+      } else {
+        await query(`UPDATE role_permissions SET actions = $1 WHERE id = $2`, [
+          ['view'],
+          existingFieldReportsPerm[0].id,
+        ]);
+      }
+      const allPerms = await query<{ role_id: string; feature: string; actions: string[] }>(
+        `SELECT role_id, feature, actions FROM role_permissions`,
+      );
+      await syncRolePermissionsToOpa(allPerms);
+
+      const token = await mintSessionToken({
+        id: testUserId,
+        role_id: testRoleId,
+        jurisdiction_scope: [testJurisdictionId],
+      });
+
+      const res = await request(app.server).get('/api/v1/me/nav-config').set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      const fieldGroup = res.body.nav_groups.find((g: { id?: string }) => g.id === 'field');
+      expect(fieldGroup).toBeTruthy();
+      expect(fieldGroup.items).toHaveLength(4);
+      const fourthItem = fieldGroup.items.find((i: { id: string }) => i.id === 'field-profile');
+      expect(fourthItem.label).toBe('Field home');
+      expect(fourthItem.href).toBe('/field');
+
+      // Every group in the response must carry a non-empty id (not just Field) —
+      // the stable-id convention applies uniformly, not as a Field-only special case.
+      for (const group of res.body.nav_groups) {
+        expect(typeof group.id).toBe('string');
+        expect(group.id.length).toBeGreaterThan(0);
+      }
+    } finally {
+      // Restore the test role to its pre-test permission set (platform:view
+      // only) so the earlier "nav-config returns []" test's assumption holds
+      // on any subsequent run against this same persistent DB — same
+      // restore-after-test pattern as the suspended-user test above. This
+      // runs unconditionally, even if an assertion above threw.
+      await query(`DELETE FROM role_permissions WHERE role_id = $1 AND feature = $2`, [
+        testRoleId,
+        'field_reports',
+      ]);
+      const restoredPerms = await query<{ role_id: string; feature: string; actions: string[] }>(
+        `SELECT role_id, feature, actions FROM role_permissions`,
+      );
+      await syncRolePermissionsToOpa(restoredPerms);
+    }
+  });
+
   it('POST /api/v1/auth/sso/callback rejects a missing/invalid id_token with 401 SSO_AUTH_FAILED', async () => {
     const res = await request(app.server).post('/api/v1/auth/sso/callback').send({ id_token: 'not-a-real-token' });
 

@@ -83,3 +83,22 @@ export async function signInAsPlanningChief(page: Page): Promise<void> {
 export async function signInAsEocDirector(page: Page): Promise<void> {
   await signInAs(page, KEYCLOAK_EOC_DIRECTOR_USERNAME, KEYCLOAK_EOC_DIRECTOR_PASSWORD);
 }
+
+/**
+ * Phase 5 (F6, 05-05): the FRD-named field-submission role's real,
+ * Keycloak-seeded identity — added to backend/keycloak/epmp-realm.json's
+ * "epmp-field-responders" group + backend/scripts/seed.ts's matching
+ * group_to_role_mapping entry, JIT-provisioned to the `field_responder`
+ * role on first login. This plan runs in wave 2, strictly BEFORE any
+ * Phase 5 frontend plan (05-03/05-04, waves 3/4) — this is the FIRST and
+ * ONLY definition of this helper; every later Phase 5 Playwright suite
+ * imports it directly from this canonical file rather than defining its
+ * own, mirroring signInAsIncidentCommander's exact structure above.
+ */
+export const KEYCLOAK_FIELD_RESPONDER_USERNAME = 'field-responder@epmp.local';
+export const KEYCLOAK_FIELD_RESPONDER_PASSWORD = 'devpass123';
+
+/** Signs in as the field_responder-role seeded user (field-mobile experience). */
+export async function signInAsFieldResponder(page: Page): Promise<void> {
+  await signInAs(page, KEYCLOAK_FIELD_RESPONDER_USERNAME, KEYCLOAK_FIELD_RESPONDER_PASSWORD);
+}

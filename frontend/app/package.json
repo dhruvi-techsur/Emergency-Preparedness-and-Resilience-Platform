@@ -7,11 +7,13 @@
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
+    "test": "vitest run",
     "test:e2e": "playwright test"
   },
   "dependencies": {
     "@epmp/design-system": "*",
     "@tanstack/react-query": "^5.59.0",
+    "idb": "^8.0.4",
     "oidc-client-ts": "^3.1.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
@@ -24,8 +26,12 @@
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.0",
+    "fake-indexeddb": "^6.0.0",
+    "jsdom": "^25.0.0",
     "pg": "^8.13.0",
     "typescript": "^5.6.0",
-    "vite": "^5.4.0"
+    "vite": "^5.4.0",
+    "vite-plugin-pwa": "^0.21.1",
+    "vitest": "^2.1.0"
   }
 }

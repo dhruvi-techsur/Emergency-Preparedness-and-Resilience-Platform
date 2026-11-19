@@ -2,7 +2,7 @@
   "generator_version": "init-dev-server@1",
   "catalog_entry": "compose",
   "generated_at": "2026-11-16T10:56:16Z",
-  "inspection_inputs_hash": "08a43ee03ff43893effe1aee4364c5fa528b106e817891399ab95c726e0caf15",
+  "inspection_inputs_hash": "7cdeaa201353e0dd1e304887aff99d25c9f22b5b5092467be8a7cd3387a9af0c",
   "inspection_inputs": {
     "matched_globs": [
       "docker-compose.yml",
@@ -24,6 +24,7 @@
       "frontend/app/package.json:script:dev=vite --host 0.0.0.0",
       "frontend/app/package.json:script:preview=vite preview --host 0.0.0.0",
       "frontend/app/package.json:script:test:e2e=playwright test",
+      "frontend/app/package.json:script:test=vitest run",
       "frontend/design-system/package.json:dev-script:vite build --watch",
       "frontend/design-system/package.json:devDependencies:react@^18.3.0",
       "frontend/design-system/package.json:devDependencies:vite@^5.4.0",

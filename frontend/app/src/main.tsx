@@ -54,6 +54,12 @@ import { SitrepGenerator } from './pages/reporting/SitrepGenerator';
 import { AarGenerator } from './pages/reporting/AarGenerator';
 import { EvidenceLogView } from './pages/reporting/EvidenceLogView';
 import { AnalyticsDashboard } from './pages/reporting/AnalyticsDashboard';
+import { FieldHome } from './pages/field-mobile/FieldHome';
+import { MyTasksField } from './pages/field-mobile/MyTasksField';
+import { ReportObservation } from './pages/field-mobile/ReportObservation';
+import { QueuedSubmissions } from './pages/field-mobile/QueuedSubmissions';
+import { SyncConflictResolution } from './pages/field-mobile/SyncConflictResolution';
+import { FieldMap } from './pages/field-mobile/FieldMap';
 
 const queryClient = new QueryClient();
 
@@ -151,6 +157,28 @@ root.render(
               <Route path="incidents/:id/aar/new" element={<AarGenerator />} />
               <Route path="reports/evidence-log" element={<EvidenceLogView />} />
               <Route path="reports/analytics" element={<AnalyticsDashboard />} />
+              {/* F6 (05-03) — Mobile Field Operations: this plan's own 3
+                  screens only (Field Home, My Tasks field view, Report
+                  Observation). 05-04 (same wave group, depends on this
+                  plan) appends its own 3 remaining field-mobile routes
+                  (field/queued, field/conflicts/:id, field/map) plus the
+                  bottom-nav wiring — following the SAME append-not-
+                  overwrite discipline 03-05/03-06 and 04-05/04-06
+                  established for their own multi-plan shared-file edits.
+                  This plan's own Playwright spec needs these 3 routes
+                  live to prove the offline-first submit flow end-to-end,
+                  so they are wired here rather than left for 05-04. */}
+              <Route path="field" element={<FieldHome />} />
+              <Route path="field/tasks" element={<MyTasksField />} />
+              <Route path="field/report" element={<ReportObservation />} />
+              {/* 05-04 (this plan) — the 3 remaining field-mobile routes,
+                  appended after 05-03's own 3 per the SAME
+                  append-not-overwrite discipline documented above. All 6
+                  field-mobile screens are now reachable via the route
+                  tree. */}
+              <Route path="field/queued" element={<QueuedSubmissions />} />
+              <Route path="field/conflicts/:id" element={<SyncConflictResolution />} />
+              <Route path="field/map" element={<FieldMap />} />
             </Route>
           </Routes>
         </RouteGuard>

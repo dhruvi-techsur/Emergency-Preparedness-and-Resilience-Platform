@@ -106,3 +106,22 @@ export async function apiPatch<T>(path: string, body: object): Promise<T> {
   });
   return handleResponse<T>(res);
 }
+
+/**
+ * Multipart photo upload — a small, intentional API surface addition
+ * (05-03): apiPost's JSON-only signature doesn't support multipart/
+ * FormData bodies, and Report Observation's photo capture needs exactly
+ * one such call (`POST /api/v1/field-reports/{id}/photos`, 05-01). Uses
+ * `fetch` directly with `FormData` so the browser sets its own
+ * multipart boundary — never set Content-Type manually for FormData.
+ */
+export async function uploadFieldReportPhoto(fieldReportId: string, file: File): Promise<void> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`/api/v1/field-reports/${fieldReportId}/photos`, {
+    method: 'POST',
+    headers: { ...authHeaders() },
+    body: formData,
+  });
+  await handleResponse<void>(res);
+}

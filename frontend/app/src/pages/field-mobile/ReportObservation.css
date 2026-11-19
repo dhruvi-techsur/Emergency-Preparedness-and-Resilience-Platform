@@ -1,0 +1,55 @@
+/*
+ * F6 S6.3 — Report Observation structured form. Single-column field-mobile
+ * layout with a sticky bottom action bar holding the one primary "Submit
+ * report" button. Token-only — no raw px/hex literals.
+ */
+
+.ep-report-observation {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  padding-bottom: var(--space-16);
+}
+
+.ep-report-observation__capture {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.ep-report-observation__hidden-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.ep-report-observation__photo-confirm {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.ep-report-observation__thumbnail {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  border: var(--border-1) solid var(--border);
+}
+
+.ep-report-observation__action-bar {
+  position: sticky;
+  bottom: 0;
+  padding: var(--space-4);
+  background: var(--bg);
+  border-top: var(--border-1) solid var(--border);
+  z-index: var(--z-sticky);
+}

@@ -167,14 +167,50 @@ async function main() {
     record('role_permissions', result);
   }
 
-  const tasksViewOnlyPerm = await findOrInsert(
-    'role_permissions',
-    ['role_id', 'feature'],
+  // field_responder: `view` (read-only task visibility, as above) PLUS a
+  // narrow `status` action — NOT `edit` — gating ONLY the
+  // PATCH /api/v1/tasks/:id/status one-tap Start/Mark-done transition My
+  // Tasks (field view) needs (05-03's F6 S6.2 screen). `edit` itself
+  // (owner reassignment, title/description/due-date changes) remains
+  // withheld from field_responder — this is a deliberately NARROWER grant
+  // than the full command/logistics `edit` action above, not a relaxation
+  // of it (review finding B2: the one-tap status button 403'd for every
+  // real field_responder because no actions beyond `view` existed on this
+  // row at all; adding `status` closes that gap without opening the wider
+  // `edit` surface a field responder was never meant to have).
+  //
+  // findOrInsert alone would never widen an ALREADY-seeded row's actions
+  // on a second run (its match is on (role_id, feature), which already
+  // exists from this exact block's own prior run before this fix) — the
+  // explicit UPDATE below is what makes the actions array actually change
+  // for anyone who seeded before this fix shipped, while still being a
+  // no-op (UPDATE sets the same already-correct array) on every run after.
+  const tasksFieldResponderActions = ['view', 'status'];
+  const existingTasksFieldResponderPerm = await pool.query<{ id: string; actions: string[] }>(
+    `SELECT id, actions FROM role_permissions WHERE role_id = $1 AND feature = $2`,
     [roleIds['field_responder'], 'tasks'],
-    ['role_id', 'feature', 'actions'],
-    [roleIds['field_responder'], 'tasks', ['view']],
   );
-  record('role_permissions', tasksViewOnlyPerm);
+  if (existingTasksFieldResponderPerm.rows.length === 0) {
+    await pool.query(`INSERT INTO role_permissions (role_id, feature, actions) VALUES ($1, $2, $3)`, [
+      roleIds['field_responder'],
+      'tasks',
+      tasksFieldResponderActions,
+    ]);
+    record('role_permissions', { id: '', inserted: true });
+  } else {
+    const row = existingTasksFieldResponderPerm.rows[0];
+    const current = row.actions;
+    const alreadyCorrect =
+      current.length === tasksFieldResponderActions.length &&
+      tasksFieldResponderActions.every((a) => current.includes(a));
+    if (!alreadyCorrect) {
+      await pool.query(`UPDATE role_permissions SET actions = $1 WHERE id = $2`, [
+        tasksFieldResponderActions,
+        row.id,
+      ]);
+    }
+    record('role_permissions', { id: row.id, inserted: false });
+  }
 
   // resource_requests feature (Phase 3, F4): planning_logistics_chief is the
   // FRD's explicitly-named "typically PER-03, logistics function" approver
@@ -394,6 +430,65 @@ async function main() {
   // file: blanket admin/platform access is scoped to the admin console,
   // not incident-reporting operations — intentional, not an oversight.
 
+  // field_reports feature (Phase 5, F6): the FRD's named field-submission
+  // role is field_responder (PER-04) — it gets view/create for submitting
+  // its own reports offline/online. The initial instinct was to withhold
+  // `resolve` from field_responder (treating Sync Conflict Resolution as
+  // an EOC-side-only action), but re-reading the mockup's own Navigation
+  // Map corrects that: the Sync Conflict Resolution screen is explicitly
+  // "Reached from: Queued Submissions View conflict row" — i.e. the FIELD
+  // RESPONDER resolves THEIR OWN conflict on their own device via "Keep my
+  // version"/"Keep EOC version". So field_responder DOES need `resolve`,
+  // not just view/create — granting only view/create here would make
+  // 05-04's own Sync Conflict Resolution screen unusable by the exact role
+  // the FRD designed it for. incident_commander/eoc_director (PER-02/
+  // PER-01) also need view+resolve — EOC-side command staff reviewing the
+  // operating picture should see field submissions too and be able to
+  // resolve conflicts from the EOC side, per the FRD's "surfaced to a
+  // named person for resolution" being role-agnostic about WHICH named
+  // person as long as it's never automatic. planning_logistics_chief
+  // (PER-03) gets view-only — situational read access, consistent with
+  // every other feature's read-access-for-planning-staff pattern 03-07/
+  // 04-04 established. secops_admin deliberately gets NO explicit
+  // 'field_reports' row here, for the identical reason documented above
+  // for every other feature in this file: blanket admin/platform access
+  // is scoped to the admin console, not field-operations, and does not
+  // need explicit field_reports grants for this phase's RBAC model.
+  const fieldResponderFieldReportsPerm = await findOrInsert(
+    'role_permissions',
+    ['role_id', 'feature'],
+    [roleIds['field_responder'], 'field_reports'],
+    ['role_id', 'feature', 'actions'],
+    [roleIds['field_responder'], 'field_reports', ['view', 'create', 'resolve']],
+  );
+  record('role_permissions', fieldResponderFieldReportsPerm);
+
+  // incident_commander/eoc_director get view+resolve (NOT create) — EOC-side
+  // command staff review and resolve conflicts surfaced from the field, but
+  // field-report AUTHORSHIP itself belongs to field_responder per the FRD's
+  // mobile-first submission flow.
+  const fieldReportsEocResolverRoles = ['incident_commander', 'eoc_director'] as const;
+
+  for (const roleName of fieldReportsEocResolverRoles) {
+    const result = await findOrInsert(
+      'role_permissions',
+      ['role_id', 'feature'],
+      [roleIds[roleName], 'field_reports'],
+      ['role_id', 'feature', 'actions'],
+      [roleIds[roleName], 'field_reports', ['view', 'resolve']],
+    );
+    record('role_permissions', result);
+  }
+
+  const fieldReportsViewOnlyPerm = await findOrInsert(
+    'role_permissions',
+    ['role_id', 'feature'],
+    [roleIds['planning_logistics_chief'], 'field_reports'],
+    ['role_id', 'feature', 'actions'],
+    [roleIds['planning_logistics_chief'], 'field_reports', ['view']],
+  );
+  record('role_permissions', fieldReportsViewOnlyPerm);
+
   // No explicit call to syncRolePermissionsToOpa here: unlike this plan's
   // earlier concern, OPA's data document is re-synced fresh from
   // role_permissions at every server.ts startup (see server.ts's `start()`),
@@ -442,6 +537,13 @@ async function main() {
     // "eocdirector@epmp.local" users.
     { idp_group: '/epmp-planning-logistics-chiefs', role_id: roleIds['planning_logistics_chief'] },
     { idp_group: '/epmp-eoc-directors', role_id: roleIds['eoc_director'] },
+    // Phase 5 (F6, 05-05): a fourth seeded Keycloak group/user so every
+    // Phase 5 Playwright suite (05-03, 05-04) can sign in as a REAL,
+    // SSO-provisioned field_responder identity from the start — see
+    // backend/keycloak/epmp-realm.json's "epmp-field-responders" group +
+    // "field-responder@epmp.local" user, and
+    // frontend/app/e2e/helpers/sign-in.ts's signInAsFieldResponder.
+    { idp_group: '/epmp-field-responders', role_id: roleIds['field_responder'] },
   ];
   const ssoConfig = await findOrInsert(
     'sso_config',
@@ -646,6 +748,228 @@ async function main() {
      WHERE email = 'eocdirector@epmp.local' AND NOT ($2 = ANY(jurisdiction_scope))`,
     [[jurisdiction.id], jurisdiction.id],
   );
+
+  // Phase 5 (F6, 05-05) UAT fixture: field-responder@epmp.local,
+  // pre-provisioned with the 'Default Agency' jurisdiction_scope up front —
+  // identical rationale/pattern to commander@epmp.local's treatment above
+  // (02-07's documented gap fix): sso.ts's JIT provisioning on first-ever
+  // Keycloak login sets jurisdiction_scope = '{}', which would otherwise
+  // leave this identity unable to see any jurisdiction-scoped field-report
+  // data. idp_subject is intentionally left NULL here for the same reason
+  // documented above for planner@epmp.local/eocDirectorUser.
+  const fieldResponderUser = await findOrInsert(
+    'users',
+    ['email'],
+    ['field-responder@epmp.local'],
+    ['email', 'name', 'role_id', 'jurisdiction_scope'],
+    ['field-responder@epmp.local', 'Field Responder', roleIds['field_responder'], [jurisdiction.id]],
+  );
+  record('users', fieldResponderUser);
+  await pool.query(
+    `UPDATE users SET jurisdiction_scope = jurisdiction_scope || $1
+     WHERE email = 'field-responder@epmp.local' AND NOT ($2 = ANY(jurisdiction_scope))`,
+    [[jurisdiction.id], jurisdiction.id],
+  );
+
+  // UAT data-doctor fixture (Phase 5/6 UAT pass, field-mobile tests 1-2):
+  // two tasks actually OWNED by field-responder@epmp.local, so Field
+  // Home (/field) and My Tasks (/field/tasks) show real rows instead of
+  // their EmptyState on a fresh UAT pass — tasks.ts's `GET
+  // /api/v1/tasks?owner=<id>` filter (both screens' real query) is an
+  // exact owner_id match, so these MUST be owned by fieldResponderUser,
+  // not merely visible through jurisdiction scope like the
+  // UAT-OVERDUE/commander-owned fixture above.
+  //
+  // One 'Open' task (so MyTasksField.tsx's nextStatusFor() shows the
+  // "Start" one-tap button — test 2's first tap target) and one
+  // 'In progress' task due soon (so the "Mark done" one-tap button is
+  // ALSO reachable without the tester having to tap through the first
+  // task first, and FieldHome.tsx's "near-due" badge state has a real
+  // row to render). Natural key (title, owner_id), same pattern as the
+  // UAT-OVERDUE fixture.
+  //
+  // due_at is intentionally far out (30 days), not "due soon" — a
+  // near-term relative due_at computed once at seed time is a ticking
+  // time bomb: findOrInsert() never updates an EXISTING row, so the very
+  // first seed run bakes in a due_at that the Phase-3 overdue-sweep will
+  // correctly flip to 'Overdue' hours later, on every subsequent UAT
+  // round against the same sandbox — at which point MyTasksField.tsx
+  // correctly renders NO action button for either seeded task (Overdue
+  // has no nextStatusFor() transition by design), silently breaking
+  // test 2 for every tester after the first. (Observed directly: a human
+  // UAT pass ~14h after the original seed run found both tasks already
+  // Overdue with no Start/Mark-done buttons.) 30 days is a committed-code
+  // fix, not a one-time instance patch — it must survive every fresh
+  // sandbox this seed runs in, not just the one it was first observed in.
+  const uatFieldResponderOpenTask = await findOrInsert(
+    'tasks',
+    ['title', 'owner_id'],
+    ['UAT-FIELD-OPEN Check shelter generator fuel', fieldResponderUser.id],
+    [
+      'title',
+      'description',
+      'status',
+      'owner_id',
+      'incident_id',
+      'due_at',
+      'requires_approval',
+      'created_by',
+    ],
+    [
+      'UAT-FIELD-OPEN Check shelter generator fuel',
+      'Walk the shelter perimeter and confirm backup generator fuel levels.',
+      'Open',
+      fieldResponderUser.id,
+      incidentIdsByName['UAT-ASSIGN-ROLE Default Agency Flood'],
+      new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // due in 30 days — never goes stale/Overdue
+      false,
+      commanderUser.id,
+    ],
+  );
+  record('tasks', uatFieldResponderOpenTask);
+  if (uatFieldResponderOpenTask.inserted) {
+    await pool.query(
+      `INSERT INTO task_status_history (task_id, from_status, to_status, changed_by)
+       VALUES ($1, NULL, 'Open', $2)`,
+      [uatFieldResponderOpenTask.id, commanderUser.id],
+    );
+  }
+
+  const uatFieldResponderInProgressTask = await findOrInsert(
+    'tasks',
+    ['title', 'owner_id'],
+    ['UAT-FIELD-INPROGRESS Report road hazard status', fieldResponderUser.id],
+    [
+      'title',
+      'description',
+      'status',
+      'owner_id',
+      'incident_id',
+      'due_at',
+      'requires_approval',
+      'created_by',
+    ],
+    [
+      'UAT-FIELD-INPROGRESS Report road hazard status',
+      'Confirm whether the Main St debris hazard has been cleared.',
+      'In progress',
+      fieldResponderUser.id,
+      incidentIdsByName['UAT-ASSIGN-ROLE Default Agency Flood'],
+      new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // due in 30 days — never goes stale/Overdue (see comment above)
+      false,
+      commanderUser.id,
+    ],
+  );
+  record('tasks', uatFieldResponderInProgressTask);
+  if (uatFieldResponderInProgressTask.inserted) {
+    await pool.query(
+      `INSERT INTO task_status_history (task_id, from_status, to_status, changed_by)
+       VALUES ($1, NULL, 'Open', $2)`,
+      [uatFieldResponderInProgressTask.id, commanderUser.id],
+    );
+    await pool.query(
+      `INSERT INTO task_status_history (task_id, from_status, to_status, changed_by)
+       VALUES ($1, 'Open', 'In progress', $2)`,
+      [uatFieldResponderInProgressTask.id, fieldResponderUser.id],
+    );
+  }
+
+  // Self-heal for a sandbox that already ran an OLDER version of this
+  // seed (before the 30-day due_at fix above): findOrInsert() never
+  // updates an existing row, so a sandbox seeded under the old "due in
+  // 2h"/"due in 30 min" values would otherwise carry a stale due_at (and
+  // whatever status the Phase-3 overdue-sweep already flipped it to)
+  // forever, even after this file is corrected and re-run. Idempotent and
+  // narrowly scoped to exactly these two fixture rows by id — never
+  // touches a real, non-fixture task.
+  await pool.query(
+    `UPDATE tasks SET status = 'Open', due_at = now() + interval '30 days'
+     WHERE id = $1 AND due_at < now() + interval '7 days'`,
+    [uatFieldResponderOpenTask.id],
+  );
+  await pool.query(
+    `UPDATE tasks SET status = 'In progress', due_at = now() + interval '30 days'
+     WHERE id = $1 AND due_at < now() + interval '7 days'`,
+    [uatFieldResponderInProgressTask.id],
+  );
+
+  // UAT data-doctor fixture (Phase 5/6 UAT pass, field-mobile test 6): a
+  // real UNRESOLVED sync_conflicts row reachable at a real
+  // /field/conflicts/:id URL, produced through the exact same code path
+  // field-reports.test.ts's own "detects a conflict" integration test and
+  // field-mobile-sync-conflict.spec.ts's e2e setup use — submit a field
+  // report via the sync-batch route whose captured_at PREDATES the
+  // anchor incident's updated_at, so field-reports.ts's own
+  // conflict-detection rule (incident.updated_at > report.captured_at)
+  // fires and writes BOTH versions itself. This is NOT a hand-inserted
+  // sync_conflicts row — running this through findOrInsert's generic
+  // helper would bypass the real detection logic, so this block instead
+  // checks for an existing row by client_report_id (field_reports'
+  // natural idempotency key) and only drives the real route handlers'
+  // SQL when absent, mirroring exactly what the route itself does.
+  const uatConflictClientReportId = 'uat-sync-conflict-field-responder-seed';
+  const existingUatConflictReport = await pool.query<{ id: string; sync_status: string }>(
+    `SELECT id, sync_status FROM field_reports WHERE client_report_id = $1`,
+    [uatConflictClientReportId],
+  );
+  if (existingUatConflictReport.rows.length === 0) {
+    const uatConflictIncidentId = incidentIdsByName['UAT-ASSIGN-ROLE Default Agency Flood'];
+
+    // Bump the anchor incident's updated_at to NOW — the real EOC-side
+    // change this conflict represents (identical mechanism
+    // field-reports.test.ts's own sync-batch conflict test and
+    // field-mobile-sync-conflict.spec.ts's e2e setup use).
+    await pool.query(`UPDATE incidents SET updated_at = now() WHERE id = $1`, [uatConflictIncidentId]);
+
+    const incidentRow = await pool.query<{ updated_at: string; name: string }>(
+      `SELECT updated_at, name FROM incidents WHERE id = $1`,
+      [uatConflictIncidentId],
+    );
+    const incident = incidentRow.rows[0];
+
+    const capturedAt = new Date(Date.now() - 5 * 60 * 1000).toISOString(); // 5 min before the bump above
+    const reportPayload = {
+      client_report_id: uatConflictClientReportId,
+      incident_id: uatConflictIncidentId,
+      observation_type: 'Damage assessment',
+      description: 'UAT-SYNC-CONFLICT Roof damage observed at shelter site',
+      captured_at: capturedAt,
+    };
+
+    // Same two-step insert field-reports.ts's sync-batch conflict branch
+    // performs: field_reports row first (sync_status='conflict'), then
+    // the sync_conflicts row referencing it, both versions preserved
+    // exactly as the real route would have written them.
+    const insertedConflictReport = await pool.query<{ id: string }>(
+      `INSERT INTO field_reports
+         (client_report_id, incident_id, observation_type, description, submitted_by, captured_at, sync_status)
+       VALUES ($1,$2,$3,$4,$5,$6,'conflict')
+       RETURNING id`,
+      [
+        reportPayload.client_report_id,
+        reportPayload.incident_id,
+        reportPayload.observation_type,
+        reportPayload.description,
+        fieldResponderUser.id,
+        reportPayload.captured_at,
+      ],
+    );
+
+    const insertedConflict = await pool.query<{ id: string }>(
+      `INSERT INTO sync_conflicts (entity_type, entity_id, field_version, eoc_version)
+       VALUES ('field_report', $1, $2, $3)
+       RETURNING id`,
+      [
+        insertedConflictReport.rows[0].id,
+        JSON.stringify(reportPayload),
+        JSON.stringify({ incident_updated_at: incident.updated_at, incident_name: incident.name }),
+      ],
+    );
+    record('field_reports', { id: insertedConflictReport.rows[0].id, inserted: true });
+    record('sync_conflicts', { id: insertedConflict.rows[0].id, inserted: true });
+  } else {
+    record('field_reports', { id: existingUatConflictReport.rows[0].id, inserted: false });
+  }
 
   // UAT data-doctor fixture (Phase 3 UAT re-run): at least one Overdue
   // task, reachable via the Task List's DEFAULT view (no filter applied,

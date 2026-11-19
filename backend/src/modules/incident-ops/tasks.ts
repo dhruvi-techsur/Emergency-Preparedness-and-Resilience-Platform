@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { PoolClient } from 'pg';
-import { requirePermission } from '../auth-org/rbac.js';
+import { requirePermission, requireAnyPermission } from '../auth-org/rbac.js';
 import { query } from '../../db/client.js';
 import { TimelineService, withTimelineTransaction } from './timeline.js';
 
@@ -409,12 +409,19 @@ export default async function tasksRoutes(app: FastifyInstance) {
     },
   );
 
+  // `requireAnyPermission` (not `requirePermission`) — accepts EITHER the
+  // broad `edit` grant (command/logistics roles) OR the narrower `status`
+  // action (field_responder, 05-05's seed). field_responder deliberately
+  // does NOT hold `edit` on `tasks` (no owner-reassignment, no
+  // title/description/due-date edits from the mobile UI) — only this one
+  // narrow status-transition capability, matching My Tasks' one-tap
+  // Start/Mark-done design (review finding B2).
   app.patch<{
     Params: { id: string };
     Body: { new_status: TaskStatus };
   }>(
     '/api/v1/tasks/:id/status',
-    { preHandler: requirePermission('tasks', 'edit') },
+    { preHandler: requireAnyPermission('tasks', ['edit', 'status']) },
     async (req, reply) => {
       const { id } = req.params;
       const { new_status } = req.body ?? ({} as never);

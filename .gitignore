@@ -123,3 +123,10 @@ htmlcov/
 # checkout and never committed: see `sandbox_bootstrap::exclude_scaffolding_cmd`,
 # which every sandbox that commits unattended now runs.
 # <<< pivota:gitignore-managed
+
+# ── Field-reports local-disk photo stand-in (05-01) ──
+# Phase 5's /api/v1/field-reports/{id}/photos route persists uploaded bytes
+# to backend/uploads/ as a local-disk stand-in for a real object-storage
+# adapter (no MinIO/S3 configured yet in this phase's TechArch). Never
+# committed — same reasoning as node_modules/dist for any build artifact.
+backend/uploads/

@@ -2,15 +2,16 @@
 pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-last_updated: "2026-11-18T14:20:37.543Z"
-last_activity: "2026-11-18 — Phase 4 complete"
+status: Phase 5 (Mobile Field Operations) complete — gap closure plan 05-06 shipped, both UAT gaps (ref 8 blocker, ref 1 major) closed. Ready for Phase 6.
+stopped_at: Completed 05-06-PLAN.md
+last_updated: "2026-11-19T10:58:36.000Z"
+last_activity: "2026-11-19 — Plan 05-06 complete (see 05-06-SUMMARY.md for full detail), a gap-closure plan for Phase 5's UAT round. Closed UAT-8 (blocker): AppShell.tsx's mobile bottom-bar now selects the Field nav group specifically by a new stable nav_groups[].id (backend, routes.ts), not by flattening+slicing the whole nav array — a field_responder's broad Phase 1-4 view-only grants no longer push the wrong 4 items into the bottom bar. Closed UAT-1 (major): the Field group's 4th SideNav item relabeled 'Profile' -> 'Field home', making the combined tasks+Report-button landing screen discoverable. F-05-01 security finding re-confirmed fixed (16/16 tests), untouched by this plan. Full backend suite (87/87), design-system suite, and all 3 project builds (backend/frontend-app/design-system) green; this plan's own new Playwright spec (2/2) plus app-shell.spec.ts (4/4) and field-mobile-report.spec.ts (1/1) regression-pass. One pre-existing, unrelated test-isolation flake in field-mobile-sync-conflict.spec.ts (jurisdiction-ordering drift from other phases' accumulated test fixtures) logged to deferred-items.md, confirmed unrelated to this plan's changes."
 progress:
   total_phases: 6
-  completed_phases: 4
-  total_plans: 57
-  completed_plans: 42
-  percent: 67
+  completed_phases: 5
+  total_plans: 58
+  completed_plans: 49
+  percent: 84
 ---
 
 # Project State
@@ -20,24 +21,35 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 4 — Notifications, Reporting & Learning — COMPLETE. All 9 plans shipped (7 original + 2 gap-closure plans, 04-08 and 04-09, run in parallel this session). UAT gap refs 2, 3, 4, and 5 all closed. Ready for Phase 5 planning.
+**Current focus:** Phase 5 — Mobile Field Operations — COMPLETE (all 6 plans shipped, incl. gap-closure plan 05-06). Every F6 screen is built, routed, and reachable via a role-driven bottom-nav; all 4 phase success criteria verified end-to-end against the real backend; both UAT gaps from Phase 5's review round (ref 8 blocker, ref 1 major) are closed. Ready for Phase 6.
 
 ## Current Position
 
-Phase: 4 of 6 (Notifications, Reporting & Learning) — COMPLETE (all 9 plans)
-Plan: 9 of 9 complete in current phase (04-01 through 04-07 original; 04-08 and 04-09 gap-closure plans, run in parallel this session)
-Status: Plan 04-08 (Notifications landing / deep-link return-path / AAR button explanation gap closure) closed UAT gap refs 2, 3, and 5. Combined with 04-09 (RBAC error-message accuracy, gap ref 4), every open UAT gap for Phase 4 is now closed.
-Last activity: 2026-11-18 — Plan 04-08 complete (see 04-08-SUMMARY.md for full detail), run in parallel with 04-09. New /notifications landing page gives Compose Notification a standalone reach-path (satisfying the UX mockup's OR-requirement alongside 04-07's Incident Workspace action); oidc-client-ts's own `state` param now threads a deep link's return path through the full sign-in redirect+callback round-trip (RouteGuard → oidc-config → SignInCallback), proven by a new Playwright spec using the correct same-browser-context-second-page isolation primitive; the disabled "Generate AAR" button now explains itself via both a title attribute and an always-visible caption. Full Playwright suite (76 tests), backend suite (70 tests), and design-system suite (51 tests) all green with zero regression; tsc --noEmit clean; full 3-workspace build green.
+Phase: 5 of 6 (Mobile Field Operations) — COMPLETE
 
-Progress: [███████░░░] 67%
+Plan: 6 of 6 complete in current phase (05-01, 05-02, 05-05, 05-03, 05-04, 05-06 all done)
+Status: Phase 5 (Mobile Field Operations) complete — gap closure plan 05-06 shipped, both UAT gaps (ref 8 blocker, ref 1 major) closed. Ready for Phase 6.
+Last activity: 2026-11-19 — Plan 05-06 complete (see 05-06-SUMMARY.md for full detail), a gap-closure plan for Phase 5's UAT round. Closed UAT-8 (blocker): AppShell.tsx's mobile bottom-bar now selects the Field nav group specifically by a new stable nav_groups[].id (backend, routes.ts), not by flattening+slicing the whole nav array — a field_responder's broad Phase 1-4 view-only grants no longer push the wrong 4 items into the bottom bar. Closed UAT-1 (major): the Field group's 4th SideNav item relabeled 'Profile' -> 'Field home', making the combined tasks+Report-button landing screen discoverable. F-05-01 security finding re-confirmed fixed (16/16 tests), untouched by this plan. Full backend suite (87/87), design-system suite, and all 3 project builds (backend/frontend-app/design-system) green; this plan's own new Playwright spec (2/2) plus app-shell.spec.ts (4/4) and field-mobile-report.spec.ts (1/1) regression-pass. One pre-existing, unrelated test-isolation flake in field-mobile-sync-conflict.spec.ts (jurisdiction-ordering drift from other phases' accumulated test fixtures) logged to deferred-items.md, confirmed unrelated to this plan's changes.
+
+Plan 05-04 (prior): closed out the phase's original scope, wiring all 6 field-mobile routes + a role-driven bottom-nav and proving sync-conflict resolution end-to-end. Shipped Queued Submissions View (/field/queued), Sync Conflict Resolution (/field/conflicts/:id), and Field Map (/field/map); wired all 6 field-mobile routes into main.tsx and a new role-driven 4-item bottom-nav group into GET /api/v1/me/nav-config. A new Playwright spec seeds a real conflict via the production sync-batch endpoint and proves the full detect-surface-resolve-commit chain with no default button selection, resolution committed server-side.
+
+Plan 05-03 (prior): shipped Field Home/My Tasks/Report Observation — the phase's success-criterion-1 screens — proven end-to-end via Playwright against the real 05-01 backend using 05-05's seeded field-responder identity. Built FieldMobileShell (shared SyncStatus-pinning wrapper). Extended offline-queue.ts with a second tasks_status IndexedDB object store (DB_VERSION 1->2) and enqueueTaskStatusChange; added a camera icon to the design system and uploadFieldReportPhoto to api-client.ts.
+
+Plan 05-05 (prior): closed the final F6 gap — idempotent field_reports role_permissions grants and a real Keycloak-seeded field_responder identity, proven end-to-end through OPA with 3 new integration tests, so 05-03/05-04's field-mobile screens can sign in as a real seeded user from the start. Extended backend/scripts/seed.ts with idempotent field_reports grants (field_responder: view/create/resolve; incident_commander/eoc_director: view/resolve; planning_logistics_chief: view), added a fourth seeded Keycloak group/user (epmp-field-responders / field-responder@epmp.local) to epmp-realm.json, and added the canonical signInAsFieldResponder Playwright helper to sign-in.ts. Full backend suite (15 files, 77 tests) green with zero regression.
+
+Plan 05-02 (prior): shipped the client-side half of F6 — SyncStatus design-system component, IndexedDB-backed offline-queue library with queue-first writes and auto-sync-on-reconnect, and PWA manifest/service-worker scaffolding for home-screen installability. New SyncStatus product-pattern component (icon+word+color for online/syncing/offline/conflict, exported from window.EPMP) and frontend/app/src/lib/offline-queue.ts (enqueueFieldReport/getQueueSnapshot/subscribeToQueue/syncQueueNow) give 05-03/05-04's field-mobile screens both reusable primitives they need. Design-system suite (59 tests, +8 new) and frontend/app's new offline-queue suite (5 tests against fake-indexeddb) both green.
+
+Plan 05-01 (prior, backend): shipped the F6 backend data layer and API surface — field_reports/field_report_photos/sync_conflicts tables plus idempotent-submit/ordered-batch-sync/photo-upload/conflict-resolve endpoints, every incident-touching write wrapped in the shared withTimelineTransaction invariant. Integration test (4 cases) + full backend suite (15 files, 74 tests) green with zero regression; tsc --noEmit and backend build both clean.
+
+Progress: [████████░░] 84%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 36
+- Total plans completed: 37
 - Average duration: 24 min
-- Total execution time: 13.3 hours
+- Total execution time: 13.9 hours
 
 **By Phase:**
 
@@ -92,6 +104,12 @@ Progress: [███████░░░] 67%
 | Phase 04 P07 | 45 min | 2 tasks | 3 files |
 | Phase 04 P09 | 15 min | 2 tasks | 3 files |
 | Phase 04 P08 | 35 min | 3 tasks | 10 files |
+| Phase 05 P01 | 8 min | 3 tasks | 7 files |
+| Phase 05-02 P02 | 35 min | 3 tasks | 12 files |
+| Phase 05 P05 | 25 min | 2 tasks | 4 files |
+| Phase 05 P03 | 35 min | 3 tasks | 12 files |
+| Phase 05 P04 | 55 min | 3 tasks | 11 files |
+| Phase 05 P06 | 12 min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -207,6 +225,22 @@ Recent decisions affecting current work:
 - [Phase 04-08]: SignInCallback's state type-guard requires a non-empty string starting with '/' AND explicitly rejects '/auth/callback' itself, not just non-string values — closes both the open-redirect vector (any absolute URL falls through to the existing '/' fallback) and a pathological self-redirect loop
 - [Phase 04-08]: AAR button explanation ships BOTH a title attribute (hover/screen-reader, matching SideNav.tsx's own interim no-Tooltip-yet pattern) AND an always-visible caption — a title-only tooltip is not reliably discoverable on touch devices or without hover
 - [Phase 04-08]: auth-deep-link-return-path.spec.ts uses page.context().newPage() (a second page in the SAME browser context, sharing cookies but with independent sessionStorage) to reproduce the gap, NOT browser.newContext() (a separate cookie jar that would hit a real Keycloak login form instead of the silent SSO round-trip the gap is actually about) — and issues a SINGLE navigation directly to the deep link rather than a preliminary visit to '/' first, since '/' is itself unauthenticated and would kick off a second, racing OIDC round-trip with the wrong return path
+- [Phase 05-01]: field-operations migration renumbered 1700000000009 -> 1700000000010 (the plan's literal number collides with Phase 4's already-existing 1700000000009_reporting-schema.js) — same renumbering precedent 04-01/04-02 established
+- [Phase 05-01]: @fastify/multipart registered locally inside field-reports.ts's own plugin scope (not globally in server.ts) to contain the new dependency's blast radius to the one route that needs multipart parsing
+- [Phase 05-01]: Photo bytes persist to backend/uploads/ (gitignored) as a local-disk stand-in for a real object-storage adapter (no MinIO/S3 configured this phase), read back exclusively through a same-origin GET route pair — documented as a drop-in replacement point for a future real adapter
+- [Phase 05-01]: sync-batch conflict detection covers entity_type='field_report' vs incidents.updated_at only; any other entity_type (e.g. a future F4 task-status sync-batch) is a documented extension point for a later plan
+- [Phase 05-02]: offline-queue.ts: a network-level sync-batch failure leaves every attempted item queue_status unchanged at 'pending' (never 'failed'), so it is retried on the next reconnect instead of silently abandoned
+- [Phase 05-05]: field_responder granted resolve (not just view/create) on field_reports — the mockup's Sync Conflict Resolution screen is reached from the field responder's own Queued Submissions View, so they resolve their own conflict on-device; incident_commander/eoc_director get view+resolve but NOT create
+- [Phase 05-03]: offline-queue.ts's IndexedDB gets a SECOND object store (tasks_status, DB_VERSION 1->2) for queued task-status changes rather than a parallel queue mechanism — one offline-queue, not two
+- [Phase 05-03]: My Tasks' status-update tap degrades ANY apiPatch failure (not just navigator.onLine===false) to the same queued path — a field app should never make a tap feel lost regardless of why the network call failed
+- [Phase 05-03]: Report Observation's photo upload stays best-effort-online-only in this plan's scope (not IndexedDB-queued) — enqueueFieldReport already guarantees the report text/location is never lost; a documented, bounded gap
+- [Phase 05-03]: This plan wired its own 3 field-mobile routes (field, field/tasks, field/report) into main.tsx now rather than leaving all 6 for 05-04, since this plan's own Playwright spec needed them live to prove the offline-first submit flow end-to-end
+- [Phase 05-04]: Added GET /api/v1/sync-conflicts/:id (single-record lookup) to 05-01's sync-conflicts.ts rather than client-side .find()-ing the unresolved-only list, since an already-resolved conflict revisited (e.g. browser back) would otherwise 404 against that list
+- [Phase 05-04]: Field Map's queued/pending markers reuse MapMarkerType='resource' (the closest existing design-system type) with a dashed CSS outline for visual distinction, rather than widening the shared MapMarker union that 02-07/03-09 and other map consumers depend on unchanged
+- [Phase 05-04]: nav-config's new 'Field' bottom-bar group routes both 'Tasks' and 'Profile' to /field — 'Tasks' per the Navigation Map's documented landing-tab convention, 'Profile' because no dedicated screen exists anywhere in F6's scope and AppShell's header Avatar menu remains the real profile entry point at every breakpoint
+- [Phase 05-04]: AppShell.tsx required no code change — confirmed (not assumed) its isBelowBpMd branch already derives mobileBottomBarItems generically via navGroups.flatMap(g => g.items)
+- [Phase 05-06]: nav_groups[].id selects the mobile bottom-bar's source group — not array position or label text — so a field_responder's broad Phase 1-4 view-only grants (which populate 5 groups before Field's own items) can no longer push the wrong 4 items into the bottom bar regardless of future emission-order or label-wording changes (closes UAT-8, reverses 05-04's own flatMap-based derivation which was the actual root cause)
+- [Phase 05-06]: Field group's 4th item relabeled 'Profile' -> 'Field home' (not renamed id/href) — closes UAT-1's discoverability gap with zero blast radius to anything keying off the existing id/href
 
 ### Pending Todos
 
@@ -214,10 +248,10 @@ None yet.
 
 ### Blockers/Concerns
 
-None yet.
+- [Phase 05-06, non-blocking]: field-mobile-sync-conflict.spec.ts's `setup` test picks `jurisdictions.items[0]` (API's alphabetical order) as the test incident's jurisdiction; an unrelated prior phase's accumulated test fixture now sorts first in the shared compose-stack DB, outside both seeded identities' jurisdiction_scope, causing the spec's main test to 404 legitimately (the F-05-01 jurisdiction-scope enforcement correctly rejecting it). Logged to .planning/phases/05-mobile-field-operations/deferred-items.md; confirmed unrelated to 05-06's own changes.
 
 ## Session Continuity
 
-Last session: 2026-11-18T12:54:19.562Z
-Stopped at: Completed 04-08-PLAN.md
+Last session: 2026-11-19T10:58:36.000Z
+Stopped at: Completed 05-06-PLAN.md
 Resume file: None

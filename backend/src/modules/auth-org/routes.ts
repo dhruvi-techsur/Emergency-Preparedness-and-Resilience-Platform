@@ -240,11 +240,25 @@ export default async function authOrgRoutes(app: FastifyInstance) {
       // wave)'s "Coordinate" append is possible — each plan's Task 3
       // appends only to the groups/keys it actually owns.
       const hasReporting = permRows.some((r) => r.feature === 'reporting' && r.actions.length > 0);
+      // Phase 5 (F6, 05-04): any role holding ANY 'field_reports'
+      // permission (05-05's seed grants view/create/resolve to
+      // field_responder, view+resolve to incident_commander/eoc_director,
+      // and view-only to planning_logistics_chief) sees the field-mobile
+      // 4-item bottom bar, per the UX mockup's Navigation Map. This is
+      // the FIRST plan to actually populate/read role_landing_config's
+      // intended field-mobile destination set — the schema has existed
+      // since Phase 1's migration (01-01) but nothing consumed it until
+      // now. Same role_permissions-driven derivation pattern as
+      // hasIncidents/hasAdmin/hasReporting above.
+      const hasFieldReports = permRows.some(
+        (r) => r.feature === 'field_reports' && r.actions.length > 0,
+      );
 
       const nav_groups = [
         ...(hasPlans
           ? [
               {
+                id: 'prepare',
                 label: 'Prepare',
                 items: [{ id: 'plans', label: 'Plans & playbooks', icon: 'file', href: '/plans' }],
               },
@@ -262,6 +276,7 @@ export default async function authOrgRoutes(app: FastifyInstance) {
         ...(hasIncidents
           ? [
               {
+                id: 'monitor',
                 label: 'Monitor',
                 items: [
                   { id: 'operating-picture', label: 'Operating picture', icon: 'map', href: '/operating-picture' },
@@ -272,6 +287,7 @@ export default async function authOrgRoutes(app: FastifyInstance) {
         ...(hasIncidents
           ? [
               {
+                id: 'activate',
                 label: 'Activate',
                 items: [{ id: 'incidents', label: 'Incidents', icon: 'flag', href: '/incidents' }],
               },
@@ -280,6 +296,7 @@ export default async function authOrgRoutes(app: FastifyInstance) {
         ...(hasTasks || hasResourceRequests || hasNotifications
           ? [
               {
+                id: 'coordinate',
                 label: 'Coordinate',
                 items: [
                   ...(hasTasks
@@ -333,6 +350,7 @@ export default async function authOrgRoutes(app: FastifyInstance) {
         ...(hasReporting
           ? [
               {
+                id: 'improve',
                 label: 'Improve',
                 items: [
                   {
@@ -351,7 +369,76 @@ export default async function authOrgRoutes(app: FastifyInstance) {
               },
             ]
           : []),
-        ...(hasAdmin ? [{ label: 'Admin', items: ADMIN_NAV_ITEMS }] : []),
+        // Phase 5 (F6, 05-04): the field-mobile bottom bar's 4 fixed
+        // destinations, per the mockup's Field Home screen layout
+        // (`[Tasks][Report][Map][Profile]`).
+        //
+        // review finding B3 (fixed): "Tasks" maps to `/field/tasks` (My
+        // Tasks, field view), NOT `/field` (Field Home) — re-reading the
+        // mockup's Navigation Map row-by-row: Field Home's own row reads
+        // "Reached from: App shell (sign-in default for PER-04) | Nav
+        // element: Bottom bar: 'Tasks' (landing)" — the "(landing)"
+        // qualifier there describes Field Home's OWN reach path (you
+        // land there once, straight out of sign-in, not via a nav tap),
+        // not a claim that the bottom bar's "Tasks" item points AT
+        // Field Home. My Tasks' own very next row is explicit and
+        // unqualified: "Reached from: Field Home bottom bar | Nav
+        // element: Bottom bar: 'Tasks'" — i.e. the bottom bar's "Tasks"
+        // item is My Tasks' (not Field Home's) reach path. Field Home
+        // itself has NO bottom-bar nav element at all (it's the sign-in
+        // landing screen you start on, the same way AppShell's admin
+        // nav doesn't need a nav item pointing at itself) — getting this
+        // backwards made `/field/tasks` a real, built, routed screen
+        // with zero nav reach, an orphan reachable only by typing the
+        // URL directly (the exact condition 05-04's own must-have truth
+        // rules out).
+        //
+        // review finding (post-B3 regression): the desktop Coordinate
+        // group's pre-existing `{id:'tasks', label:'Tasks', href:'/tasks'}`
+        // (03-06) and this Field group's `{id:'field-tasks', href:
+        // '/field/tasks'}` both rendered the exact label "Tasks" for any
+        // role holding BOTH `tasks` and `field_reports` permissions (e.g.
+        // incident_commander), producing two ambiguous identically-
+        // labeled SideNav links to two different screens. The mockup
+        // itself only ever names this screen "My Tasks (field view)" /
+        // component `MyTasksField` — its own Navigation Map and screen
+        // heading never call it bare "Tasks" outside the bottom-bar's
+        // space-constrained 4-icon mobile mockup glyph, which this
+        // desktop-rendered SideNav item isn't bound to reproduce
+        // verbatim. Relabeling to "My Tasks" (matching the screen's own
+        // documented name everywhere else) disambiguates the two items
+        // without touching either href — `/field/tasks` remains reachable
+        // (B3 stays fixed) and `/tasks` is untouched.
+        //
+        // UAT round 1 (gap ref UAT-1, major) found this 4th item's "Profile"
+        // label ambiguous: it routes to `/field` (Field Home — the screen
+        // combining today's task list WITH the sticky Report button), but a
+        // user scanning the 4 Field-group labels naturally clicked "My
+        // Tasks" first (the narrower, Report-button-less `/field/tasks`)
+        // looking for exactly that combined view, and never discovered that
+        // the unrelated-sounding "Profile" label was the actual landing
+        // screen they wanted. Relabeling to "Field home" (and swapping the
+        // icon from the people-glyph `'users'` to `'home'`) signals what the
+        // destination actually is without touching the item's `id` or
+        // `href` — nothing else keys off either, and the real profile menu
+        // remains reachable via AppShell's own header Avatar/
+        // profileMenuOpen toggle (visible at every breakpoint, including
+        // below bp-md) exactly as before this fix.
+        ...(hasFieldReports
+          ? [
+              {
+                id: 'field',
+                label: 'Field',
+                items: [
+                  { id: 'field-tasks', label: 'My Tasks', icon: 'flag', href: '/field/tasks' },
+                  { id: 'field-report', label: 'Report', icon: 'send', href: '/field/report' },
+                  { id: 'field-map-nav', label: 'Map', icon: 'map', href: '/field/map' },
+                  { id: 'field-profile', label: 'Field home', icon: 'home', href: '/field' },
+                ],
+              },
+            ]
+          : []),
+        ...(hasAdmin ? [{ id: 'admin', label: 'Admin', items: ADMIN_NAV_ITEMS }] : []),
       ];
 
       // `permissions`: the signed-in user's full feature->actions map,
