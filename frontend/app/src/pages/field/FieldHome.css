@@ -1,0 +1,13 @@
+/*
+ * F18 S18.4 — Field Home layout. Minimal: this page is a documented,
+ * honest placeholder (see the component's own file-header comment) — no
+ * grid/card layout to establish beyond PageHeader + EmptyState's own
+ * built-in spacing, both token-driven already. Token-only spacing here
+ * matches every other page's CSS convention.
+ */
+
+.ep-field-home {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
