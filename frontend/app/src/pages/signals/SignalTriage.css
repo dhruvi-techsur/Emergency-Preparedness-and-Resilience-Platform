@@ -1,0 +1,30 @@
+/*
+ * S9.1 — Signal Triage Queue layout. Toolbar + table layout, matching
+ * IncidentList's established toolbar/table pattern (not sharing its file
+ * — this is a distinct screen with its own class namespace). Token-only
+ * spacing/sizing throughout.
+ */
+
+.ep-signal-triage__toolbar {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-end;
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.ep-signal-triage__row-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.ep-signal-triage__summary-link {
+  color: var(--text-link, var(--brand));
+  text-decoration: none;
+}
+
+.ep-signal-triage__summary-link:hover {
+  text-decoration: underline;
+}
