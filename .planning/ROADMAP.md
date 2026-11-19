@@ -28,7 +28,7 @@ capabilities that reach across (rather than own) the rest of the platform.
 - [x] **Phase 2: Incident Command & Operating Picture** - Incident/ICS activation and command, backed by a shared, GIS-grounded operating picture (completed 2026-11-17)
 - [x] **Phase 3: Plans, Tasks & Resource Requests** - Versioned plan/SOP repository linked to a full task and resource-request lifecycle (completed 2026-11-18)
 - [x] **Phase 4: Notifications & Reporting/Learning** - Accountable, approval-gated notifications and ICS/SITREP/AAR reporting that closes the preparedness loop (completed 2026-11-18)
-- [ ] **Phase 5: Mobile Field Operations** - Offline-first, installable field-mobile app with queued submissions and reconciliation
+- [x] **Phase 5: Mobile Field Operations** - Offline-first, installable field-mobile app with queued submissions and reconciliation (completed 2026-11-19)
 - [ ] **Phase 6: Persona Dashboards & AI Assistance** - Role-scoped dashboards for every persona plus governed, human-approved AI drafting and signal triage
 
 ## Phase Details
@@ -195,5 +195,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 2. Incident Command & Operating Picture | 7/7 | Complete | 2026-11-17 |
 | 3. Plans, Tasks & Resource Requests | 9/9 | Complete | 2026-11-18 |
 | 4. Notifications & Reporting/Learning | 7/7 | Complete | 2026-11-18 |
-| 5. Mobile Field Operations | 0/TBD | Passed | - |
+| 5. Mobile Field Operations | 0/TBD | Complete | 2026-11-19 |
 | 6. Persona Dashboards & AI Assistance | 0/10 | Not started | - |
