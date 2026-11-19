@@ -1,0 +1,31 @@
+{
+  "duration_secs": 57082.0,
+  "token_usage": {
+    "input": 824,
+    "output": 309187,
+    "total": 105854981,
+    "cache_read": 102363968,
+    "cache_write": 3181002,
+    "cost": 31.518816600000005
+  },
+  "model": "claude-sonnet-5",
+  "files_changed": [
+    ".pivota/dev-script.meta.json",
+    ".pivota/uat-shots/1-field-home.png",
+    ".pivota/uat-shots/2-my-tasks.png",
+    ".pivota/uat-shots/3-report-observation.png",
+    ".pivota/uat-shots/6-sync-conflict.png",
+    ".pivota/uat-shots/7-queued-submissions.png",
+    ".pivota/uat-shots/8-field-map.png",
+    ".planning/debug/field-home-report-button-unreachable-from-my-tasks.md",
+    ".planning/debug/mobile-bottom-nav-wrong-items.md",
+    ".planning/phases/05-mobile-field-operations/05-UAT.md",
+    ".planning/phases/05-mobile-field-operations/05-UAT.summary.json",
+    "backend/scripts/seed.ts"
+  ],
+  "verification_status": "failed",
+  "error_message": null,
+  "attempt_number": 2,
+  "created_at": "2026-11-18T18:03:23.368166+00:00",
+  "completed_at": "2026-11-19T09:54:45.928536959+00:00"
+}
