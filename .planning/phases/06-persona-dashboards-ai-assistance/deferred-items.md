@@ -19,3 +19,10 @@
 **Symptom:** `PATCH /api/v1/admin/roles/{id} grants admin:view with no OPA caching window` intermittently fails when the full backend suite runs together.
 **Root cause:** Not caused by 06-09's changes (`ai-assist/signals.ts`, `frontend/app/src/pages/signals/*`, `main.tsx` — no overlap with `auth-org`/admin/OPA). Confirmed via isolation: `npx vitest run src/modules/auth-org/admin.test.ts` alone passes 7/7. Same class of issue as the field-reports.test.ts (06-02) and tasks.test.ts (06-03) flakes already logged above — shared compose-stack Postgres/OPA state across concurrently-run test files, now observed in a third file.
 **Action:** Not fixed (deviation rules scope boundary). Gate retry produced a clean 108/108 pass; recorded `pass` with a `pre_existing` note in `06-GATE.md` per protocol.
+
+## Browser suite gate (post-wave-9): 3 pre-existing, unrelated browser-test failures (out of scope)
+
+**Found during:** Phase-level browser suite gate (after all 9 waves, before verification)
+**Symptom:** 3/100 Playwright tests failed — `admin-users-roles.spec.ts` (test 3, page_size exceeded by 1351 accumulated fixture users), `field-mobile-sync-conflict.spec.ts` (exact repeat of the documented 05-06 jurisdiction-ordering flake), `signal-triage.spec.ts` (test 2, zero `New`-status signals remain after repeated test runs exhausted the fixture across this session).
+**Root cause:** All three are test-fixture accumulation/exhaustion in the shared, long-lived compose-stack sandbox DB across six phases of repeated plan/test execution — not regressions from any Phase 6 plan. None of the three spec files were touched by a Phase 6 commit. Full technical detail and evidence recorded in `06-GATE.md`'s "Browser Suite" section.
+**Action:** Not fixed. A `page_size` bump for the admin spec was attempted and reverted after it surfaced a second cascading pre-existing race rather than cleanly resolving — chasing it further was outside this phase's scope per the deviation rules' scope boundary. Recorded `browser-suite: fail` with full evidence; the verifier converts these into gaps.
