@@ -3,7 +3,7 @@ phase: 06
 gate_status: passed
 build_command: "rc=0; (npm run build -w backend) || rc=$?; (npm run build -w frontend/design-system) || rc=$?; (npm run build -w frontend/app) || rc=$?; exit $rc"
 test_command: "rc=0; (npm run test -w backend) || rc=$?; (npm run test -w frontend/design-system) || rc=$?; exit $rc"
-last_updated: 2026-11-19T12:51:40Z
+last_updated: 2026-11-19T13:13:08Z
 tests_disabled_during_fixes: none
 shadowed_sources: 0
 waves:
@@ -20,6 +20,10 @@ waves:
     tests: pass
     fix_attempts: 0
   - wave: 4
+    build: pass
+    tests: pass
+    fix_attempts: 0
+  - wave: 5
     build: pass
     tests: pass
     fix_attempts: 0
@@ -2283,5 +2287,587 @@ files generated
 [2m      Tests [22m [1m[32m65 passed[39m[22m[90m (65)[39m
 [2m   Start at [22m 12:51:33
 [2m   Duration [22m 1.19s[2m (transform 302ms, setup 241ms, collect 985ms, tests 763ms, environment 1.38s, prepare 211ms)[22m
+```
+
+## Wave 5
+
+- Build: `rc=0; (npm run build -w backend) || rc=$?; (npm run build -w frontend/design-system) || rc=$?; (npm run build -w frontend/app) || rc=$?; exit $rc` → pass
+- Tests: `rc=0; (npm run test -w backend) || rc=$?; (npm run test -w frontend/design-system) || rc=$?; exit $rc` → pass
+- Fix attempts: 0/3
+
+### Gate output
+
+```
+> @epmp/backend@0.1.0 build
+> tsc -p tsconfig.json
+
+
+> @epmp/design-system@0.1.0 build
+> vite build
+
+[36mvite v5.4.21 [32mbuilding for production...[36m[39m
+transforming...
+[32m✓[39m 81 modules transformed.
+rendering chunks...
+computing gzip size...
+[2mdist/[22m[35mbundle.css    [39m[1m[2m 39.21 kB[22m[1m[22m[2m │ gzip:  5.72 kB[22m
+[2mdist/[22m[36mbundle.es.js  [39m[1m[2m109.52 kB[22m[1m[22m[2m │ gzip: 24.80 kB[22m
+[2mdist/[22m[35mbundle.css  [39m[1m[2m39.21 kB[22m[1m[22m[2m │ gzip:  5.72 kB[22m
+[2mdist/[22m[36mbundle.js   [39m[1m[2m69.06 kB[22m[1m[22m[2m │ gzip: 20.65 kB[22m
+[32m✓ built in 182ms[39m
+
+> @epmp/app@0.1.0 build
+> vite build
+
+[36mvite v5.4.21 [32mbuilding for production...[36m[39m
+transforming...
+[32m✓[39m 157 modules transformed.
+rendering chunks...
+computing gzip size...
+[2mdist/[22m[32mregisterSW.js              [39m[1m[2m  0.13 kB[22m[1m[22m
+[2mdist/[22m[32mmanifest.webmanifest       [39m[1m[2m  0.32 kB[22m[1m[22m
+[2mdist/[22m[32mindex.html                 [39m[1m[2m  1.55 kB[22m[1m[22m[2m │ gzip:   0.87 kB[22m
+[2mdist/[22m[2massets/[22m[35mindex-Bf46wM01.css  [39m[1m[2m 54.19 kB[22m[1m[22m[2m │ gzip:   8.64 kB[22m
+[2mdist/[22m[2massets/[22m[36mindex-CMJxUL0M.js   [39m[1m[33m506.81 kB[39m[22m[2m │ gzip: 144.97 kB[22m
+[33m
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+[32m✓ built in 802ms[39m
+
+PWA v0.21.2
+mode      generateSW
+precache  7 entries (549.63 KiB)
+files generated
+  dist/sw.js
+  dist/workbox-ee9d8b34.js
+
+> @epmp/backend@0.1.0 test
+> vitest run
+
+
+ RUN  v4.1.12 /home/daytona/project/backend
+
+{"level":30,"time":1795093978534,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","req":{"method":"POST","url":"/api/v1/field-reports","host":"127.0.0.1:33063","remoteAddress":"127.0.0.1","remotePort":52824},"msg":"incoming request"}
+{"level":30,"time":1795093978541,"pid":213722,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","req":{"method":"POST","url":"/api/v1/admin/webhook-subscriptions","host":"127.0.0.1:34777","remoteAddress":"127.0.0.1","remotePort":41534},"msg":"incoming request"}
+{"level":30,"time":1795093978543,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","req":{"method":"POST","url":"/api/v1/admin/webhook-subscriptions","host":"127.0.0.1:39099","remoteAddress":"127.0.0.1","remotePort":44362},"msg":"incoming request"}
+{"level":30,"time":1795093978547,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","res":{"statusCode":201},"responseTime":12.43388699999997,"msg":"request completed"}
+{"level":30,"time":1795093978550,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","req":{"method":"POST","url":"/api/v1/field-reports","host":"127.0.0.1:42411","remoteAddress":"127.0.0.1","remotePort":58608},"msg":"incoming request"}
+{"level":30,"time":1795093978553,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","res":{"statusCode":201},"responseTime":2.776065000000017,"msg":"request completed"}
+{"level":30,"time":1795093978555,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","req":{"method":"POST","url":"/api/v1/field-reports","host":"127.0.0.1:46705","remoteAddress":"127.0.0.1","remotePort":57358},"msg":"incoming request"}
+{"level":30,"time":1795093978557,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","res":{"statusCode":422},"responseTime":2.296346000000028,"msg":"request completed"}
+{"level":30,"time":1795093978559,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:43071","remoteAddress":"127.0.0.1","remotePort":53576},"msg":"incoming request"}
+{"level":30,"time":1795093978576,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","res":{"statusCode":201},"responseTime":16.943092000000036,"msg":"request completed"}
+{"level":30,"time":1795093978577,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","req":{"method":"POST","url":"/api/v1/field-reports/sync-batch","host":"127.0.0.1:42145","remoteAddress":"127.0.0.1","remotePort":50902},"msg":"incoming request"}
+{"level":30,"time":1795093978583,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","res":{"statusCode":200},"responseTime":5.208428000000026,"msg":"request completed"}
+{"level":30,"time":1795093978585,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","req":{"method":"POST","url":"/api/v1/sync-conflicts/a59ce987-84ce-46bf-9f59-ec144085df02/resolve","host":"127.0.0.1:46497","remoteAddress":"127.0.0.1","remotePort":32898},"msg":"incoming request"}
+{"level":30,"time":1795093978589,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","res":{"statusCode":200},"responseTime":3.5847719999999867,"msg":"request completed"}
+{"level":30,"time":1795093978590,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","req":{"method":"GET","url":"/api/v1/incidents/424c5e62-50b5-4fce-ae81-db2c0629b7e1/timeline","host":"127.0.0.1:39187","remoteAddress":"127.0.0.1","remotePort":55348},"msg":"incoming request"}
+{"level":30,"time":1795093978592,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","res":{"statusCode":200},"responseTime":2.474119999999971,"msg":"request completed"}
+{"level":30,"time":1795093978593,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-8","req":{"method":"POST","url":"/api/v1/sync-conflicts/a59ce987-84ce-46bf-9f59-ec144085df02/resolve","host":"127.0.0.1:38127","remoteAddress":"127.0.0.1","remotePort":48836},"msg":"incoming request"}
+{"level":30,"time":1795093978595,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-8","res":{"statusCode":409},"responseTime":1.8202139999999645,"msg":"request completed"}
+{"level":30,"time":1795093978598,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-9","req":{"method":"POST","url":"/api/v1/field-reports","host":"127.0.0.1:38435","remoteAddress":"127.0.0.1","remotePort":48270},"msg":"incoming request"}
+{"level":30,"time":1795093978600,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-9","res":{"statusCode":201},"responseTime":2.2883410000000026,"msg":"request completed"}
+{"level":30,"time":1795093978600,"pid":213722,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","res":{"statusCode":201},"responseTime":58.719965,"msg":"request completed"}
+{"level":30,"time":1795093978602,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-a","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:45813","remoteAddress":"127.0.0.1","remotePort":37628},"msg":"incoming request"}
+{"level":30,"time":1795093978605,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-a","res":{"statusCode":201},"responseTime":3.2462280000000305,"msg":"request completed"}
+{"level":30,"time":1795093978607,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-b","req":{"method":"POST","url":"/api/v1/field-reports/sync-batch","host":"127.0.0.1:37883","remoteAddress":"127.0.0.1","remotePort":33128},"msg":"incoming request"}
+{"level":30,"time":1795093978607,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","res":{"statusCode":201},"responseTime":63.85449299999999,"msg":"request completed"}
+{"level":30,"time":1795093978609,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-b","res":{"statusCode":200},"responseTime":2.5242739999999912,"msg":"request completed"}
+{"level":30,"time":1795093978610,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-c","req":{"method":"POST","url":"/api/v1/sync-conflicts/f92649f9-cf60-4be3-8e25-fac61ee5ffa8/resolve","host":"127.0.0.1:45359","remoteAddress":"127.0.0.1","remotePort":49756},"msg":"incoming request"}
+{"level":30,"time":1795093978610,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:44365","remoteAddress":"127.0.0.1","remotePort":55250},"msg":"incoming request"}
+{"level":30,"time":1795093978614,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-c","res":{"statusCode":200},"responseTime":3.5765370000000303,"msg":"request completed"}
+{"level":30,"time":1795093978616,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-d","req":{"method":"POST","url":"/api/v1/field-reports","host":"127.0.0.1:35341","remoteAddress":"127.0.0.1","remotePort":36216},"msg":"incoming request"}
+{"level":30,"time":1795093978618,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-d","res":{"statusCode":403},"responseTime":1.9395570000000362,"msg":"request completed"}
+{"level":30,"time":1795093978619,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-e","req":{"method":"GET","url":"/api/v1/sync-conflicts","host":"127.0.0.1:32867","remoteAddress":"127.0.0.1","remotePort":56738},"msg":"incoming request"}
+{"level":30,"time":1795093978622,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-e","res":{"statusCode":200},"responseTime":2.874980999999991,"msg":"request completed"}
+{"level":30,"time":1795093978623,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","res":{"statusCode":201},"responseTime":12.332606999999996,"msg":"request completed"}
+{"level":30,"time":1795093978624,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-f","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:45661","remoteAddress":"127.0.0.1","remotePort":33566},"msg":"incoming request"}
+{"level":30,"time":1795093978624,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","req":{"method":"POST","url":"/api/v1/resource-requests","host":"127.0.0.1:34741","remoteAddress":"127.0.0.1","remotePort":44726},"msg":"incoming request"}
+{"level":30,"time":1795093978627,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-f","res":{"statusCode":201},"responseTime":3.423549000000037,"msg":"request completed"}
+{"level":30,"time":1795093978628,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-g","req":{"method":"POST","url":"/api/v1/field-reports/sync-batch","host":"127.0.0.1:42733","remoteAddress":"127.0.0.1","remotePort":32892},"msg":"incoming request"}
+{"level":30,"time":1795093978629,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","res":{"statusCode":201},"responseTime":4.782518000000039,"msg":"request completed"}
+{"level":30,"time":1795093978630,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-g","res":{"statusCode":200},"responseTime":1.8184100000000285,"msg":"request completed"}
+{"level":30,"time":1795093978631,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","req":{"method":"POST","url":"/api/v1/resource-requests/678de057-9be0-4aa9-944a-1183173369db/decline","host":"127.0.0.1:37569","remoteAddress":"127.0.0.1","remotePort":57434},"msg":"incoming request"}
+{"level":30,"time":1795093978632,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-h","req":{"method":"GET","url":"/api/v1/sync-conflicts?page_size=100","host":"127.0.0.1:36111","remoteAddress":"127.0.0.1","remotePort":38508},"msg":"incoming request"}
+{"level":30,"time":1795093978632,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","res":{"statusCode":422},"responseTime":1.5673890000000483,"msg":"request completed"}
+{"level":30,"time":1795093978634,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-h","res":{"statusCode":200},"responseTime":2.034656000000041,"msg":"request completed"}
+{"level":30,"time":1795093978634,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","req":{"method":"GET","url":"/api/v1/resource-requests?incident=a4ef4d23-94ee-4d77-afed-e8cdfb597edd","host":"127.0.0.1:41223","remoteAddress":"127.0.0.1","remotePort":42286},"msg":"incoming request"}
+{"level":30,"time":1795093978635,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-i","req":{"method":"GET","url":"/api/v1/sync-conflicts/bc8afe8a-385a-405e-b4da-291d25c1967a","host":"127.0.0.1:37713","remoteAddress":"127.0.0.1","remotePort":59476},"msg":"incoming request"}
+{"level":30,"time":1795093978636,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","res":{"statusCode":200},"responseTime":2.2283879999999954,"msg":"request completed"}
+{"level":30,"time":1795093978637,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-i","res":{"statusCode":404},"responseTime":1.6777060000000006,"msg":"request completed"}
+{"level":30,"time":1795093978637,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","req":{"method":"POST","url":"/api/v1/resource-requests/678de057-9be0-4aa9-944a-1183173369db/decline","host":"127.0.0.1:33157","remoteAddress":"127.0.0.1","remotePort":33296},"msg":"incoming request"}
+{"level":30,"time":1795093978638,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-j","req":{"method":"POST","url":"/api/v1/sync-conflicts/bc8afe8a-385a-405e-b4da-291d25c1967a/resolve","host":"127.0.0.1:36569","remoteAddress":"127.0.0.1","remotePort":53034},"msg":"incoming request"}
+{"level":30,"time":1795093978639,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-j","res":{"statusCode":404},"responseTime":1.3127920000000017,"msg":"request completed"}
+{"level":30,"time":1795093978640,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-k","req":{"method":"GET","url":"/api/v1/field-reports/6646540d-b5c0-4500-b011-3cd66fffb8fc/photos/2b7beaa1-be5a-44d4-97fd-263b5912a61a","host":"127.0.0.1:40883","remoteAddress":"127.0.0.1","remotePort":49194},"msg":"incoming request"}
+{"level":30,"time":1795093978641,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","res":{"statusCode":200},"responseTime":3.5654670000000124,"msg":"request completed"}
+{"level":30,"time":1795093978641,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-k","res":{"statusCode":404},"responseTime":1.2554740000000493,"msg":"request completed"}
+{"level":30,"time":1795093978642,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","req":{"method":"GET","url":"/api/v1/incidents/a4ef4d23-94ee-4d77-afed-e8cdfb597edd/timeline","host":"127.0.0.1:39171","remoteAddress":"127.0.0.1","remotePort":34832},"msg":"incoming request"}
+{"level":30,"time":1795093978643,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-l","req":{"method":"POST","url":"/api/v1/field-reports/6646540d-b5c0-4500-b011-3cd66fffb8fc/photos","host":"127.0.0.1:44159","remoteAddress":"127.0.0.1","remotePort":37032},"msg":"incoming request"}
+{"level":30,"time":1795093978644,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","res":{"statusCode":200},"responseTime":2.6549479999999903,"msg":"request completed"}
+{"level":30,"time":1795093978645,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-l","res":{"statusCode":404},"responseTime":1.6646209999998973,"msg":"request completed"}
+{"level":30,"time":1795093978646,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-m","req":{"method":"GET","url":"/api/v1/sync-conflicts/bc8afe8a-385a-405e-b4da-291d25c1967a","host":"127.0.0.1:38069","remoteAddress":"127.0.0.1","remotePort":40958},"msg":"incoming request"}
+{"level":30,"time":1795093978646,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-8","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:34187","remoteAddress":"127.0.0.1","remotePort":39030},"msg":"incoming request"}
+{"level":30,"time":1795093978647,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-m","res":{"statusCode":200},"responseTime":1.5230870000000323,"msg":"request completed"}
+{"level":30,"time":1795093978648,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-n","req":{"method":"GET","url":"/api/v1/field-reports/6646540d-b5c0-4500-b011-3cd66fffb8fc/photos/2b7beaa1-be5a-44d4-97fd-263b5912a61a","host":"127.0.0.1:33763","remoteAddress":"127.0.0.1","remotePort":40098},"msg":"incoming request"}
+{"level":30,"time":1795093978650,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-8","res":{"statusCode":201},"responseTime":4.34827400000006,"msg":"request completed"}
+{"level":50,"time":1795093978649,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-n","err":{"type":"Error","message":"ENOENT: no such file or directory, open '/home/daytona/project/backend/uploads/field-reports/6646540d-b5c0-4500-b011-3cd66fffb8fc/f0501-test.jpg'","stack":"Error: ENOENT: no such file or directory, open '/home/daytona/project/backend/uploads/field-reports/6646540d-b5c0-4500-b011-3cd66fffb8fc/f0501-test.jpg'\n    at async open (node:internal/fs/promises:637:25)\n    at async readFile (node:internal/fs/promises:1249:14)\n    at Object.<anonymous> (/home/daytona/project/backend/src/modules/incident-ops/field-reports.ts:420:24)","errno":-2,"code":"ENOENT","syscall":"open","path":"/home/daytona/project/backend/uploads/field-reports/6646540d-b5c0-4500-b011-3cd66fffb8fc/f0501-test.jpg"},"msg":"Field report photo read failed for photo_id=2b7beaa1-be5a-44d4-97fd-263b5912a61a"}
+{"level":30,"time":1795093978651,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-n","res":{"statusCode":404},"responseTime":3.315617999999972,"msg":"request completed"}
+{"level":30,"time":1795093978652,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-9","req":{"method":"POST","url":"/api/v1/resource-requests","host":"127.0.0.1:33143","remoteAddress":"127.0.0.1","remotePort":36386},"msg":"incoming request"}
+{"level":30,"time":1795093978652,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-o","req":{"method":"POST","url":"/api/v1/field-reports/6646540d-b5c0-4500-b011-3cd66fffb8fc/photos","host":"127.0.0.1:35561","remoteAddress":"127.0.0.1","remotePort":51864},"msg":"incoming request"}
+{"level":30,"time":1795093978656,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-9","res":{"statusCode":201},"responseTime":4.16872699999999,"msg":"request completed"}
+{"level":30,"time":1795093978656,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-o","res":{"statusCode":204},"responseTime":3.8045849999999746,"msg":"request completed"}
+{"level":30,"time":1795093978657,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-a","req":{"method":"POST","url":"/api/v1/resource-requests/e9419d56-d965-4d0f-817b-57efbd8135d3/approve","host":"127.0.0.1:45841","remoteAddress":"127.0.0.1","remotePort":40270},"msg":"incoming request"}
+{"level":30,"time":1795093978657,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-p","req":{"method":"GET","url":"/api/v1/field-reports/6646540d-b5c0-4500-b011-3cd66fffb8fc/photos/806ab2c2-2f7e-4e3c-b69c-a1ec55b1c601","host":"127.0.0.1:34615","remoteAddress":"127.0.0.1","remotePort":47186},"msg":"incoming request"}
+{"level":30,"time":1795093978659,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-p","res":{"statusCode":200},"responseTime":2.0476600000000644,"msg":"request completed"}
+{"level":30,"time":1795093978660,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-q","req":{"method":"POST","url":"/api/v1/sync-conflicts/bc8afe8a-385a-405e-b4da-291d25c1967a/resolve","host":"127.0.0.1:44345","remoteAddress":"127.0.0.1","remotePort":57094},"msg":"incoming request"}
+{"level":30,"time":1795093978661,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-a","res":{"statusCode":200},"responseTime":4.147476999999981,"msg":"request completed"}
+{"level":30,"time":1795093978663,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-b","req":{"method":"POST","url":"/api/v1/resource-requests/e9419d56-d965-4d0f-817b-57efbd8135d3/fulfill","host":"127.0.0.1:40587","remoteAddress":"127.0.0.1","remotePort":58382},"msg":"incoming request"}
+{"level":30,"time":1795093978664,"pid":213723,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-q","res":{"statusCode":200},"responseTime":3.289788999999928,"msg":"request completed"}
+{"level":30,"time":1795093978667,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-b","res":{"statusCode":200},"responseTime":4.121939999999995,"msg":"request completed"}
+{"level":30,"time":1795093978669,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-c","req":{"method":"POST","url":"/api/v1/resource-requests/e9419d56-d965-4d0f-817b-57efbd8135d3/fulfill","host":"127.0.0.1:34185","remoteAddress":"127.0.0.1","remotePort":43370},"msg":"incoming request"}
+{"level":30,"time":1795093978673,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-c","res":{"statusCode":200},"responseTime":4.456407000000013,"msg":"request completed"}
+{"level":30,"time":1795093978675,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-d","req":{"method":"GET","url":"/api/v1/incidents/fa3b33c8-f1e9-4880-85e9-e46b1e367c96/timeline","host":"127.0.0.1:32875","remoteAddress":"127.0.0.1","remotePort":55826},"msg":"incoming request"}
+{"level":30,"time":1795093978683,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-d","res":{"statusCode":200},"responseTime":7.726679999999988,"msg":"request completed"}
+{"level":30,"time":1795093978807,"pid":213722,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","req":{"method":"GET","url":"/api/v1/openapi.json","host":"127.0.0.1:34573","remoteAddress":"127.0.0.1","remotePort":38422},"msg":"incoming request"}
+{"level":30,"time":1795093978811,"pid":213722,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","res":{"statusCode":200},"responseTime":3.6432219999999234,"msg":"request completed"}
+{"level":30,"time":1795093978887,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-e","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:39753","remoteAddress":"127.0.0.1","remotePort":49774},"msg":"incoming request"}
+{"level":30,"time":1795093978891,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-e","res":{"statusCode":201},"responseTime":4.139674000000014,"msg":"request completed"}
+{"level":30,"time":1795093978892,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-f","req":{"method":"POST","url":"/api/v1/resource-requests","host":"127.0.0.1:45265","remoteAddress":"127.0.0.1","remotePort":37204},"msg":"incoming request"}
+{"level":30,"time":1795093978894,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-f","res":{"statusCode":422},"responseTime":1.378906000000029,"msg":"request completed"}
+{"level":30,"time":1795093978895,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-g","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:33465","remoteAddress":"127.0.0.1","remotePort":42828},"msg":"incoming request"}
+{"level":30,"time":1795093978898,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-g","res":{"statusCode":201},"responseTime":3.168931999999927,"msg":"request completed"}
+{"level":30,"time":1795093978899,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-h","req":{"method":"POST","url":"/api/v1/resource-requests","host":"127.0.0.1:41657","remoteAddress":"127.0.0.1","remotePort":44924},"msg":"incoming request"}
+{"level":30,"time":1795093978902,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-h","res":{"statusCode":201},"responseTime":2.9925009999999475,"msg":"request completed"}
+{"level":30,"time":1795093978903,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-i","req":{"method":"POST","url":"/api/v1/resource-requests/a1692a4e-5957-43be-b4d6-c082b0c342f8/fulfill","host":"127.0.0.1:33055","remoteAddress":"127.0.0.1","remotePort":57382},"msg":"incoming request"}
+{"level":30,"time":1795093978905,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-i","res":{"statusCode":409},"responseTime":1.654141999999979,"msg":"request completed"}
+{"level":30,"time":1795093978905,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-j","req":{"method":"POST","url":"/api/v1/resource-requests/a1692a4e-5957-43be-b4d6-c082b0c342f8/approve","host":"127.0.0.1:41721","remoteAddress":"127.0.0.1","remotePort":51278},"msg":"incoming request"}
+{"level":30,"time":1795093978907,"pid":213721,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-j","res":{"statusCode":409},"responseTime":1.6869229999999789,"msg":"request completed"}
+{"level":30,"time":1795093978954,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","req":{"method":"POST","url":"/api/v1/notifications/compose","host":"127.0.0.1:41631","remoteAddress":"127.0.0.1","remotePort":40558},"msg":"incoming request"}
+{"level":30,"time":1795093978980,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","res":{"statusCode":422},"responseTime":25.108405000000005,"msg":"request completed"}
+{"level":30,"time":1795093978984,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","req":{"method":"POST","url":"/api/v1/recipient-groups","host":"127.0.0.1:37629","remoteAddress":"127.0.0.1","remotePort":59574},"msg":"incoming request"}
+{"level":30,"time":1795093978987,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","res":{"statusCode":201},"responseTime":3.130720999999994,"msg":"request completed"}
+{"level":30,"time":1795093978989,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:43351","remoteAddress":"127.0.0.1","remotePort":57122},"msg":"incoming request"}
+{"level":30,"time":1795093979003,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","res":{"statusCode":201},"responseTime":13.816688999999997,"msg":"request completed"}
+{"level":30,"time":1795093979004,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","req":{"method":"POST","url":"/api/v1/notifications/compose","host":"127.0.0.1:35159","remoteAddress":"127.0.0.1","remotePort":35416},"msg":"incoming request"}
+{"level":30,"time":1795093979016,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","res":{"statusCode":201},"responseTime":12.287523000000022,"msg":"request completed"}
+{"level":30,"time":1795093979018,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","req":{"method":"POST","url":"/api/v1/notifications/788d7c63-fdfe-4b6e-8950-339b2c029a8b/send","host":"127.0.0.1:43815","remoteAddress":"127.0.0.1","remotePort":34376},"msg":"incoming request"}
+{"level":30,"time":1795093979020,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","res":{"statusCode":403},"responseTime":2.0655740000000264,"msg":"request completed"}
+{"level":30,"time":1795093979021,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","req":{"method":"POST","url":"/api/v1/notifications/788d7c63-fdfe-4b6e-8950-339b2c029a8b/send","host":"127.0.0.1:41819","remoteAddress":"127.0.0.1","remotePort":40070},"msg":"incoming request"}
+{"level":30,"time":1795093979024,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","res":{"statusCode":200},"responseTime":3.130991999999992,"msg":"request completed"}
+{"level":30,"time":1795093979028,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","req":{"method":"GET","url":"/api/v1/incidents/323555e4-7cb3-410b-aabf-98beadff8f0a/timeline","host":"127.0.0.1:41209","remoteAddress":"127.0.0.1","remotePort":39534},"msg":"incoming request"}
+{"level":30,"time":1795093979031,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","res":{"statusCode":200},"responseTime":2.700433999999973,"msg":"request completed"}
+{"level":30,"time":1795093979032,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-8","req":{"method":"GET","url":"/api/v1/notifications/788d7c63-fdfe-4b6e-8950-339b2c029a8b/delivery-status","host":"127.0.0.1:33323","remoteAddress":"127.0.0.1","remotePort":48574},"msg":"incoming request"}
+{"level":30,"time":1795093979035,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-8","res":{"statusCode":200},"responseTime":2.417622999999992,"msg":"request completed"}
+{"level":30,"time":1795093979037,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-9","req":{"method":"POST","url":"/api/v1/recipient-groups","host":"127.0.0.1:38767","remoteAddress":"127.0.0.1","remotePort":41948},"msg":"incoming request"}
+{"level":30,"time":1795093979038,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-9","res":{"statusCode":201},"responseTime":1.7679650000000038,"msg":"request completed"}
+{"level":30,"time":1795093979039,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-a","req":{"method":"POST","url":"/api/v1/ai-drafts","host":"127.0.0.1:37597","remoteAddress":"127.0.0.1","remotePort":38454},"msg":"incoming request"}
+{"level":30,"time":1795093979041,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-a","res":{"statusCode":200},"responseTime":1.987367000000006,"msg":"request completed"}
+{"level":30,"time":1795093979042,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-b","req":{"method":"POST","url":"/api/v1/notifications/compose","host":"127.0.0.1:40953","remoteAddress":"127.0.0.1","remotePort":59352},"msg":"incoming request"}
+{"level":30,"time":1795093979050,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-b","res":{"statusCode":201},"responseTime":7.506456000000014,"msg":"request completed"}
+{"level":30,"time":1795093979051,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-c","req":{"method":"POST","url":"/api/v1/notifications/14a4d8f3-5700-4059-b904-a8e8df18b13b/send","host":"127.0.0.1:34419","remoteAddress":"127.0.0.1","remotePort":47424},"msg":"incoming request"}
+{"level":30,"time":1795093979053,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-c","res":{"statusCode":400},"responseTime":2.114846,"msg":"request completed"}
+{"level":30,"time":1795093979054,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-d","req":{"method":"POST","url":"/api/v1/ai-drafts/23aeeea3-b2fe-4063-908b-68f0e002c983/approve","host":"127.0.0.1:45541","remoteAddress":"127.0.0.1","remotePort":47656},"msg":"incoming request"}
+{"level":30,"time":1795093979056,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-d","res":{"statusCode":200},"responseTime":2.0763129999999705,"msg":"request completed"}
+{"level":30,"time":1795093979057,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-e","req":{"method":"POST","url":"/api/v1/notifications/14a4d8f3-5700-4059-b904-a8e8df18b13b/send","host":"127.0.0.1:37459","remoteAddress":"127.0.0.1","remotePort":53304},"msg":"incoming request"}
+{"level":30,"time":1795093979076,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-e","res":{"statusCode":200},"responseTime":19.163756999999976,"msg":"request completed"}
+{"level":30,"time":1795093979080,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-f","req":{"method":"POST","url":"/api/v1/recipient-groups","host":"127.0.0.1:33151","remoteAddress":"127.0.0.1","remotePort":56856},"msg":"incoming request"}
+{"level":30,"time":1795093979082,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-f","res":{"statusCode":201},"responseTime":1.8911360000000172,"msg":"request completed"}
+{"level":30,"time":1795093979084,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-g","req":{"method":"POST","url":"/api/v1/notifications/compose","host":"127.0.0.1:38997","remoteAddress":"127.0.0.1","remotePort":55700},"msg":"incoming request"}
+{"level":30,"time":1795093979101,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-g","res":{"statusCode":201},"responseTime":17.09279399999997,"msg":"request completed"}
+{"level":30,"time":1795093979102,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-h","req":{"method":"POST","url":"/api/v1/notifications/9eaad089-bee3-487f-aae9-d854c8a9c31d/send","host":"127.0.0.1:33633","remoteAddress":"127.0.0.1","remotePort":40700},"msg":"incoming request"}
+{"level":30,"time":1795093979105,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-h","res":{"statusCode":200},"responseTime":3.3120309999999904,"msg":"request completed"}
+{"level":30,"time":1795093979106,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-i","req":{"method":"POST","url":"/api/v1/notifications/compose","host":"127.0.0.1:33297","remoteAddress":"127.0.0.1","remotePort":55528},"msg":"incoming request"}
+{"level":30,"time":1795093979120,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:41757","remoteAddress":"127.0.0.1","remotePort":45002},"msg":"incoming request"}
+{"level":30,"time":1795093979129,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-i","res":{"statusCode":201},"responseTime":22.746073999999965,"msg":"request completed"}
+{"level":30,"time":1795093979130,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-j","req":{"method":"POST","url":"/api/v1/notifications/5a6a13a9-b42c-4ea1-9aba-294b496726fa/send","host":"127.0.0.1:43553","remoteAddress":"127.0.0.1","remotePort":41764},"msg":"incoming request"}
+{"level":30,"time":1795093979132,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-j","res":{"statusCode":403},"responseTime":1.8559510000000046,"msg":"request completed"}
+{"level":30,"time":1795093979134,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-k","req":{"method":"GET","url":"/api/v1/recipient-groups","host":"127.0.0.1:39051","remoteAddress":"127.0.0.1","remotePort":35090},"msg":"incoming request"}
+{"level":30,"time":1795093979136,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","res":{"statusCode":201},"responseTime":15.912791000000027,"msg":"request completed"}
+{"level":30,"time":1795093979139,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","req":{"method":"GET","url":"/api/v1/incidents/8c495bd7-4664-437c-924a-31b33fe06a9a/timeline","host":"127.0.0.1:43109","remoteAddress":"127.0.0.1","remotePort":48138},"msg":"incoming request"}
+{"level":30,"time":1795093979143,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","res":{"statusCode":200},"responseTime":3.6709840000000327,"msg":"request completed"}
+{"level":30,"time":1795093979146,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-k","res":{"statusCode":200},"responseTime":11.524050999999986,"msg":"request completed"}
+{"level":30,"time":1795093979146,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:36499","remoteAddress":"127.0.0.1","remotePort":42498},"msg":"incoming request"}
+{"level":30,"time":1795093979147,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-l","req":{"method":"POST","url":"/api/v1/notifications/compose","host":"127.0.0.1:44605","remoteAddress":"127.0.0.1","remotePort":40698},"msg":"incoming request"}
+{"level":30,"time":1795093979148,"pid":213775,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-l","res":{"statusCode":403},"responseTime":1.4871789999999692,"msg":"request completed"}
+{"level":30,"time":1795093979150,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","res":{"statusCode":201},"responseTime":4.222247999999979,"msg":"request completed"}
+{"level":30,"time":1795093979151,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:35063","remoteAddress":"127.0.0.1","remotePort":39234},"msg":"incoming request"}
+{"level":30,"time":1795093979153,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","res":{"statusCode":409},"responseTime":1.9441059999999766,"msg":"request completed"}
+{"level":30,"time":1795093979154,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:44419","remoteAddress":"127.0.0.1","remotePort":35612},"msg":"incoming request"}
+{"level":30,"time":1795093979176,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","res":{"statusCode":201},"responseTime":21.612198999999976,"msg":"request completed"}
+{"level":30,"time":1795093979178,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:36679","remoteAddress":"127.0.0.1","remotePort":50852},"msg":"incoming request"}
+{"level":30,"time":1795093979181,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","res":{"statusCode":201},"responseTime":3.29580100000004,"msg":"request completed"}
+{"level":30,"time":1795093979182,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:33383","remoteAddress":"127.0.0.1","remotePort":57280},"msg":"incoming request"}
+{"level":30,"time":1795093979185,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","res":{"statusCode":201},"responseTime":2.851096000000041,"msg":"request completed"}
+{"level":30,"time":1795093979186,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-8","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:39423","remoteAddress":"127.0.0.1","remotePort":43738},"msg":"incoming request"}
+{"level":30,"time":1795093979189,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-8","res":{"statusCode":201},"responseTime":2.9737370000000283,"msg":"request completed"}
+{"level":30,"time":1795093979190,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-9","req":{"method":"GET","url":"/api/v1/incidents?severity=Critical&page_size=100","host":"127.0.0.1:36021","remoteAddress":"127.0.0.1","remotePort":42174},"msg":"incoming request"}
+{"level":30,"time":1795093979193,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-9","res":{"statusCode":200},"responseTime":2.60386299999999,"msg":"request completed"}
+{"level":30,"time":1795093979195,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-a","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:40269","remoteAddress":"127.0.0.1","remotePort":47928},"msg":"incoming request"}
+{"level":30,"time":1795093979199,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-a","res":{"statusCode":201},"responseTime":3.4925589999999715,"msg":"request completed"}
+{"level":30,"time":1795093979199,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-b","req":{"method":"GET","url":"/api/v1/incidents/3c810a67-194d-4f8d-b94a-a983e5ef2790","host":"127.0.0.1:45099","remoteAddress":"127.0.0.1","remotePort":36234},"msg":"incoming request"}
+{"level":30,"time":1795093979201,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-b","res":{"statusCode":404},"responseTime":1.9393159999999625,"msg":"request completed"}
+{"level":30,"time":1795093979202,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-c","req":{"method":"GET","url":"/api/v1/incidents?page_size=100","host":"127.0.0.1:37127","remoteAddress":"127.0.0.1","remotePort":50352},"msg":"incoming request"}
+{"level":30,"time":1795093979206,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-c","res":{"statusCode":200},"responseTime":3.2271519999999896,"msg":"request completed"}
+{"level":30,"time":1795093979207,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-d","req":{"method":"PATCH","url":"/api/v1/incidents/3c810a67-194d-4f8d-b94a-a983e5ef2790","host":"127.0.0.1:33427","remoteAddress":"127.0.0.1","remotePort":55246},"msg":"incoming request"}
+{"level":30,"time":1795093979209,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-d","res":{"statusCode":404},"responseTime":1.7183820000000196,"msg":"request completed"}
+{"level":30,"time":1795093979209,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-e","req":{"method":"GET","url":"/api/v1/incidents/3c810a67-194d-4f8d-b94a-a983e5ef2790/timeline","host":"127.0.0.1:44229","remoteAddress":"127.0.0.1","remotePort":45580},"msg":"incoming request"}
+{"level":30,"time":1795093979211,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-e","res":{"statusCode":404},"responseTime":1.4679229999999848,"msg":"request completed"}
+{"level":30,"time":1795093979212,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-f","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:44539","remoteAddress":"127.0.0.1","remotePort":56170},"msg":"incoming request"}
+{"level":30,"time":1795093979215,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-f","res":{"statusCode":201},"responseTime":3.1965339999999856,"msg":"request completed"}
+{"level":30,"time":1795093979229,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-g","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:46237","remoteAddress":"127.0.0.1","remotePort":55146},"msg":"incoming request"}
+{"level":30,"time":1795093979240,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-g","res":{"statusCode":201},"responseTime":11.216052999999988,"msg":"request completed"}
+{"level":30,"time":1795093979242,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-h","req":{"method":"POST","url":"/api/v1/tasks","host":"127.0.0.1:35645","remoteAddress":"127.0.0.1","remotePort":50468},"msg":"incoming request"}
+{"level":30,"time":1795093979246,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-h","res":{"statusCode":201},"responseTime":4.166412999999977,"msg":"request completed"}
+{"level":30,"time":1795093979247,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-i","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:41419","remoteAddress":"127.0.0.1","remotePort":40870},"msg":"incoming request"}
+{"level":30,"time":1795093979251,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-i","res":{"statusCode":201},"responseTime":3.5076480000000174,"msg":"request completed"}
+{"level":30,"time":1795093979252,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-j","req":{"method":"POST","url":"/api/v1/resource-requests","host":"127.0.0.1:43449","remoteAddress":"127.0.0.1","remotePort":58036},"msg":"incoming request"}
+{"level":40,"time":1795093979256,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-j","err":{"type":"Error","message":"NATS not connected","stack":"Error: NATS not connected\n    at publishEvent (/home/daytona/project/backend/src/modules/integration-gateway/nats-client.ts:45:18)\n    at publishResourceRequestStatusChanged (/home/daytona/project/backend/src/modules/incident-ops/resource-requests.ts:87:3)\n    at Object.<anonymous> (/home/daytona/project/backend/src/modules/incident-ops/resource-requests.ts:288:9)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)"},"msg":"resource_request.status_changed publish failed"}
+{"level":30,"time":1795093979257,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-j","res":{"statusCode":201},"responseTime":5.387803000000019,"msg":"request completed"}
+{"level":30,"time":1795093979258,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-k","req":{"method":"POST","url":"/api/v1/resource-requests/001fc7ed-df27-42fc-9866-4203c7236821/approve","host":"127.0.0.1:42619","remoteAddress":"127.0.0.1","remotePort":56218},"msg":"incoming request"}
+{"level":30,"time":1795093979260,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:43709","remoteAddress":"127.0.0.1","remotePort":56508},"msg":"incoming request"}
+{"level":40,"time":1795093979261,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-k","err":{"type":"Error","message":"NATS not connected","stack":"Error: NATS not connected\n    at publishEvent (/home/daytona/project/backend/src/modules/integration-gateway/nats-client.ts:45:18)\n    at publishResourceRequestStatusChanged (/home/daytona/project/backend/src/modules/incident-ops/resource-requests.ts:87:3)\n    at Object.<anonymous> (/home/daytona/project/backend/src/modules/incident-ops/resource-requests.ts:344:9)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)"},"msg":"resource_request.status_changed publish failed"}
+{"level":30,"time":1795093979261,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-k","res":{"statusCode":200},"responseTime":3.1656359999999495,"msg":"request completed"}
+{"level":30,"time":1795093979275,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-l","req":{"method":"GET","url":"/api/v1/tasks?page_size=5","host":"127.0.0.1:44157","remoteAddress":"127.0.0.1","remotePort":60432},"msg":"incoming request"}
+{"level":30,"time":1795093979280,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-l","res":{"statusCode":200},"responseTime":4.919264999999996,"msg":"request completed"}
+{"level":30,"time":1795093979281,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-m","req":{"method":"POST","url":"/api/v1/tasks","host":"127.0.0.1:45271","remoteAddress":"127.0.0.1","remotePort":55234},"msg":"incoming request"}
+{"level":30,"time":1795093979283,"pid":213786,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-m","res":{"statusCode":403},"responseTime":1.3473670000000197,"msg":"request completed"}
+{"level":30,"time":1795093979293,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","res":{"statusCode":201},"responseTime":33.045187999999996,"msg":"request completed"}
+{"level":30,"time":1795093979296,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","req":{"method":"POST","url":"/api/v1/tasks","host":"127.0.0.1:35931","remoteAddress":"127.0.0.1","remotePort":48188},"msg":"incoming request"}
+{"level":30,"time":1795093979301,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","res":{"statusCode":201},"responseTime":5.369950000000017,"msg":"request completed"}
+{"level":30,"time":1795093979302,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","req":{"method":"POST","url":"/api/v1/incidents/15001e11-617d-4134-b4d0-bc44dcd60d9f/sitreps","host":"127.0.0.1:37583","remoteAddress":"127.0.0.1","remotePort":55240},"msg":"incoming request"}
+{"level":30,"time":1795093979306,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","res":{"statusCode":201},"responseTime":3.899001999999996,"msg":"request completed"}
+{"level":30,"time":1795093979308,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:40173","remoteAddress":"127.0.0.1","remotePort":47214},"msg":"incoming request"}
+{"level":30,"time":1795093979311,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","res":{"statusCode":201},"responseTime":3.549386000000027,"msg":"request completed"}
+{"level":30,"time":1795093979313,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","req":{"method":"POST","url":"/api/v1/incidents/d5d29fd3-b076-4a6f-a9a9-afc045ad3272/aar","host":"127.0.0.1:41611","remoteAddress":"127.0.0.1","remotePort":59348},"msg":"incoming request"}
+{"level":30,"time":1795093979314,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","res":{"statusCode":409},"responseTime":1.6316789999999628,"msg":"request completed"}
+{"level":30,"time":1795093979315,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","req":{"method":"POST","url":"/api/v1/incidents/d5d29fd3-b076-4a6f-a9a9-afc045ad3272/closure","host":"127.0.0.1:42677","remoteAddress":"127.0.0.1","remotePort":47326},"msg":"incoming request"}
+{"level":30,"time":1795093979319,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","res":{"statusCode":200},"responseTime":3.4901350000000093,"msg":"request completed"}
+{"level":30,"time":1795093979320,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","req":{"method":"POST","url":"/api/v1/incidents/d5d29fd3-b076-4a6f-a9a9-afc045ad3272/aar","host":"127.0.0.1:36379","remoteAddress":"127.0.0.1","remotePort":41348},"msg":"incoming request"}
+{"level":30,"time":1795093979324,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","res":{"statusCode":201},"responseTime":3.5893010000000345,"msg":"request completed"}
+{"level":30,"time":1795093979325,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-8","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:43353","remoteAddress":"127.0.0.1","remotePort":40092},"msg":"incoming request"}
+{"level":30,"time":1795093979328,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-8","res":{"statusCode":201},"responseTime":3.0148740000000203,"msg":"request completed"}
+{"level":30,"time":1795093979329,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-9","req":{"method":"POST","url":"/api/v1/incidents/3c018363-b5ea-49a9-adb2-40784b9a1873/closure","host":"127.0.0.1:37991","remoteAddress":"127.0.0.1","remotePort":54444},"msg":"incoming request"}
+{"level":30,"time":1795093979337,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-9","res":{"statusCode":200},"responseTime":8.201309999999978,"msg":"request completed"}
+{"level":30,"time":1795093979338,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-a","req":{"method":"POST","url":"/api/v1/incidents/3c018363-b5ea-49a9-adb2-40784b9a1873/aar","host":"127.0.0.1:35085","remoteAddress":"127.0.0.1","remotePort":41740},"msg":"incoming request"}
+{"level":30,"time":1795093979340,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-a","res":{"statusCode":422},"responseTime":1.587266999999997,"msg":"request completed"}
+{"level":30,"time":1795093979341,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-b","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:40015","remoteAddress":"127.0.0.1","remotePort":36866},"msg":"incoming request"}
+{"level":30,"time":1795093979344,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-b","res":{"statusCode":201},"responseTime":2.93055499999997,"msg":"request completed"}
+{"level":30,"time":1795093979344,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-c","req":{"method":"POST","url":"/api/v1/incidents/a8beada4-e11d-4cf8-81bc-cd709b60ec04/closure","host":"127.0.0.1:37771","remoteAddress":"127.0.0.1","remotePort":54262},"msg":"incoming request"}
+{"level":30,"time":1795093979348,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-c","res":{"statusCode":200},"responseTime":3.3364670000000274,"msg":"request completed"}
+{"level":30,"time":1795093979349,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-d","req":{"method":"POST","url":"/api/v1/incidents/a8beada4-e11d-4cf8-81bc-cd709b60ec04/aar","host":"127.0.0.1:41703","remoteAddress":"127.0.0.1","remotePort":52592},"msg":"incoming request"}
+{"level":30,"time":1795093979352,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-d","res":{"statusCode":201},"responseTime":3.321107999999981,"msg":"request completed"}
+{"level":30,"time":1795093979353,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-e","req":{"method":"PATCH","url":"/api/v1/incidents/a8beada4-e11d-4cf8-81bc-cd709b60ec04/aar/c11b5913-074e-4383-b67d-dc33bdaee787/finalize","host":"127.0.0.1:41257","remoteAddress":"127.0.0.1","remotePort":43742},"msg":"incoming request"}
+{"level":30,"time":1795093979356,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-e","res":{"statusCode":200},"responseTime":2.7703650000000266,"msg":"request completed"}
+{"level":30,"time":1795093979356,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-f","req":{"method":"PATCH","url":"/api/v1/incidents/a8beada4-e11d-4cf8-81bc-cd709b60ec04/aar/c11b5913-074e-4383-b67d-dc33bdaee787/finalize","host":"127.0.0.1:35933","remoteAddress":"127.0.0.1","remotePort":42826},"msg":"incoming request"}
+{"level":30,"time":1795093979358,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-f","res":{"statusCode":403},"responseTime":1.7454130000000418,"msg":"request completed"}
+{"level":30,"time":1795093979359,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-g","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:34737","remoteAddress":"127.0.0.1","remotePort":49390},"msg":"incoming request"}
+{"level":30,"time":1795093979363,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-g","res":{"statusCode":201},"responseTime":3.2413290000000075,"msg":"request completed"}
+{"level":30,"time":1795093979363,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-h","req":{"method":"POST","url":"/api/v1/incidents/67388531-cf4c-40c3-953e-8fbe675774de/closure","host":"127.0.0.1:38319","remoteAddress":"127.0.0.1","remotePort":48548},"msg":"incoming request"}
+{"level":30,"time":1795093979376,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-h","res":{"statusCode":200},"responseTime":12.356921999999997,"msg":"request completed"}
+{"level":30,"time":1795093979377,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-i","req":{"method":"POST","url":"/api/v1/incidents/67388531-cf4c-40c3-953e-8fbe675774de/aar","host":"127.0.0.1:34661","remoteAddress":"127.0.0.1","remotePort":55386},"msg":"incoming request"}
+{"level":30,"time":1795093979380,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-i","res":{"statusCode":201},"responseTime":2.871584999999982,"msg":"request completed"}
+{"level":30,"time":1795093979380,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-j","req":{"method":"PATCH","url":"/api/v1/incidents/67388531-cf4c-40c3-953e-8fbe675774de/aar/6e7867e9-3079-434f-84db-c6ae6b2b13e6/finalize","host":"127.0.0.1:33967","remoteAddress":"127.0.0.1","remotePort":50624},"msg":"incoming request"}
+{"level":30,"time":1795093979383,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-j","res":{"statusCode":200},"responseTime":2.224290999999994,"msg":"request completed"}
+{"level":30,"time":1795093979384,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-k","req":{"method":"GET","url":"/api/v1/evidence-log?actor_id=f5338656-adf8-4b76-9776-e76b62634cf2&page_size=200","host":"127.0.0.1:32979","remoteAddress":"127.0.0.1","remotePort":33396},"msg":"incoming request"}
+{"level":30,"time":1795093979387,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-k","res":{"statusCode":200},"responseTime":2.9404539999999884,"msg":"request completed"}
+{"level":30,"time":1795093979388,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-l","req":{"method":"PATCH","url":"/api/v1/evidence-log","host":"127.0.0.1:34023","remoteAddress":"127.0.0.1","remotePort":41798},"msg":"incoming request"}
+{"level":30,"time":1795093979389,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-l","res":{"statusCode":403},"responseTime":1.2347650000000385,"msg":"request completed"}
+{"level":30,"time":1795093979390,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-m","req":{"method":"GET","url":"/api/v1/analytics/kpis?date_range=1970-01-01%2C2099-01-01","host":"127.0.0.1:38795","remoteAddress":"127.0.0.1","remotePort":51502},"msg":"incoming request"}
+{"level":30,"time":1795093979394,"pid":213797,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-m","res":{"statusCode":200},"responseTime":3.2025460000000407,"msg":"request completed"}
+{"level":30,"time":1795093979492,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:42699","remoteAddress":"127.0.0.1","remotePort":34362},"msg":"incoming request"}
+{"level":30,"time":1795093979511,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","res":{"statusCode":201},"responseTime":18.35197500000004,"msg":"request completed"}
+{"level":30,"time":1795093979514,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","req":{"method":"POST","url":"/api/v1/incidents/e598f30d-46c8-4f02-84c6-07fb984d2d4e/activation","host":"127.0.0.1:43441","remoteAddress":"127.0.0.1","remotePort":36436},"msg":"incoming request"}
+{"level":30,"time":1795093979518,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","res":{"statusCode":422},"responseTime":3.2226229999999987,"msg":"request completed"}
+{"level":30,"time":1795093979519,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","req":{"method":"GET","url":"/api/v1/incidents/e598f30d-46c8-4f02-84c6-07fb984d2d4e","host":"127.0.0.1:36449","remoteAddress":"127.0.0.1","remotePort":37960},"msg":"incoming request"}
+{"level":30,"time":1795093979537,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","res":{"statusCode":200},"responseTime":18.471108000000015,"msg":"request completed"}
+{"level":30,"time":1795093979538,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","req":{"method":"POST","url":"/api/v1/incidents/e598f30d-46c8-4f02-84c6-07fb984d2d4e/command-roles","host":"127.0.0.1:35229","remoteAddress":"127.0.0.1","remotePort":33606},"msg":"incoming request"}
+{"level":30,"time":1795093979542,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","res":{"statusCode":201},"responseTime":3.8073890000000006,"msg":"request completed"}
+{"level":30,"time":1795093979543,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","req":{"method":"POST","url":"/api/v1/incidents/e598f30d-46c8-4f02-84c6-07fb984d2d4e/activation","host":"127.0.0.1:44601","remoteAddress":"127.0.0.1","remotePort":59826},"msg":"incoming request"}
+{"level":30,"time":1795093979547,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","res":{"statusCode":200},"responseTime":3.880898000000002,"msg":"request completed"}
+{"level":30,"time":1795093979548,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","req":{"method":"GET","url":"/api/v1/incidents/e598f30d-46c8-4f02-84c6-07fb984d2d4e/timeline","host":"127.0.0.1:40129","remoteAddress":"127.0.0.1","remotePort":56014},"msg":"incoming request"}
+{"level":30,"time":1795093979551,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","res":{"statusCode":200},"responseTime":2.5496309999999767,"msg":"request completed"}
+{"level":30,"time":1795093979552,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","req":{"method":"POST","url":"/api/v1/incidents/e598f30d-46c8-4f02-84c6-07fb984d2d4e/activation","host":"127.0.0.1:33571","remoteAddress":"127.0.0.1","remotePort":34160},"msg":"incoming request"}
+{"level":30,"time":1795093979554,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","res":{"statusCode":400},"responseTime":1.258690999999999,"msg":"request completed"}
+{"level":30,"time":1795093979554,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-8","req":{"method":"GET","url":"/api/v1/incidents/e598f30d-46c8-4f02-84c6-07fb984d2d4e","host":"127.0.0.1:44261","remoteAddress":"127.0.0.1","remotePort":40388},"msg":"incoming request"}
+{"level":30,"time":1795093979557,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-8","res":{"statusCode":200},"responseTime":2.498794999999973,"msg":"request completed"}
+{"level":30,"time":1795093979558,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-9","req":{"method":"POST","url":"/api/v1/incidents/e598f30d-46c8-4f02-84c6-07fb984d2d4e/command-roles","host":"127.0.0.1:40241","remoteAddress":"127.0.0.1","remotePort":51268},"msg":"incoming request"}
+{"level":30,"time":1795093979561,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-9","res":{"statusCode":201},"responseTime":2.5632570000000214,"msg":"request completed"}
+{"level":30,"time":1795093979562,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-a","req":{"method":"GET","url":"/api/v1/incidents/e598f30d-46c8-4f02-84c6-07fb984d2d4e/timeline","host":"127.0.0.1:37519","remoteAddress":"127.0.0.1","remotePort":58906},"msg":"incoming request"}
+{"level":30,"time":1795093979577,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-a","res":{"statusCode":200},"responseTime":14.87949199999997,"msg":"request completed"}
+{"level":30,"time":1795093979578,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-b","req":{"method":"POST","url":"/api/v1/incidents/e598f30d-46c8-4f02-84c6-07fb984d2d4e/closure","host":"127.0.0.1:40151","remoteAddress":"127.0.0.1","remotePort":48704},"msg":"incoming request"}
+{"level":30,"time":1795093979582,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-b","res":{"statusCode":200},"responseTime":4.53329100000002,"msg":"request completed"}
+{"level":30,"time":1795093979583,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-c","req":{"method":"GET","url":"/api/v1/incidents/e598f30d-46c8-4f02-84c6-07fb984d2d4e/timeline","host":"127.0.0.1:46803","remoteAddress":"127.0.0.1","remotePort":59038},"msg":"incoming request"}
+{"level":30,"time":1795093979585,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-c","res":{"statusCode":200},"responseTime":2.1363269999999943,"msg":"request completed"}
+{"level":30,"time":1795093979587,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-d","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:37915","remoteAddress":"127.0.0.1","remotePort":53584},"msg":"incoming request"}
+{"level":30,"time":1795093979590,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-d","res":{"statusCode":201},"responseTime":3.18031400000001,"msg":"request completed"}
+{"level":30,"time":1795093979591,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-e","req":{"method":"POST","url":"/api/v1/incidents/47d38b51-200f-4cb0-82bf-c1fb795d6f2e/command-roles","host":"127.0.0.1:45393","remoteAddress":"127.0.0.1","remotePort":32866},"msg":"incoming request"}
+{"level":30,"time":1795093979594,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-e","res":{"statusCode":201},"responseTime":2.539942999999994,"msg":"request completed"}
+{"level":30,"time":1795093979595,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-f","req":{"method":"POST","url":"/api/v1/incidents/47d38b51-200f-4cb0-82bf-c1fb795d6f2e/command-roles","host":"127.0.0.1:34031","remoteAddress":"127.0.0.1","remotePort":50322},"msg":"incoming request"}
+{"level":30,"time":1795093979597,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-f","res":{"statusCode":201},"responseTime":2.4319899999999848,"msg":"request completed"}
+{"level":30,"time":1795093979598,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-g","req":{"method":"GET","url":"/api/v1/incidents/47d38b51-200f-4cb0-82bf-c1fb795d6f2e/timeline","host":"127.0.0.1:41763","remoteAddress":"127.0.0.1","remotePort":57168},"msg":"incoming request"}
+{"level":30,"time":1795093979600,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-g","res":{"statusCode":200},"responseTime":2.1133330000000115,"msg":"request completed"}
+{"level":30,"time":1795093979602,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-h","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:44501","remoteAddress":"127.0.0.1","remotePort":45888},"msg":"incoming request"}
+{"level":30,"time":1795093979606,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-h","res":{"statusCode":201},"responseTime":3.770480999999961,"msg":"request completed"}
+{"level":30,"time":1795093979607,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-i","req":{"method":"POST","url":"/api/v1/incidents/82f4d0a0-7f5a-4ec1-b4ef-2ddef349f7c2/activation","host":"127.0.0.1:42135","remoteAddress":"127.0.0.1","remotePort":40834},"msg":"incoming request"}
+{"level":30,"time":1795093979609,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-i","res":{"statusCode":404},"responseTime":2.044524000000024,"msg":"request completed"}
+{"level":30,"time":1795093979610,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-j","req":{"method":"POST","url":"/api/v1/incidents/82f4d0a0-7f5a-4ec1-b4ef-2ddef349f7c2/command-roles","host":"127.0.0.1:42321","remoteAddress":"127.0.0.1","remotePort":44174},"msg":"incoming request"}
+{"level":30,"time":1795093979612,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-j","res":{"statusCode":404},"responseTime":2.075000999999986,"msg":"request completed"}
+{"level":30,"time":1795093979614,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-k","req":{"method":"POST","url":"/api/v1/incidents/82f4d0a0-7f5a-4ec1-b4ef-2ddef349f7c2/closure","host":"127.0.0.1:32817","remoteAddress":"127.0.0.1","remotePort":48282},"msg":"incoming request"}
+{"level":30,"time":1795093979615,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-k","res":{"statusCode":404},"responseTime":1.8067780000000084,"msg":"request completed"}
+{"level":30,"time":1795093979616,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-l","req":{"method":"POST","url":"/api/v1/incidents/82f4d0a0-7f5a-4ec1-b4ef-2ddef349f7c2/activation","host":"127.0.0.1:43667","remoteAddress":"127.0.0.1","remotePort":36946},"msg":"incoming request"}
+{"level":30,"time":1795093979619,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-l","res":{"statusCode":200},"responseTime":2.775193999999999,"msg":"request completed"}
+{"level":30,"time":1795093979620,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-m","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:42077","remoteAddress":"127.0.0.1","remotePort":39178},"msg":"incoming request"}
+{"level":30,"time":1795093979624,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-m","res":{"statusCode":201},"responseTime":3.375920000000008,"msg":"request completed"}
+{"level":30,"time":1795093979625,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-n","req":{"method":"POST","url":"/api/v1/incidents/e5dc1d28-5608-4da1-840f-b03e0a846222/closure","host":"127.0.0.1:34045","remoteAddress":"127.0.0.1","remotePort":34224},"msg":"incoming request"}
+{"level":30,"time":1795093979628,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-n","res":{"statusCode":200},"responseTime":3.7255870000000186,"msg":"request completed"}
+{"level":30,"time":1795093979629,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-o","req":{"method":"POST","url":"/api/v1/incidents/e5dc1d28-5608-4da1-840f-b03e0a846222/closure","host":"127.0.0.1:45733","remoteAddress":"127.0.0.1","remotePort":54590},"msg":"incoming request"}
+{"level":30,"time":1795093979632,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","req":{"method":"POST","url":"/api/v1/plans","host":"127.0.0.1:35019","remoteAddress":"127.0.0.1","remotePort":58882},"msg":"incoming request"}
+{"level":30,"time":1795093979635,"pid":213811,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-o","res":{"statusCode":409},"responseTime":6.1043469999999616,"msg":"request completed"}
+{"level":30,"time":1795093979647,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","res":{"statusCode":201},"responseTime":14.716677000000004,"msg":"request completed"}
+{"level":30,"time":1795093979650,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","req":{"method":"POST","url":"/api/v1/plans/af6f31d9-df38-461d-bf1d-1bcf42b7f18a/submit-review","host":"127.0.0.1:36681","remoteAddress":"127.0.0.1","remotePort":53670},"msg":"incoming request"}
+{"level":30,"time":1795093979655,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","res":{"statusCode":200},"responseTime":5.12722500000001,"msg":"request completed"}
+{"level":30,"time":1795093979657,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","req":{"method":"POST","url":"/api/v1/plans/af6f31d9-df38-461d-bf1d-1bcf42b7f18a/review","host":"127.0.0.1:36167","remoteAddress":"127.0.0.1","remotePort":58324},"msg":"incoming request"}
+{"level":30,"time":1795093979675,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","res":{"statusCode":403},"responseTime":17.995667000000026,"msg":"request completed"}
+{"level":30,"time":1795093979676,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","req":{"method":"GET","url":"/api/v1/plans/af6f31d9-df38-461d-bf1d-1bcf42b7f18a","host":"127.0.0.1:35479","remoteAddress":"127.0.0.1","remotePort":59014},"msg":"incoming request"}
+{"level":30,"time":1795093979679,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","res":{"statusCode":200},"responseTime":2.6169380000000046,"msg":"request completed"}
+{"level":30,"time":1795093979680,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","req":{"method":"POST","url":"/api/v1/plans/af6f31d9-df38-461d-bf1d-1bcf42b7f18a/review","host":"127.0.0.1:42287","remoteAddress":"127.0.0.1","remotePort":58818},"msg":"incoming request"}
+{"level":30,"time":1795093979684,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","res":{"statusCode":200},"responseTime":3.825132999999994,"msg":"request completed"}
+{"level":30,"time":1795093979685,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","req":{"method":"GET","url":"/api/v1/plans/af6f31d9-df38-461d-bf1d-1bcf42b7f18a","host":"127.0.0.1:43131","remoteAddress":"127.0.0.1","remotePort":39008},"msg":"incoming request"}
+{"level":30,"time":1795093979687,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","res":{"statusCode":200},"responseTime":2.0156000000000063,"msg":"request completed"}
+{"level":30,"time":1795093979688,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","req":{"method":"POST","url":"/api/v1/plans/af6f31d9-df38-461d-bf1d-1bcf42b7f18a/sections/bc605e84-dd55-498c-9ca7-727cd3f7678c/link-tasks","host":"127.0.0.1:36523","remoteAddress":"127.0.0.1","remotePort":40702},"msg":"incoming request"}
+{"level":30,"time":1795093979690,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","res":{"statusCode":204},"responseTime":1.8987300000000005,"msg":"request completed"}
+{"level":30,"time":1795093979690,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-8","req":{"method":"GET","url":"/api/v1/plans/af6f31d9-df38-461d-bf1d-1bcf42b7f18a","host":"127.0.0.1:40645","remoteAddress":"127.0.0.1","remotePort":54756},"msg":"incoming request"}
+{"level":30,"time":1795093979692,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-8","res":{"statusCode":200},"responseTime":1.9510879999999702,"msg":"request completed"}
+{"level":30,"time":1795093979693,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-9","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:42571","remoteAddress":"127.0.0.1","remotePort":54770},"msg":"incoming request"}
+{"level":30,"time":1795093979704,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-9","res":{"statusCode":201},"responseTime":10.539183000000037,"msg":"request completed"}
+{"level":30,"time":1795093979705,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-a","req":{"method":"POST","url":"/api/v1/plans/af6f31d9-df38-461d-bf1d-1bcf42b7f18a/materialize-tasks","host":"127.0.0.1:41011","remoteAddress":"127.0.0.1","remotePort":58032},"msg":"incoming request"}
+{"level":30,"time":1795093979710,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-a","res":{"statusCode":200},"responseTime":4.398026999999956,"msg":"request completed"}
+{"level":30,"time":1795093979711,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-b","req":{"method":"GET","url":"/api/v1/tasks?incident=8c584732-6eaf-43d6-a97b-74a7f6ab7e5d","host":"127.0.0.1:33603","remoteAddress":"127.0.0.1","remotePort":39022},"msg":"incoming request"}
+{"level":30,"time":1795093979714,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-b","res":{"statusCode":200},"responseTime":2.52642800000001,"msg":"request completed"}
+{"level":30,"time":1795093979715,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-c","req":{"method":"POST","url":"/api/v1/plans","host":"127.0.0.1:44189","remoteAddress":"127.0.0.1","remotePort":40776},"msg":"incoming request"}
+{"level":30,"time":1795093979718,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-c","res":{"statusCode":201},"responseTime":2.9072419999999966,"msg":"request completed"}
+{"level":30,"time":1795093979719,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-d","req":{"method":"POST","url":"/api/v1/plans/f6f90355-ddc7-4c62-a055-6dbee5736a8e/review","host":"127.0.0.1:35473","remoteAddress":"127.0.0.1","remotePort":34152},"msg":"incoming request"}
+{"level":30,"time":1795093979721,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-d","res":{"statusCode":409},"responseTime":2.1483289999999897,"msg":"request completed"}
+{"level":30,"time":1795093979722,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-e","req":{"method":"POST","url":"/api/v1/plans","host":"127.0.0.1:36595","remoteAddress":"127.0.0.1","remotePort":39604},"msg":"incoming request"}
+{"level":30,"time":1795093979724,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-e","res":{"statusCode":201},"responseTime":2.2549889999999664,"msg":"request completed"}
+{"level":30,"time":1795093979725,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-f","req":{"method":"POST","url":"/api/v1/plans/f9c86ee4-598c-469c-94e0-2a50b5e26b23/submit-review","host":"127.0.0.1:46291","remoteAddress":"127.0.0.1","remotePort":42786},"msg":"incoming request"}
+{"level":30,"time":1795093979727,"pid":213861,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-f","res":{"statusCode":422},"responseTime":1.6637499999999932,"msg":"request completed"}
+{"level":30,"time":1795093979741,"pid":213872,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:40479","remoteAddress":"127.0.0.1","remotePort":35712},"msg":"incoming request"}
+{"level":30,"time":1795093979758,"pid":213872,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","res":{"statusCode":201},"responseTime":16.136961000000042,"msg":"request completed"}
+{"level":30,"time":1795093979761,"pid":213872,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","req":{"method":"POST","url":"/api/v1/incidents/4417dbea-5fb3-4e5c-943c-04f499478f5e/ics-forms","host":"127.0.0.1:44025","remoteAddress":"127.0.0.1","remotePort":52658},"msg":"incoming request"}
+{"level":30,"time":1795093979765,"pid":213872,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","res":{"statusCode":201},"responseTime":4.328837000000021,"msg":"request completed"}
+{"level":30,"time":1795093979776,"pid":213872,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","req":{"method":"POST","url":"/api/v1/incidents/4417dbea-5fb3-4e5c-943c-04f499478f5e/ics-forms/2e5a7ed4-5468-4e6f-8d07-a96963672672/approve","host":"127.0.0.1:42543","remoteAddress":"127.0.0.1","remotePort":56036},"msg":"incoming request"}
+{"level":30,"time":1795093979778,"pid":213872,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","res":{"statusCode":403},"responseTime":2.7694229999999607,"msg":"request completed"}
+{"level":30,"time":1795093979780,"pid":213872,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","req":{"method":"GET","url":"/api/v1/me","host":"127.0.0.1:37335","remoteAddress":"127.0.0.1","remotePort":53546},"msg":"incoming request"}
+{"level":30,"time":1795093979782,"pid":213872,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","res":{"statusCode":200},"responseTime":2.4067529999999806,"msg":"request completed"}
+{"level":30,"time":1795093979783,"pid":213872,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","req":{"method":"POST","url":"/api/v1/incidents/4417dbea-5fb3-4e5c-943c-04f499478f5e/ics-forms/2e5a7ed4-5468-4e6f-8d07-a96963672672/approve","host":"127.0.0.1:43289","remoteAddress":"127.0.0.1","remotePort":55712},"msg":"incoming request"}
+{"level":30,"time":1795093979787,"pid":213872,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","res":{"statusCode":200},"responseTime":3.1897519999999986,"msg":"request completed"}
+{"level":30,"time":1795093979787,"pid":213872,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","req":{"method":"GET","url":"/api/v1/incidents/4417dbea-5fb3-4e5c-943c-04f499478f5e/timeline","host":"127.0.0.1:37655","remoteAddress":"127.0.0.1","remotePort":42898},"msg":"incoming request"}
+{"level":30,"time":1795093979790,"pid":213872,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","res":{"statusCode":200},"responseTime":2.258985999999993,"msg":"request completed"}
+{"level":30,"time":1795093979791,"pid":213872,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","req":{"method":"GET","url":"/api/v1/me","host":"127.0.0.1:35695","remoteAddress":"127.0.0.1","remotePort":34644},"msg":"incoming request"}
+{"level":30,"time":1795093979793,"pid":213872,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","res":{"statusCode":200},"responseTime":1.5494750000000295,"msg":"request completed"}
+{"level":30,"time":1795093979794,"pid":213872,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-8","req":{"method":"POST","url":"/api/v1/incidents/4417dbea-5fb3-4e5c-943c-04f499478f5e/ics-forms","host":"127.0.0.1:39125","remoteAddress":"127.0.0.1","remotePort":52482},"msg":"incoming request"}
+{"level":30,"time":1795093979796,"pid":213872,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-8","res":{"statusCode":201},"responseTime":1.9614879999999744,"msg":"request completed"}
+{"level":30,"time":1795093979797,"pid":213872,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-9","req":{"method":"POST","url":"/api/v1/incidents/4417dbea-5fb3-4e5c-943c-04f499478f5e/ics-forms/a32af18f-b4af-47d0-af65-6653d9a8af47/approve","host":"127.0.0.1:33863","remoteAddress":"127.0.0.1","remotePort":43490},"msg":"incoming request"}
+{"level":30,"time":1795093979800,"pid":213872,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-9","res":{"statusCode":400},"responseTime":2.3256210000000124,"msg":"request completed"}
+{"level":30,"time":1795093979801,"pid":213872,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-a","req":{"method":"GET","url":"/api/v1/me","host":"127.0.0.1:38833","remoteAddress":"127.0.0.1","remotePort":51322},"msg":"incoming request"}
+{"level":30,"time":1795093979803,"pid":213872,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-a","res":{"statusCode":200},"responseTime":1.892518999999993,"msg":"request completed"}
+{"level":30,"time":1795093979804,"pid":213872,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-b","req":{"method":"POST","url":"/api/v1/incidents/4417dbea-5fb3-4e5c-943c-04f499478f5e/ics-forms/a32af18f-b4af-47d0-af65-6653d9a8af47/approve","host":"127.0.0.1:38929","remoteAddress":"127.0.0.1","remotePort":43352},"msg":"incoming request"}
+{"level":30,"time":1795093979807,"pid":213872,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-b","res":{"statusCode":200},"responseTime":2.9112890000000107,"msg":"request completed"}
+{"level":30,"time":1795093979808,"pid":213872,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-c","req":{"method":"GET","url":"/api/v1/me","host":"127.0.0.1:45557","remoteAddress":"127.0.0.1","remotePort":46784},"msg":"incoming request"}
+{"level":30,"time":1795093979810,"pid":213872,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-c","res":{"statusCode":200},"responseTime":1.5305510000000027,"msg":"request completed"}
+{"level":30,"time":1795093979811,"pid":213872,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-d","req":{"method":"POST","url":"/api/v1/incidents/4417dbea-5fb3-4e5c-943c-04f499478f5e/ics-forms/2e5a7ed4-5468-4e6f-8d07-a96963672672/approve","host":"127.0.0.1:39339","remoteAddress":"127.0.0.1","remotePort":47482},"msg":"incoming request"}
+{"level":30,"time":1795093979812,"pid":213872,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-d","res":{"statusCode":403},"responseTime":1.234435000000019,"msg":"request completed"}
+{"level":30,"time":1795093979813,"pid":213872,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-e","req":{"method":"GET","url":"/api/v1/dashboard/summary","host":"127.0.0.1:36951","remoteAddress":"127.0.0.1","remotePort":33868},"msg":"incoming request"}
+{"level":30,"time":1795093979816,"pid":213872,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-e","res":{"statusCode":200},"responseTime":2.6677719999999567,"msg":"request completed"}
+{"level":30,"time":1795093979990,"pid":213903,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","req":{"method":"POST","url":"/api/v1/admin/users","host":"127.0.0.1:35947","remoteAddress":"127.0.0.1","remotePort":42470},"msg":"incoming request"}
+{"level":30,"time":1795093979997,"pid":213903,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","res":{"statusCode":201},"responseTime":6.654098000000033,"msg":"request completed"}
+{"level":30,"time":1795093980000,"pid":213903,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","req":{"method":"GET","url":"/api/v1/admin/users?page_size=1000","host":"127.0.0.1:33121","remoteAddress":"127.0.0.1","remotePort":43520},"msg":"incoming request"}
+{"level":30,"time":1795093980010,"pid":213903,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","res":{"statusCode":200},"responseTime":9.34286000000003,"msg":"request completed"}
+{"level":30,"time":1795093980013,"pid":213903,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","req":{"method":"GET","url":"/api/v1/me","host":"127.0.0.1:41821","remoteAddress":"127.0.0.1","remotePort":54050},"msg":"incoming request"}
+{"level":30,"time":1795093980015,"pid":213903,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","res":{"statusCode":200},"responseTime":2.64530000000002,"msg":"request completed"}
+{"level":30,"time":1795093980016,"pid":213903,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","req":{"method":"PATCH","url":"/api/v1/admin/users/af14ed1e-6e95-45b9-bb2c-a0b5b70dffbe","host":"127.0.0.1:44871","remoteAddress":"127.0.0.1","remotePort":37978},"msg":"incoming request"}
+{"level":30,"time":1795093980019,"pid":213903,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","res":{"statusCode":200},"responseTime":3.0338090000000193,"msg":"request completed"}
+{"level":30,"time":1795093980020,"pid":213903,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","req":{"method":"GET","url":"/api/v1/me","host":"127.0.0.1:44195","remoteAddress":"127.0.0.1","remotePort":47014},"msg":"incoming request"}
+{"level":30,"time":1795093980021,"pid":213903,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","res":{"statusCode":401},"responseTime":0.5323480000000131,"msg":"request completed"}
+{"level":30,"time":1795093980036,"pid":213903,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","req":{"method":"GET","url":"/api/v1/admin/audit-log","host":"127.0.0.1:38135","remoteAddress":"127.0.0.1","remotePort":37728},"msg":"incoming request"}
+{"level":30,"time":1795093980037,"pid":213903,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","res":{"statusCode":403},"responseTime":1.2736879999999928,"msg":"request completed"}
+{"level":30,"time":1795093980038,"pid":213903,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","req":{"method":"PATCH","url":"/api/v1/admin/roles/8c257962-6ced-46b5-b7a3-f0d6e40ebb93","host":"127.0.0.1:46115","remoteAddress":"127.0.0.1","remotePort":57156},"msg":"incoming request"}
+{"level":30,"time":1795093980042,"pid":213903,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","res":{"statusCode":200},"responseTime":4.3228860000000395,"msg":"request completed"}
+{"level":30,"time":1795093980043,"pid":213903,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-8","req":{"method":"GET","url":"/api/v1/admin/audit-log","host":"127.0.0.1:45349","remoteAddress":"127.0.0.1","remotePort":37966},"msg":"incoming request"}
+{"level":30,"time":1795093980047,"pid":213903,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-8","res":{"statusCode":200},"responseTime":3.1357209999999895,"msg":"request completed"}
+{"level":30,"time":1795093980048,"pid":213903,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-9","req":{"method":"GET","url":"/api/v1/admin/audit-log?actor_id=1074b68f-804e-465c-8cd0-35c51a0b3587&page_size=50","host":"127.0.0.1:35437","remoteAddress":"127.0.0.1","remotePort":34214},"msg":"incoming request"}
+{"level":30,"time":1795093980050,"pid":213903,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-9","res":{"statusCode":200},"responseTime":2.1219090000000165,"msg":"request completed"}
+{"level":30,"time":1795093980052,"pid":213903,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-a","req":{"method":"PATCH","url":"/api/v1/admin/audit-log","host":"127.0.0.1:44375","remoteAddress":"127.0.0.1","remotePort":55444},"msg":"incoming request"}
+{"level":30,"time":1795093980054,"pid":213903,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-a","res":{"statusCode":403},"responseTime":1.6457260000000247,"msg":"request completed"}
+{"level":30,"time":1795093980055,"pid":213903,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-b","req":{"method":"POST","url":"/api/v1/admin/sso-config/test","host":"127.0.0.1:45251","remoteAddress":"127.0.0.1","remotePort":49786},"msg":"incoming request"}
+{"level":30,"time":1795093980057,"pid":213903,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-b","res":{"statusCode":200},"responseTime":1.971537000000012,"msg":"request completed"}
+{"level":30,"time":1795093980058,"pid":213903,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-c","req":{"method":"PATCH","url":"/api/v1/admin/sso-config","host":"127.0.0.1:39463","remoteAddress":"127.0.0.1","remotePort":58042},"msg":"incoming request"}
+{"level":30,"time":1795093980061,"pid":213903,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-c","res":{"statusCode":422},"responseTime":2.49166299999996,"msg":"request completed"}
+{"level":30,"time":1795093980062,"pid":213903,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-d","req":{"method":"GET","url":"/api/v1/admin/sso-config","host":"127.0.0.1:33467","remoteAddress":"127.0.0.1","remotePort":46444},"msg":"incoming request"}
+{"level":30,"time":1795093980065,"pid":213903,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-d","res":{"statusCode":200},"responseTime":2.2505899999999883,"msg":"request completed"}
+{"level":30,"time":1795093980066,"pid":213903,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-e","req":{"method":"GET","url":"/api/v1/admin/audit-log?actor_id=1074b68f-804e-465c-8cd0-35c51a0b3587&action_type=record_view","host":"127.0.0.1:41743","remoteAddress":"127.0.0.1","remotePort":54312},"msg":"incoming request"}
+{"level":30,"time":1795093980068,"pid":213903,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-e","res":{"statusCode":200},"responseTime":2.186370000000011,"msg":"request completed"}
+{"level":30,"time":1795093980082,"pid":213916,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","req":{"method":"POST","url":"/api/v1/tasks","host":"127.0.0.1:44301","remoteAddress":"127.0.0.1","remotePort":43160},"msg":"incoming request"}
+{"level":30,"time":1795093980088,"pid":213916,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","res":{"statusCode":422},"responseTime":5.213686999999993,"msg":"request completed"}
+{"level":30,"time":1795093980092,"pid":213916,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","req":{"method":"POST","url":"/api/v1/tasks","host":"127.0.0.1:46479","remoteAddress":"127.0.0.1","remotePort":52178},"msg":"incoming request"}
+{"level":30,"time":1795093980094,"pid":213916,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","res":{"statusCode":422},"responseTime":2.2109459999999785,"msg":"request completed"}
+{"level":30,"time":1795093980095,"pid":213916,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","req":{"method":"POST","url":"/api/v1/tasks","host":"127.0.0.1:37635","remoteAddress":"127.0.0.1","remotePort":35350},"msg":"incoming request"}
+{"level":30,"time":1795093980100,"pid":213916,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","res":{"statusCode":201},"responseTime":4.671178999999995,"msg":"request completed"}
+{"level":30,"time":1795093980101,"pid":213916,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:45057","remoteAddress":"127.0.0.1","remotePort":53194},"msg":"incoming request"}
+{"level":30,"time":1795093980111,"pid":213916,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","res":{"statusCode":201},"responseTime":9.92200600000001,"msg":"request completed"}
+{"level":30,"time":1795093980112,"pid":213916,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","req":{"method":"POST","url":"/api/v1/tasks","host":"127.0.0.1:43251","remoteAddress":"127.0.0.1","remotePort":54262},"msg":"incoming request"}
+{"level":30,"time":1795093980115,"pid":213916,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","res":{"statusCode":201},"responseTime":2.7666679999999815,"msg":"request completed"}
+{"level":30,"time":1795093980116,"pid":213916,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","req":{"method":"GET","url":"/api/v1/incidents/d9813a4d-f150-47bf-a571-d66b995cf2b4/timeline","host":"127.0.0.1:42289","remoteAddress":"127.0.0.1","remotePort":35230},"msg":"incoming request"}
+{"level":30,"time":1795093980118,"pid":213916,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","res":{"statusCode":200},"responseTime":2.363202000000001,"msg":"request completed"}
+{"level":30,"time":1795093980120,"pid":213916,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","req":{"method":"POST","url":"/api/v1/tasks","host":"127.0.0.1:43415","remoteAddress":"127.0.0.1","remotePort":54166},"msg":"incoming request"}
+{"level":30,"time":1795093980122,"pid":213916,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","res":{"statusCode":201},"responseTime":2.37257900000003,"msg":"request completed"}
+{"level":30,"time":1795093980123,"pid":213916,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-8","req":{"method":"PATCH","url":"/api/v1/tasks/28ef7072-10a9-4619-8ff1-18fe6d2471be/status","host":"127.0.0.1:45241","remoteAddress":"127.0.0.1","remotePort":49354},"msg":"incoming request"}
+{"level":30,"time":1795093980125,"pid":213916,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-8","res":{"statusCode":409},"responseTime":1.859687000000008,"msg":"request completed"}
+{"level":30,"time":1795093980126,"pid":213916,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-9","req":{"method":"POST","url":"/api/v1/tasks","host":"127.0.0.1:38363","remoteAddress":"127.0.0.1","remotePort":53172},"msg":"incoming request"}
+{"level":30,"time":1795093980136,"pid":213916,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-9","res":{"statusCode":201},"responseTime":9.413321999999994,"msg":"request completed"}
+{"level":30,"time":1795093980137,"pid":213916,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-a","req":{"method":"PATCH","url":"/api/v1/tasks/a6eab27e-e26e-42c0-8378-804791b2fb69/status","host":"127.0.0.1:43697","remoteAddress":"127.0.0.1","remotePort":35160},"msg":"incoming request"}
+{"level":30,"time":1795093980139,"pid":213916,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-a","res":{"statusCode":409},"responseTime":2.3491559999999936,"msg":"request completed"}
+{"level":30,"time":1795093980140,"pid":213916,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-b","req":{"method":"PATCH","url":"/api/v1/tasks/a6eab27e-e26e-42c0-8378-804791b2fb69/status","host":"127.0.0.1:34403","remoteAddress":"127.0.0.1","remotePort":33828},"msg":"incoming request"}
+{"level":30,"time":1795093980143,"pid":213916,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-b","res":{"statusCode":200},"responseTime":3.0582660000000033,"msg":"request completed"}
+{"level":30,"time":1795093980144,"pid":213916,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-c","req":{"method":"PATCH","url":"/api/v1/tasks/a6eab27e-e26e-42c0-8378-804791b2fb69/status","host":"127.0.0.1:39259","remoteAddress":"127.0.0.1","remotePort":55264},"msg":"incoming request"}
+{"level":30,"time":1795093980146,"pid":213916,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-c","res":{"statusCode":409},"responseTime":1.733771000000047,"msg":"request completed"}
+{"level":30,"time":1795093980146,"pid":213916,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-d","req":{"method":"PATCH","url":"/api/v1/tasks/a6eab27e-e26e-42c0-8378-804791b2fb69/status","host":"127.0.0.1:36751","remoteAddress":"127.0.0.1","remotePort":55248},"msg":"incoming request"}
+{"level":30,"time":1795093980149,"pid":213916,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-d","res":{"statusCode":200},"responseTime":2.4607840000000465,"msg":"request completed"}
+{"level":30,"time":1795093980150,"pid":213916,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-e","req":{"method":"PATCH","url":"/api/v1/tasks/a6eab27e-e26e-42c0-8378-804791b2fb69/status","host":"127.0.0.1:34597","remoteAddress":"127.0.0.1","remotePort":47380},"msg":"incoming request"}
+{"level":30,"time":1795093980152,"pid":213916,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-e","res":{"statusCode":200},"responseTime":2.2604989999999816,"msg":"request completed"}
+{"level":30,"time":1795093980180,"pid":213927,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","req":{"method":"POST","url":"/api/v1/admin/api-clients","host":"127.0.0.1:37589","remoteAddress":"127.0.0.1","remotePort":48160},"msg":"incoming request"}
+{"level":30,"time":1795093980211,"pid":213927,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","res":{"statusCode":201},"responseTime":31.161606000000006,"msg":"request completed"}
+{"level":30,"time":1795093980214,"pid":213927,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","req":{"method":"GET","url":"/api/v1/admin/api-clients","host":"127.0.0.1:38803","remoteAddress":"127.0.0.1","remotePort":46716},"msg":"incoming request"}
+{"level":30,"time":1795093980217,"pid":213927,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","res":{"statusCode":200},"responseTime":3.2746610000000373,"msg":"request completed"}
+{"level":30,"time":1795093980234,"pid":213927,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","req":{"method":"POST","url":"/api/v1/admin/federation-grants","host":"127.0.0.1:39745","remoteAddress":"127.0.0.1","remotePort":50056},"msg":"incoming request"}
+{"level":30,"time":1795093980236,"pid":213927,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","res":{"statusCode":400},"responseTime":1.922155000000032,"msg":"request completed"}
+{"level":30,"time":1795093980238,"pid":213927,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","req":{"method":"POST","url":"/api/v1/admin/federation-grants","host":"127.0.0.1:35419","remoteAddress":"127.0.0.1","remotePort":45938},"msg":"incoming request"}
+{"level":30,"time":1795093980241,"pid":213927,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","res":{"statusCode":201},"responseTime":3.4188910000000305,"msg":"request completed"}
+{"level":30,"time":1795093980243,"pid":213927,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","req":{"method":"POST","url":"/api/v1/admin/federation-grants/60948788-5e1e-47e4-930b-97e22edc4513/revoke","host":"127.0.0.1:32805","remoteAddress":"127.0.0.1","remotePort":59248},"msg":"incoming request"}
+{"level":30,"time":1795093980246,"pid":213927,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","res":{"statusCode":204},"responseTime":2.831088999999963,"msg":"request completed"}
+{"level":30,"time":1795093980248,"pid":213927,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","req":{"method":"POST","url":"/api/v1/admin/record-authority","host":"127.0.0.1:34301","remoteAddress":"127.0.0.1","remotePort":39586},"msg":"incoming request"}
+{"level":30,"time":1795093980250,"pid":213927,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","res":{"statusCode":200},"responseTime":2.3068460000000073,"msg":"request completed"}
+{"level":30,"time":1795093980251,"pid":213927,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","req":{"method":"GET","url":"/api/v1/admin/record-authority","host":"127.0.0.1:39273","remoteAddress":"127.0.0.1","remotePort":52390},"msg":"incoming request"}
+{"level":30,"time":1795093980253,"pid":213927,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","res":{"statusCode":200},"responseTime":1.615729999999985,"msg":"request completed"}
+{"level":30,"time":1795093980254,"pid":213927,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-8","req":{"method":"POST","url":"/api/v1/admin/record-authority","host":"127.0.0.1:44289","remoteAddress":"127.0.0.1","remotePort":35796},"msg":"incoming request"}
+{"level":30,"time":1795093980256,"pid":213927,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-8","res":{"statusCode":200},"responseTime":1.9580220000000281,"msg":"request completed"}
+{"level":30,"time":1795093980406,"pid":213940,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:42183","remoteAddress":"127.0.0.1","remotePort":39640},"msg":"incoming request"}
+{"level":30,"time":1795093980438,"pid":213940,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","res":{"statusCode":201},"responseTime":31.722077000000013,"msg":"request completed"}
+{"level":30,"time":1795093980447,"pid":213940,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","req":{"method":"GET","url":"/api/v1/incidents/60d848dc-2aad-459a-8ebf-1ee50c82f6bf/timeline","host":"127.0.0.1:34655","remoteAddress":"127.0.0.1","remotePort":58824},"msg":"incoming request"}
+{"level":30,"time":1795093980450,"pid":213940,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","res":{"statusCode":200},"responseTime":3.6358379999999784,"msg":"request completed"}
+{"level":30,"time":1795093980455,"pid":213940,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:46641","remoteAddress":"127.0.0.1","remotePort":48410},"msg":"incoming request"}
+{"level":30,"time":1795093980458,"pid":213940,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","res":{"statusCode":201},"responseTime":3.139005999999995,"msg":"request completed"}
+{"level":30,"time":1795093980459,"pid":213940,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","req":{"method":"POST","url":"/api/v1/incidents/91fecc45-9812-4250-9f0d-ee8e47338a04/closure","host":"127.0.0.1:34767","remoteAddress":"127.0.0.1","remotePort":34718},"msg":"incoming request"}
+{"level":30,"time":1795093980465,"pid":213940,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","res":{"statusCode":200},"responseTime":5.499472999999966,"msg":"request completed"}
+{"level":30,"time":1795093980467,"pid":213940,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","req":{"method":"GET","url":"/api/v1/incidents/91fecc45-9812-4250-9f0d-ee8e47338a04/timeline","host":"127.0.0.1:45477","remoteAddress":"127.0.0.1","remotePort":42414},"msg":"incoming request"}
+{"level":30,"time":1795093980470,"pid":213940,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","res":{"statusCode":200},"responseTime":2.700784999999996,"msg":"request completed"}
+{"level":30,"time":1795093980518,"pid":213952,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:39141","remoteAddress":"127.0.0.1","remotePort":43656},"msg":"incoming request"}
+{"level":30,"time":1795093980537,"pid":213952,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","res":{"statusCode":201},"responseTime":18.773275000000012,"msg":"request completed"}
+{"level":30,"time":1795093980540,"pid":213952,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:44609","remoteAddress":"127.0.0.1","remotePort":52794},"msg":"incoming request"}
+{"level":30,"time":1795093980545,"pid":213952,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","res":{"statusCode":201},"responseTime":4.695084999999949,"msg":"request completed"}
+{"level":30,"time":1795093980546,"pid":213952,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","req":{"method":"GET","url":"/api/v1/operating-picture/markers","host":"127.0.0.1:35547","remoteAddress":"127.0.0.1","remotePort":59516},"msg":"incoming request"}
+{"level":30,"time":1795093980550,"pid":213952,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","res":{"statusCode":200},"responseTime":4.490020000000015,"msg":"request completed"}
+{"level":30,"time":1795093980553,"pid":213952,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","req":{"method":"POST","url":"/api/v1/incidents","host":"127.0.0.1:44143","remoteAddress":"127.0.0.1","remotePort":42836},"msg":"incoming request"}
+{"level":30,"time":1795093980558,"pid":213952,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","res":{"statusCode":201},"responseTime":4.443452999999977,"msg":"request completed"}
+{"level":30,"time":1795093980560,"pid":213952,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","req":{"method":"GET","url":"/api/v1/operating-picture/markers?force_gis_failure=true","host":"127.0.0.1:33107","remoteAddress":"127.0.0.1","remotePort":49108},"msg":"incoming request"}
+{"level":30,"time":1795093980563,"pid":213952,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","res":{"statusCode":200},"responseTime":2.902823000000012,"msg":"request completed"}
+{"level":30,"time":1795093980564,"pid":213952,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","req":{"method":"GET","url":"/api/v1/operating-picture/markers?bbox=1%2C2%2Cnotanumber","host":"127.0.0.1:36571","remoteAddress":"127.0.0.1","remotePort":55736},"msg":"incoming request"}
+{"level":30,"time":1795093980567,"pid":213952,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","res":{"statusCode":200},"responseTime":2.8429309999999646,"msg":"request completed"}
+{"level":30,"time":1795093980569,"pid":213952,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","req":{"method":"GET","url":"/api/v1/operating-picture/layers","host":"127.0.0.1:39971","remoteAddress":"127.0.0.1","remotePort":41516},"msg":"incoming request"}
+{"level":30,"time":1795093980571,"pid":213952,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","res":{"statusCode":200},"responseTime":2.389882,"msg":"request completed"}
+{"level":30,"time":1795093980575,"pid":213952,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-8","req":{"method":"GET","url":"/api/v1/operating-picture/markers","host":"127.0.0.1:39267","remoteAddress":"127.0.0.1","remotePort":54342},"msg":"incoming request"}
+{"level":30,"time":1795093980577,"pid":213963,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","req":{"method":"GET","url":"/api/v1/me/landing-config","host":"127.0.0.1:41525","remoteAddress":"127.0.0.1","remotePort":34530},"msg":"incoming request"}
+{"level":30,"time":1795093980578,"pid":213952,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-8","res":{"statusCode":200},"responseTime":3.5738020000000006,"msg":"request completed"}
+{"level":30,"time":1795093980580,"pid":213952,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-9","req":{"method":"GET","url":"/api/v1/integrations/gis/health","host":"127.0.0.1:43969","remoteAddress":"127.0.0.1","remotePort":39522},"msg":"incoming request"}
+{"level":30,"time":1795093980582,"pid":213952,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-9","res":{"statusCode":200},"responseTime":2.397145000000023,"msg":"request completed"}
+{"level":30,"time":1795093980590,"pid":213963,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","res":{"statusCode":200},"responseTime":12.85098899999997,"msg":"request completed"}
+{"level":30,"time":1795093980594,"pid":213963,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","req":{"method":"GET","url":"/api/v1/me/landing-config","host":"127.0.0.1:39409","remoteAddress":"127.0.0.1","remotePort":41418},"msg":"incoming request"}
+{"level":30,"time":1795093980596,"pid":213963,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","res":{"statusCode":200},"responseTime":2.0786979999999744,"msg":"request completed"}
+{"level":30,"time":1795093980598,"pid":213963,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","req":{"method":"GET","url":"/api/v1/me/landing-config","host":"127.0.0.1:45559","remoteAddress":"127.0.0.1","remotePort":56912},"msg":"incoming request"}
+{"level":30,"time":1795093980600,"pid":213963,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","res":{"statusCode":200},"responseTime":1.6733370000000036,"msg":"request completed"}
+{"level":30,"time":1795093980601,"pid":213963,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","req":{"method":"GET","url":"/api/v1/me/landing-config","host":"127.0.0.1:34245","remoteAddress":"127.0.0.1","remotePort":50204},"msg":"incoming request"}
+{"level":30,"time":1795093980603,"pid":213963,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","res":{"statusCode":200},"responseTime":1.7498620000000074,"msg":"request completed"}
+{"level":30,"time":1795093980605,"pid":213963,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","req":{"method":"GET","url":"/api/v1/me/landing-config","host":"127.0.0.1:45293","remoteAddress":"127.0.0.1","remotePort":42764},"msg":"incoming request"}
+{"level":30,"time":1795093980607,"pid":213963,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","res":{"statusCode":200},"responseTime":1.8328769999999963,"msg":"request completed"}
+{"level":30,"time":1795093980609,"pid":213963,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","req":{"method":"GET","url":"/api/v1/me/landing-config","host":"127.0.0.1:39673","remoteAddress":"127.0.0.1","remotePort":54306},"msg":"incoming request"}
+{"level":30,"time":1795093980610,"pid":213963,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","res":{"statusCode":200},"responseTime":1.585092999999972,"msg":"request completed"}
+{"level":30,"time":1795093980613,"pid":213963,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","req":{"method":"GET","url":"/api/v1/me/landing-config","host":"127.0.0.1:34515","remoteAddress":"127.0.0.1","remotePort":37092},"msg":"incoming request"}
+{"level":30,"time":1795093980636,"pid":213963,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","res":{"statusCode":200},"responseTime":22.89697799999999,"msg":"request completed"}
+{"level":30,"time":1795093980641,"pid":213963,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-8","req":{"method":"GET","url":"/api/v1/me/landing-config","host":"127.0.0.1:46637","remoteAddress":"127.0.0.1","remotePort":42700},"msg":"incoming request"}
+{"level":30,"time":1795093980643,"pid":213963,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-8","res":{"statusCode":200},"responseTime":1.9262429999999995,"msg":"request completed"}
+{"level":30,"time":1795093980813,"pid":213975,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","req":{"method":"POST","url":"/api/v1/ai-drafts","host":"127.0.0.1:34579","remoteAddress":"127.0.0.1","remotePort":54230},"msg":"incoming request"}
+{"level":30,"time":1795093980820,"pid":213975,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","res":{"statusCode":200},"responseTime":6.448692999999992,"msg":"request completed"}
+{"level":30,"time":1795093980838,"pid":213975,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","req":{"method":"POST","url":"/api/v1/ai-drafts","host":"127.0.0.1:36685","remoteAddress":"127.0.0.1","remotePort":37638},"msg":"incoming request"}
+{"level":30,"time":1795093980840,"pid":213975,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","res":{"statusCode":200},"responseTime":2.419187000000022,"msg":"request completed"}
+{"level":30,"time":1795093980843,"pid":213975,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","req":{"method":"POST","url":"/api/v1/ai-drafts/e75d8208-8a80-48cf-abb7-160bb0d83ca6/approve","host":"127.0.0.1:41239","remoteAddress":"127.0.0.1","remotePort":60380},"msg":"incoming request"}
+{"level":30,"time":1795093980844,"pid":213975,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","res":{"statusCode":403},"responseTime":1.6370900000000006,"msg":"request completed"}
+{"level":30,"time":1795093980847,"pid":213975,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","req":{"method":"POST","url":"/api/v1/ai-drafts","host":"127.0.0.1:35825","remoteAddress":"127.0.0.1","remotePort":48192},"msg":"incoming request"}
+{"level":30,"time":1795093980849,"pid":213975,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","res":{"statusCode":200},"responseTime":2.05012499999998,"msg":"request completed"}
+{"level":30,"time":1795093980850,"pid":213975,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","req":{"method":"POST","url":"/api/v1/ai-drafts/366c0fa1-c239-442e-8982-6f03a2015a86/approve","host":"127.0.0.1:35763","remoteAddress":"127.0.0.1","remotePort":49586},"msg":"incoming request"}
+{"level":30,"time":1795093980852,"pid":213975,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","res":{"statusCode":200},"responseTime":2.0491629999999645,"msg":"request completed"}
+{"level":30,"time":1795093980854,"pid":213975,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","req":{"method":"POST","url":"/api/v1/ai-drafts","host":"127.0.0.1:43009","remoteAddress":"127.0.0.1","remotePort":45226},"msg":"incoming request"}
+{"level":30,"time":1795093980856,"pid":213975,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","res":{"statusCode":200},"responseTime":2.068870000000004,"msg":"request completed"}
+{"level":30,"time":1795093980857,"pid":213975,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","req":{"method":"POST","url":"/api/v1/ai-drafts/04569b6f-09b3-4395-a179-ec9c12132102/discard","host":"127.0.0.1:36137","remoteAddress":"127.0.0.1","remotePort":40234},"msg":"incoming request"}
+{"level":30,"time":1795093980859,"pid":213975,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","res":{"statusCode":204},"responseTime":1.7321580000000267,"msg":"request completed"}
+{"level":30,"time":1795093980935,"pid":213988,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","req":{"method":"GET","url":"/api/v1/me","host":"127.0.0.1:44203","remoteAddress":"127.0.0.1","remotePort":39232},"msg":"incoming request"}
+{"level":30,"time":1795093980941,"pid":213988,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","res":{"statusCode":200},"responseTime":5.825493999999992,"msg":"request completed"}
+{"level":30,"time":1795093980943,"pid":213988,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","req":{"method":"GET","url":"/api/v1/me","host":"127.0.0.1:41775","remoteAddress":"127.0.0.1","remotePort":47148},"msg":"incoming request"}
+{"level":30,"time":1795093980944,"pid":213988,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","res":{"statusCode":401},"responseTime":0.1975699999999847,"msg":"request completed"}
+{"level":30,"time":1795093980946,"pid":213988,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","req":{"method":"PATCH","url":"/api/v1/me/preferences","host":"127.0.0.1:44319","remoteAddress":"127.0.0.1","remotePort":33436},"msg":"incoming request"}
+{"level":30,"time":1795093980949,"pid":213988,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","res":{"statusCode":200},"responseTime":3.5725289999999745,"msg":"request completed"}
+{"level":30,"time":1795093980950,"pid":213988,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","req":{"method":"GET","url":"/api/v1/me","host":"127.0.0.1:38415","remoteAddress":"127.0.0.1","remotePort":57278},"msg":"incoming request"}
+{"level":30,"time":1795093980952,"pid":213988,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","res":{"statusCode":200},"responseTime":2.014267000000018,"msg":"request completed"}
+{"level":30,"time":1795093980953,"pid":213988,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","req":{"method":"GET","url":"/api/v1/me","host":"127.0.0.1:43719","remoteAddress":"127.0.0.1","remotePort":55766},"msg":"incoming request"}
+{"level":30,"time":1795093980955,"pid":213988,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-5","res":{"statusCode":200},"responseTime":1.887188999999978,"msg":"request completed"}
+{"level":30,"time":1795093980957,"pid":213988,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","req":{"method":"GET","url":"/api/v1/me","host":"127.0.0.1:34205","remoteAddress":"127.0.0.1","remotePort":53414},"msg":"incoming request"}
+{"level":30,"time":1795093980957,"pid":213988,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-6","res":{"statusCode":401},"responseTime":0.47256599999997206,"msg":"request completed"}
+{"level":30,"time":1795093980959,"pid":213988,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","req":{"method":"GET","url":"/api/v1/me/nav-config","host":"127.0.0.1:44015","remoteAddress":"127.0.0.1","remotePort":32852},"msg":"incoming request"}
+{"level":30,"time":1795093980960,"pid":213988,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-7","res":{"statusCode":200},"responseTime":1.7155769999999961,"msg":"request completed"}
+{"level":30,"time":1795093980964,"pid":213988,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-8","req":{"method":"GET","url":"/api/v1/me/nav-config","host":"127.0.0.1:33601","remoteAddress":"127.0.0.1","remotePort":47408},"msg":"incoming request"}
+{"level":30,"time":1795093980966,"pid":213988,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-8","res":{"statusCode":200},"responseTime":1.5311609999999973,"msg":"request completed"}
+{"level":30,"time":1795093980977,"pid":213988,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-9","req":{"method":"POST","url":"/api/v1/auth/sso/callback","host":"127.0.0.1:40255","remoteAddress":"127.0.0.1","remotePort":51858},"msg":"incoming request"}
+{"level":30,"time":1795093980979,"pid":213988,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-9","res":{"statusCode":401},"responseTime":1.066880000000026,"msg":"request completed"}
+{"level":30,"time":1795093980998,"pid":213999,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","req":{"method":"GET","url":"/api/v1/signals","host":"127.0.0.1:41865","remoteAddress":"127.0.0.1","remotePort":42608},"msg":"incoming request"}
+{"level":30,"time":1795093981005,"pid":213999,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","res":{"statusCode":200},"responseTime":5.837467000000004,"msg":"request completed"}
+{"level":30,"time":1795093981009,"pid":213999,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","req":{"method":"POST","url":"/api/v1/signals/d26a644d-3a50-475c-ad4f-c1801a6a6035/promote","host":"127.0.0.1:37207","remoteAddress":"127.0.0.1","remotePort":60382},"msg":"incoming request"}
+{"level":30,"time":1795093981012,"pid":213999,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","res":{"statusCode":200},"responseTime":2.42572899999999,"msg":"request completed"}
+{"level":30,"time":1795093981013,"pid":213999,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","req":{"method":"POST","url":"/api/v1/signals/fb883986-3919-413b-834b-5c4d0e3553cf/dismiss","host":"127.0.0.1:41627","remoteAddress":"127.0.0.1","remotePort":58164},"msg":"incoming request"}
+{"level":30,"time":1795093981016,"pid":213999,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","res":{"statusCode":422},"responseTime":2.158087000000023,"msg":"request completed"}
+{"level":30,"time":1795093981017,"pid":213999,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","req":{"method":"POST","url":"/api/v1/signals/fb883986-3919-413b-834b-5c4d0e3553cf/dismiss","host":"127.0.0.1:38229","remoteAddress":"127.0.0.1","remotePort":58276},"msg":"incoming request"}
+{"level":30,"time":1795093981019,"pid":213999,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-4","res":{"statusCode":200},"responseTime":2.1210780000000113,"msg":"request completed"}
+{"level":30,"time":1795093981146,"pid":214011,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","req":{"method":"GET","url":"/api/v1/_test/rbac-reporting-edit-probe","host":"127.0.0.1:33545","remoteAddress":"127.0.0.1","remotePort":55300},"msg":"incoming request"}
+{"level":30,"time":1795093981150,"pid":214011,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-1","res":{"statusCode":403},"responseTime":3.863023999999996,"msg":"request completed"}
+{"level":30,"time":1795093981153,"pid":214011,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","req":{"method":"GET","url":"/api/v1/_test/rbac-reporting-edit-probe","host":"127.0.0.1:37817","remoteAddress":"127.0.0.1","remotePort":39132},"msg":"incoming request"}
+{"level":30,"time":1795093981154,"pid":214011,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-2","res":{"statusCode":403},"responseTime":1.5616079999999783,"msg":"request completed"}
+{"level":30,"time":1795093981155,"pid":214011,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","req":{"method":"GET","url":"/api/v1/_test/rbac-reporting-edit-probe","host":"127.0.0.1:35231","remoteAddress":"127.0.0.1","remotePort":46150},"msg":"incoming request"}
+{"level":30,"time":1795093981157,"pid":214011,"hostname":"pivota-sandbox-c5aaeb0a","reqId":"req-3","res":{"statusCode":200},"responseTime":1.4335179999999923,"msg":"request completed"}
+
+ Test Files  19 passed (19)
+      Tests  108 passed (108)
+   Start at  13:12:58
+   Duration  3.04s (transform 437ms, setup 66ms, import 3.76s, tests 3.68s, environment 1ms)
+
+
+> @epmp/design-system@0.1.0 test
+> vitest run
+
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90m/home/daytona/project/frontend/design-system[39m
+
+ [32m✓[39m test/layout-nav.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[90m 64[2mms[22m[39m
+ [32m✓[39m test/data-viz.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[90m 55[2mms[22m[39m
+ [32m✓[39m test/foundations.test.tsx [2m([22m[2m23 tests[22m[2m)[22m[90m 105[2mms[22m[39m
+ [32m✓[39m test/product-patterns.test.tsx [2m([22m[2m13 tests[22m[2m)[22m[90m 117[2mms[22m[39m
+ [32m✓[39m test/maps.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[90m 99[2mms[22m[39m
+ [32m✓[39m test/data-overlays.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[90m 115[2mms[22m[39m
+ [32m✓[39m test/forms.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[90m 159[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m7 passed[39m[22m[90m (7)[39m
+[2m      Tests [22m [1m[32m65 passed[39m[22m[90m (65)[39m
+[2m   Start at [22m 13:13:01
+[2m   Duration [22m 1.16s[2m (transform 333ms, setup 178ms, collect 968ms, tests 714ms, environment 1.40s, prepare 179ms)[22m
 ```
 
