@@ -2105,6 +2105,39 @@ async function main() {
     },
   ];
 
+  // Phase 6 (06-03, F9): ai_assist feature permission — the NEW
+  // permission string 06-03's ai-assist/ai-drafts.ts routes gate on
+  // (relocated out of notifications.ts's old notifications:view gate).
+  // Granted to exactly the FRD's named drafting/reviewing personas:
+  // eoc_director (PER-01) and planning_logistics_chief (PER-03) are the
+  // FRD's "A reviewer (typically PER-01 or PER-03)" signal-triage
+  // reviewers; incident_commander (PER-02) drafts ICS-form/SITREP
+  // narrative content directly per S9.3's embedding list ("F1 ICS
+  // forms/narrative"). All three get the full
+  // view/create/approve/discard action set — there is no narrower
+  // read-only/draft-only split documented for this feature the way
+  // notifications/resource_requests/plans each have one.
+  //
+  // field_responder (PER-04) and secops_admin (PER-05) deliberately get
+  // NO explicit 'ai_assist' row: field_responder has no AIDraft
+  // touchpoint in this phase's scope (F6 mobile forms don't embed
+  // AIDraft per the FRD's S9.3 list), and secops_admin's role is
+  // platform administration, not incident content drafting — same
+  // "intentional, not an oversight" reasoning this file already
+  // documents for every other feature's admin-exclusion above.
+  const aiAssistRoles = ['incident_commander', 'eoc_director', 'planning_logistics_chief'] as const;
+
+  for (const roleName of aiAssistRoles) {
+    const result = await findOrInsert(
+      'role_permissions',
+      ['role_id', 'feature'],
+      [roleIds[roleName], 'ai_assist'],
+      ['role_id', 'feature', 'actions'],
+      [roleIds[roleName], 'ai_assist', ['view', 'create', 'approve', 'discard']],
+    );
+    record('role_permissions', result);
+  }
+
   for (const cfg of roleLandingConfigs) {
     const roleId = roleIds[cfg.roleName];
     // `mobile_bottom_bar_items` is a nullable JSONB column with a
