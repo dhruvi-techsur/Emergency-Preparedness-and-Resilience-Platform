@@ -6,6 +6,7 @@ import adminUsersRoutes from './admin-users.js';
 import adminRolesRoutes from './admin-roles.js';
 import adminSsoConfigRoutes from './admin-sso-config.js';
 import adminAuditRoutes from './admin-audit.js';
+import landingConfigRoutes from './landing-config.js';
 
 interface UserRow {
   id: string;
@@ -465,4 +466,9 @@ export default async function authOrgRoutes(app: FastifyInstance) {
   await app.register(adminRolesRoutes);
   await app.register(adminSsoConfigRoutes);
   await app.register(adminAuditRoutes);
+
+  // F18 (06-02): persona-dashboard landing-config resolution — see
+  // landing-config.ts's own doc comment for the ROLE_VIEW_UNMAPPED
+  // fallback contract.
+  await app.register(landingConfigRoutes);
 }
