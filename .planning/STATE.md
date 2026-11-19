@@ -2,15 +2,16 @@
 pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-last_updated: "2026-11-19T12:04:29.185Z"
-last_activity: "2026-11-19 — Phase 5 complete"
+status: in_progress
+stopped_at: Completed 06-05-PLAN.md
+last_updated: "2026-11-19T12:10:13.807Z"
+last_activity: "2026-11-19 — Plan 05-06 complete (see 05-06-SUMMARY.md for full detail), a gap-closure plan for Phase 5's UAT round. Closed UAT-8 (blocker): AppShell.tsx's mobile bottom-bar now selects the Field nav group specifically by a new stable nav_groups[].id (backend, routes.ts), not by flattening+slicing the whole nav array — a field_responder's broad Phase 1-4 view-only grants no longer push the wrong 4 items into the bottom bar. Closed UAT-1 (major): the Field group's 4th SideNav item relabeled 'Profile' -> 'Field home', making the combined tasks+Report-button landing screen discoverable. F-05-01 security finding re-confirmed fixed (16/16 tests), untouched by this plan. Full backend suite (87/87), design-system suite, and all 3 project builds (backend/frontend-app/design-system) green; this plan's own new Playwright spec (2/2) plus app-shell.spec.ts (4/4) and field-mobile-report.spec.ts (1/1) regression-pass. One pre-existing, unrelated test-isolation flake in field-mobile-sync-conflict.spec.ts (jurisdiction-ordering drift from other phases' accumulated test fixtures) logged to deferred-items.md, confirmed unrelated to this plan's changes."
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 58
-  completed_plans: 48
-  percent: 83
+  completed_plans: 49
+  percent: 84
 ---
 
 # Project State
@@ -20,15 +21,18 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 5 — Mobile Field Operations — COMPLETE (all 6 plans shipped, incl. gap-closure plan 05-06). Every F6 screen is built, routed, and reachable via a role-driven bottom-nav; all 4 phase success criteria verified end-to-end against the real backend; both UAT gaps from Phase 5's review round (ref 8 blocker, ref 1 major) are closed. Ready for Phase 6.
+**Current focus:** Phase 6 — Persona Dashboards & AI Assistance — IN PROGRESS. Plan 06-05 shipped the AIDraft design-system component (F9's sole AI-output UI surface). Phase 5 (Mobile Field Operations) is COMPLETE (all 6 plans shipped, incl. gap-closure plan 05-06).
 
 ## Current Position
 
-Phase: 5 of 6 (Mobile Field Operations) — COMPLETE
+Phase: 6 of 6 (Persona Dashboards & AI Assistance) — IN PROGRESS
 
-Plan: 6 of 6 complete in current phase (05-01, 05-02, 05-05, 05-03, 05-04, 05-06 all done)
-Status: Phase 5 (Mobile Field Operations) complete — gap closure plan 05-06 shipped, both UAT gaps (ref 8 blocker, ref 1 major) closed. Ready for Phase 6.
-Last activity: 2026-11-19 — Plan 05-06 complete (see 05-06-SUMMARY.md for full detail), a gap-closure plan for Phase 5's UAT round. Closed UAT-8 (blocker): AppShell.tsx's mobile bottom-bar now selects the Field nav group specifically by a new stable nav_groups[].id (backend, routes.ts), not by flattening+slicing the whole nav array — a field_responder's broad Phase 1-4 view-only grants no longer push the wrong 4 items into the bottom bar. Closed UAT-1 (major): the Field group's 4th SideNav item relabeled 'Profile' -> 'Field home', making the combined tasks+Report-button landing screen discoverable. F-05-01 security finding re-confirmed fixed (16/16 tests), untouched by this plan. Full backend suite (87/87), design-system suite, and all 3 project builds (backend/frontend-app/design-system) green; this plan's own new Playwright spec (2/2) plus app-shell.spec.ts (4/4) and field-mobile-report.spec.ts (1/1) regression-pass. One pre-existing, unrelated test-isolation flake in field-mobile-sync-conflict.spec.ts (jurisdiction-ordering drift from other phases' accumulated test fixtures) logged to deferred-items.md, confirmed unrelated to this plan's changes.
+Plan: 1 of 10 complete in current phase (06-05 done; 06-01..06-04/06-06..06-10 not yet executed)
+Status: Phase 6 (Persona Dashboards & AI Assistance) in progress. Plan 06-05 shipped the AIDraft design-system component — the ONE UI surface through which AI output reaches a person anywhere in EPMP per F9's terminology — with a structural approve-only text-egress path (no prop writes outside onApprove) and 5 new unit tests. Ready for 06-08 (ICS-form/SITREP drafting touchpoints) to embed it, and for the remaining Phase 6 plans.
+Last activity: 2026-11-19 — Plan 06-05 complete (see 06-05-SUMMARY.md for full detail). Built AIDraft.tsx (persistent "Not issued" Badge, Provenance-chip rendering, 3-action Discard/Edit/Approve footer) + AIDraft.css + public index.ts export; extended the existing product-patterns.test.tsx with a new AIDraft describe block (5 tests) alongside its pre-existing SyncStatus coverage (8 tests), zero regression. Design-system full suite (65/65), tsc --noEmit (design-system + frontend/app), and design-system's vite build all green.
+
+Prior (Phase 5, complete): gap closure plan 05-06 shipped, both UAT gaps (ref 8 blocker, ref 1 major) are closed.
+Prior activity: 2026-11-19 — Plan 05-06 complete (see 05-06-SUMMARY.md for full detail), a gap-closure plan for Phase 5's UAT round. Closed UAT-8 (blocker): AppShell.tsx's mobile bottom-bar now selects the Field nav group specifically by a new stable nav_groups[].id (backend, routes.ts), not by flattening+slicing the whole nav array — a field_responder's broad Phase 1-4 view-only grants no longer push the wrong 4 items into the bottom bar. Closed UAT-1 (major): the Field group's 4th SideNav item relabeled 'Profile' -> 'Field home', making the combined tasks+Report-button landing screen discoverable. F-05-01 security finding re-confirmed fixed (16/16 tests), untouched by this plan. Full backend suite (87/87), design-system suite, and all 3 project builds (backend/frontend-app/design-system) green; this plan's own new Playwright spec (2/2) plus app-shell.spec.ts (4/4) and field-mobile-report.spec.ts (1/1) regression-pass. One pre-existing, unrelated test-isolation flake in field-mobile-sync-conflict.spec.ts (jurisdiction-ordering drift from other phases' accumulated test fixtures) logged to deferred-items.md, confirmed unrelated to this plan's changes.
 
 Plan 05-04 (prior): closed out the phase's original scope, wiring all 6 field-mobile routes + a role-driven bottom-nav and proving sync-conflict resolution end-to-end. Shipped Queued Submissions View (/field/queued), Sync Conflict Resolution (/field/conflicts/:id), and Field Map (/field/map); wired all 6 field-mobile routes into main.tsx and a new role-driven 4-item bottom-nav group into GET /api/v1/me/nav-config. A new Playwright spec seeds a real conflict via the production sync-batch endpoint and proves the full detect-surface-resolve-commit chain with no default button selection, resolution committed server-side.
 
@@ -109,6 +113,7 @@ Progress: [████████░░] 84%
 | Phase 05 P03 | 35 min | 3 tasks | 12 files |
 | Phase 05 P04 | 55 min | 3 tasks | 11 files |
 | Phase 05 P06 | 12 min | 3 tasks | 6 files |
+| Phase 06 P05 | 6 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -240,6 +245,8 @@ Recent decisions affecting current work:
 - [Phase 05-04]: AppShell.tsx required no code change — confirmed (not assumed) its isBelowBpMd branch already derives mobileBottomBarItems generically via navGroups.flatMap(g => g.items)
 - [Phase 05-06]: nav_groups[].id selects the mobile bottom-bar's source group — not array position or label text — so a field_responder's broad Phase 1-4 view-only grants (which populate 5 groups before Field's own items) can no longer push the wrong 4 items into the bottom bar regardless of future emission-order or label-wording changes (closes UAT-8, reverses 05-04's own flatMap-based derivation which was the actual root cause)
 - [Phase 05-06]: Field group's 4th item relabeled 'Profile' -> 'Field home' (not renamed id/href) — closes UAT-1's discoverability gap with zero blast radius to anything keying off the existing id/href
+- [Phase 06-05]: AIDraft has NO onChange-into-target-field prop — onApprove(finalText)/onEdit/onDiscard are the complete callback surface, and onApprove hands text back to the CALLER rather than writing anywhere itself, making "never appears pre-inserted into the record" true by construction rather than by caller convention
+- [Phase 06-05]: Extended the existing product-patterns.test.tsx (already holding SyncStatus coverage) with a new AIDraft describe block rather than overwriting the file, preserving 8 pre-existing passing tests with zero regression
 
 ### Pending Todos
 
@@ -251,6 +258,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-19T10:58:36.000Z
-Stopped at: Completed 05-06-PLAN.md
+Last session: 2026-11-19T12:09:03.000Z
+Stopped at: Completed 06-05-PLAN.md
 Resume file: None
