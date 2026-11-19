@@ -258,6 +258,7 @@ export default async function authOrgRoutes(app: FastifyInstance) {
         ...(hasPlans
           ? [
               {
+                id: 'prepare',
                 label: 'Prepare',
                 items: [{ id: 'plans', label: 'Plans & playbooks', icon: 'file', href: '/plans' }],
               },
@@ -275,6 +276,7 @@ export default async function authOrgRoutes(app: FastifyInstance) {
         ...(hasIncidents
           ? [
               {
+                id: 'monitor',
                 label: 'Monitor',
                 items: [
                   { id: 'operating-picture', label: 'Operating picture', icon: 'map', href: '/operating-picture' },
@@ -285,6 +287,7 @@ export default async function authOrgRoutes(app: FastifyInstance) {
         ...(hasIncidents
           ? [
               {
+                id: 'activate',
                 label: 'Activate',
                 items: [{ id: 'incidents', label: 'Incidents', icon: 'flag', href: '/incidents' }],
               },
@@ -293,6 +296,7 @@ export default async function authOrgRoutes(app: FastifyInstance) {
         ...(hasTasks || hasResourceRequests || hasNotifications
           ? [
               {
+                id: 'coordinate',
                 label: 'Coordinate',
                 items: [
                   ...(hasTasks
@@ -346,6 +350,7 @@ export default async function authOrgRoutes(app: FastifyInstance) {
         ...(hasReporting
           ? [
               {
+                id: 'improve',
                 label: 'Improve',
                 items: [
                   {
@@ -405,29 +410,35 @@ export default async function authOrgRoutes(app: FastifyInstance) {
         // without touching either href — `/field/tasks` remains reachable
         // (B3 stays fixed) and `/tasks` is untouched.
         //
-        // "Profile" still has no dedicated screen anywhere in this phase
-        // or prior phases — no F6 screen spec defines one — so it
-        // continues to route to `/field` (Claude's discretion,
-        // unchanged by this fix): the bottom-bar's `SideNavItem` shape
-        // requires an `href`, not an onClick handler, and the real
-        // profile menu remains reachable via AppShell's own header
-        // Avatar/profileMenuOpen toggle (visible at every breakpoint,
-        // including below bp-md) — simpler than inventing a fake 5th
-        // screen just to satisfy the href requirement.
+        // UAT round 1 (gap ref UAT-1, major) found this 4th item's "Profile"
+        // label ambiguous: it routes to `/field` (Field Home — the screen
+        // combining today's task list WITH the sticky Report button), but a
+        // user scanning the 4 Field-group labels naturally clicked "My
+        // Tasks" first (the narrower, Report-button-less `/field/tasks`)
+        // looking for exactly that combined view, and never discovered that
+        // the unrelated-sounding "Profile" label was the actual landing
+        // screen they wanted. Relabeling to "Field home" (and swapping the
+        // icon from the people-glyph `'users'` to `'home'`) signals what the
+        // destination actually is without touching the item's `id` or
+        // `href` — nothing else keys off either, and the real profile menu
+        // remains reachable via AppShell's own header Avatar/
+        // profileMenuOpen toggle (visible at every breakpoint, including
+        // below bp-md) exactly as before this fix.
         ...(hasFieldReports
           ? [
               {
+                id: 'field',
                 label: 'Field',
                 items: [
                   { id: 'field-tasks', label: 'My Tasks', icon: 'flag', href: '/field/tasks' },
                   { id: 'field-report', label: 'Report', icon: 'send', href: '/field/report' },
                   { id: 'field-map-nav', label: 'Map', icon: 'map', href: '/field/map' },
-                  { id: 'field-profile', label: 'Profile', icon: 'users', href: '/field' },
+                  { id: 'field-profile', label: 'Field home', icon: 'home', href: '/field' },
                 ],
               },
             ]
           : []),
-        ...(hasAdmin ? [{ label: 'Admin', items: ADMIN_NAV_ITEMS }] : []),
+        ...(hasAdmin ? [{ id: 'admin', label: 'Admin', items: ADMIN_NAV_ITEMS }] : []),
       ];
 
       // `permissions`: the signed-in user's full feature->actions map,

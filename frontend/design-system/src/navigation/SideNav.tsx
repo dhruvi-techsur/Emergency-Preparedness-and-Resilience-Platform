@@ -46,6 +46,12 @@ export interface SideNavItem {
 }
 
 export interface SideNavGroup {
+  /** Stable, machine-readable group identifier (e.g. 'field', 'admin') —
+   * distinct from `label` (the human-readable display text, which can
+   * change wording without breaking a consumer that selects a group by
+   * `id`). Optional for backward compatibility with any caller not yet
+   * supplying one; falls back to `label` if absent. */
+  id?: string;
   label?: string;
   items: SideNavItem[];
 }
