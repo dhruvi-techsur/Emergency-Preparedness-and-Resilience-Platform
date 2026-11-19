@@ -2,16 +2,16 @@
 pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: gap closure in progress — 06-12, 06-13 remaining
-stopped_at: Completed 06-11-PLAN.md
-last_updated: "2026-11-19T23:30:33.767Z"
-last_activity: 2026-11-19 -- Plan 06-11 complete (see 06-11-SUMMARY.md for full detail). Gap-closure plan: closed the browser_suite:fail gate blocker's signal-triage.spec.ts fixture-exhaustion failure (06-GATE.md failure #3) by extending seed.ts's hazardFeedEventDefs with 6 more fixture rows. Two more gap-closure plans (06-12, 06-13) remain for this phase.
+status: verifying
+stopped_at: Completed 06-12-PLAN.md
+last_updated: "2026-11-19T23:38:53.521Z"
+last_activity: 2026-11-19 -- Plan 06-13 complete (see 06-13-SUMMARY.md for full detail). All Phase 6 gap-closure plans (06-11, 06-12, 06-13) are now done.
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 61
-  completed_plans: 60
-  percent: 83
+  completed_plans: 61
+  percent: 100
 ---
 
 # Project State
@@ -21,15 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 6 — Persona Dashboards & AI Assistance — core 10 plans shipped; 3 gap-closure plans added post-UAT/GATE (06-11 now done, 06-12/06-13 remaining). Plan 06-01 shipped the F9 AI-governance substrate (schema + shared assertAiOriginApproved guard) and its first real governed consumer (ICS Form Editor draft/approve); Plan 06-05 shipped the AIDraft design-system component; Plan 06-02 populated role_landing_config and shipped GET /api/v1/me/landing-config; Plan 06-03 shipped the AI-drafts request/approve/discard backend lifecycle; Plan 06-04 shipped the Signal Triage Queue backend (real clustering + promote/dismiss); Plan 06-06 shipped PER-01's EOC Dashboard and PER-03's My Work Dashboard, plus RouteGuard's reusable landing-config redirect mechanism; Plan 06-07 shipped PER-04's bottom-bar-only AppShell override and PER-05's dual-facet (Admin/Executive) experience, completing F18's all-5-personas success criterion; Plan 06-08 shipped the ICS Form Editor, the first real reachable consumer of 06-01's ics_forms backend wired to 06-05's AIDraft component, proving F9's governance cascade end-to-end via Playwright including a direct-API-bypass rejection proof; Plan 06-09 shipped the Signal Triage Queue/Detail screens, the frontend consumer of 06-04's signal-clustering backend, proving success criterion 5's user-facing half (Promote only ever navigates to the pre-filled Create Incident form); Plan 06-10 (the phase's terminal integration-proof plan, mirroring 03-08/04-07) shipped one Playwright suite proving all 5 personas end-to-end in a single run, closed the PER-02 landing-config redirect gap no individual plan re-tested, and proved the incidents:approve RBAC gate rejects a non-holder's direct API bypass with 403. Plan 06-11 (gap closure) extended seed.ts's hazard-feed fixture pool so signal-triage.spec.ts survives repeated full-suite re-runs, closing 06-GATE.md's browser_suite failure #3. Phase 5 (Mobile Field Operations) is COMPLETE (all 6 plans shipped, incl. gap-closure plan 05-06). 06-12 and 06-13 gap-closure plans remain before Phase 6/the milestone can re-enter verification.
+**Current focus:** Phase 6 — Persona Dashboards & AI Assistance — core 10 plans shipped; all 3 gap-closure plans added post-UAT/GATE (06-11, 06-12, 06-13 all now done). Phase 6 is ready to re-enter verification. Plan 06-01 shipped the F9 AI-governance substrate (schema + shared assertAiOriginApproved guard) and its first real governed consumer (ICS Form Editor draft/approve); Plan 06-05 shipped the AIDraft design-system component; Plan 06-02 populated role_landing_config and shipped GET /api/v1/me/landing-config; Plan 06-03 shipped the AI-drafts request/approve/discard backend lifecycle; Plan 06-04 shipped the Signal Triage Queue backend (real clustering + promote/dismiss); Plan 06-06 shipped PER-01's EOC Dashboard and PER-03's My Work Dashboard, plus RouteGuard's reusable landing-config redirect mechanism; Plan 06-07 shipped PER-04's bottom-bar-only AppShell override and PER-05's dual-facet (Admin/Executive) experience, completing F18's all-5-personas success criterion; Plan 06-08 shipped the ICS Form Editor, the first real reachable consumer of 06-01's ics_forms backend wired to 06-05's AIDraft component, proving F9's governance cascade end-to-end via Playwright including a direct-API-bypass rejection proof; Plan 06-09 shipped the Signal Triage Queue/Detail screens, the frontend consumer of 06-04's signal-clustering backend, proving success criterion 5's user-facing half (Promote only ever navigates to the pre-filled Create Incident form); Plan 06-10 (the phase's terminal integration-proof plan, mirroring 03-08/04-07) shipped one Playwright suite proving all 5 personas end-to-end in a single run, closed the PER-02 landing-config redirect gap no individual plan re-tested, and proved the incidents:approve RBAC gate rejects a non-holder's direct API bypass with 403. Plan 06-11 (gap closure) extended seed.ts's hazard-feed fixture pool so signal-triage.spec.ts survives repeated full-suite re-runs, closing 06-GATE.md's browser_suite failure #3. Phase 5 (Mobile Field Operations) is COMPLETE (all 6 plans shipped, incl. gap-closure plan 05-06). 06-12 and 06-13 gap-closure plans remain before Phase 6/the milestone can re-enter verification.
 
 ## Current Position
 
-Phase: 6 of 6 (Persona Dashboards & AI Assistance) — gap closure in progress
+Phase: 6 of 6 (Persona Dashboards & AI Assistance) — all 13 plans complete, ready for verification
 
-Plan: 11 of 13 complete in current phase (06-01 through 06-11 done; 06-12, 06-13 remaining gap-closure plans)
-Status: Plan 06-11 (gap closure, wave 1, depends_on none) closed the `browser_suite: fail` gate blocker's `signal-triage.spec.ts` failure (06-GATE.md, "Browser Suite" section, failure #3): extended `backend/scripts/seed.ts`'s `hazardFeedEventDefs` array with 6 more isolated, distinct-type, far-apart-geometry fixture rows (UAT-SIGNAL-NOAA-005/NWS-006/USGS-007/NOAA-008/NWS-009/USGS-010), following the array's own pre-established "UAT data-doctor fixtures" pattern exactly. Proved the fix against the EXACT failure condition: ran `npx playwright test e2e/signal-triage.spec.ts --workers=1` twice in direct succession in this same long-lived sandbox — 4/4 passed both times (11 New-status signals after the first full seed+test cycle, 7 remaining after the second — comfortably above the "at least 2 New" precondition both times). `clusterHazardFeedEvents()`'s own idempotency guard (`WHERE NOT EXISTS (signal_source_events link)`) is completely unmodified and re-confirmed working: a bare re-run of `npm run seed` after clustering already ran logs `0 new signal(s) created`. No production route, guard, or schema touched — a pure fixture-data addition. Full backend suite (19 files, 108 tests) green with zero regression; `tsc --noEmit` clean. Zero deviations from plan. The other two recorded browser_suite failures (`admin-users-roles.spec.ts`, `field-mobile-sync-conflict.spec.ts`) remain explicitly out of scope, owned by Phase 1/Phase 5 respectively, per `deferred-items.md`'s documented scope boundary.
-Last activity: 2026-11-19 -- Plan 06-11 complete (see 06-11-SUMMARY.md for full detail). Gap-closure plans 06-12 and 06-13 remain before Phase 6 re-enters verification.
+Plan: 13 of 13 complete in current phase (06-01 through 06-13 all done)
+Status: Plan 06-13 (gap closure, wave 1, depends_on none) closed UAT gap ref 8 (06-UAT.md, cosmetic): the Signal Triage Queue's Dismiss confirmation Modal's multiline Reason TextField visually overflowed the Modal's own right edge. Direct measurement during UAT diagnosis found the true root cause was NOT specific to this one Modal — it was a systemic, app-wide CSS integration gap: `tokens.css`'s `box-sizing: border-box` reset is scoped exclusively to descendants of an element carrying the literal class `.ep` (`.ep, .ep * { box-sizing: border-box }`), and the design system's own test harnesses always wrap fixtures in `<div className="ep">` to activate it — but `AppShell.tsx`'s root (the single outermost element wrapping every page in the app) only ever carried the unrelated `ep-shell` layout class, never `.ep` itself. Fixed with a single-class addition (`className="ep ep-shell"`), activating the reset app-wide with zero changes to `Modal.css`/`TextField.css` or any other design-system stylesheet — resolving not just the one reported overflow but the entire systemic class of Modal+multiline-TextField width miscalculations the gap's own diagnosis identified across the codebase (RecipientGroups, MessageTemplates, ComposeNotification, SignalDetail, ResourceRequestDetail, ReviewPlanModal, RecordAuthority). Added a Playwright `boundingBox()` geometry regression guard to `signal-triage.spec.ts`'s existing Dismiss Modal test plus a new standalone test 2b at a 390px mobile viewport (5/5 passing). Regression sample of 4 other Modal+multiline-TextField spec files (24 tests) and the app-shell suite (4 tests) all pass unaffected. `tsc --noEmit` and `npm run build` both clean. Zero deviations from plan. All three gap-closure plans (06-11, 06-12, 06-13) for this phase are now complete — Phase 6 (and the v1.0 milestone's final phase) is ready to re-enter verification.
+Last activity: 2026-11-19 -- Plan 06-13 complete (see 06-13-SUMMARY.md for full detail). All Phase 6 gap-closure plans (06-11, 06-12, 06-13) are now done.
+
+Plan 06-12 (prior, this phase): see 06-12-SUMMARY.md for full detail. Gap-closure plan: closed UAT gap ref 1 (major) by removing the stale, self-contradictory "ships in a later phase" hint from EocDashboard.tsx's Open tasks/Pending resource requests Stat tiles, which were already rendering real jurisdiction-scoped nonzero counts from dashboard.ts's genuine COUNT(*) queries. New regression guard added to persona-dashboards.spec.ts.
 
 Plan 06-10 (prior, this phase): see 06-10-SUMMARY.md for full detail. The phase's terminal integration-proof plan (Wave 9, depends_on 06-01+06-06+06-07+06-08+06-09) shipped persona-dashboards-integration.spec.ts (8 tests), a single Playwright suite signing in as all 5 personas in sequence — mirroring Phase 3's 03-08 and Phase 4's 04-07 precedent exactly. Proves PER-01 through PER-05 each land on their own distinct route with SideNav/bottom-bar matching a fresh server-side nav-config fetch; explicitly closes the one gap no individual Phase 6 plan re-tested (PER-02/incident_commander's Phase-2-era landing page now flows through the SAME landing-config mechanism 06-06/06-07 built for the other 4 personas); sanity-rechecks 06-08/06-09's AI-governance screens remain reachable; and proves the incidents:approve RBAC gate rejects planning_logistics_chief's direct API bypass attempt with a real 403, not merely a hidden button. One genuine, pre-existing, non-blocking finding surfaced and documented (not fixed, per this plan's own zero-new-code scope and threat-model transfer rule): PER-01/PER-02 render byte-identical SideNav label sets because GET /api/v1/me/nav-config derives nav items from feature-level permission presence, never per-action — the test's cross-persona uniqueness check was adjusted to assert distinct dashboard IDENTITY (route+nav combined) instead, with the known overlap asserted directly rather than masked. One Rule-1 test-only fix: switching Keycloak identities within a single test requires clearing both sessionStorage's epmp_session_token AND Keycloak's own SSO cookie. Full backend suite (19 files, 108 tests) green with zero regression; tsc --noEmit (backend + frontend/app) and both builds (backend + frontend/app) clean; persona-dashboards.spec.ts (4/4), persona-dashboards-per04-per05.spec.ts (5/5), and app-shell.spec.ts (4/4) regression-pass unaffected.
 
@@ -64,7 +66,7 @@ Plan 05-02 (prior): shipped the client-side half of F6 — SyncStatus design-sys
 
 Plan 05-01 (prior, backend): shipped the F6 backend data layer and API surface — field_reports/field_report_photos/sync_conflicts tables plus idempotent-submit/ordered-batch-sync/photo-upload/conflict-resolve endpoints, every incident-touching write wrapped in the shared withTimelineTransaction invariant. Integration test (4 cases) + full backend suite (15 files, 74 tests) green with zero regression; tsc --noEmit and backend build both clean.
 
-Progress: [████████░░] 83%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -144,6 +146,8 @@ Progress: [████████░░] 83%
 | Phase 06 P09 | 9 min | 3 tasks | 7 files |
 | Phase 06 P10 | 35 min | 1 tasks | 1 files |
 | Phase 06 P11 | 12 min | 1 tasks | 1 files |
+| Phase 06 P12 | 12 min | 2 tasks | 2 files |
+| Phase 06 P13 | 10 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -304,6 +308,8 @@ Recent decisions affecting current work:
 - [Phase 06-09]: CreateIncident.tsx's pre-fill type_suggestion is defensively mapped through resolveTypeSuggestion() to the form's existing IncidentType enum (falling back to 'Other') -- 06-04's promote endpoint derives free-text hazard vocabulary (e.g. "Earthquake Advisory") that is not itself a member of incidents.type's own CHECK constraint, and submitting it unedited would 500 on the DB constraint
 - [Phase 06-10]: Step 6's cross-persona uniqueness check asserts distinct dashboard identity (route + nav combined), not nav-label uniqueness alone -- PER-01/PER-02 render byte-identical SideNav label sets by a real, pre-existing, cross-phase nav-config design (feature-presence derivation, never per-action), documented as a transferred finding rather than fixed in this zero-new-code integration plan — Changing routes.ts nav-config derivation to be action-aware would touch a route 5+ phases of passing tests depend on; this plan's own threat model (T-06-20) marks such findings as transfer-ownership to the responsible earlier plan
 - [Phase 06-10]: Switching Keycloak-SSO identities within a single test requires clearing BOTH sessionStorage's epmp_session_token AND context().clearCookies() -- every other multi-identity spec in this codebase switches across separate test() calls with a fresh context instead, so this exact sequence had never been needed before this plan's single-test two-identity RBAC proof
+- [Phase 06-13]: Fixed the systemic missing-.ep-class root cause on AppShell.tsx's shell root rather than patching individual Modal.css/TextField.css stylesheets — The design system's own test harnesses already wrap fixtures in .ep to activate tokens.css's box-sizing:border-box reset; the real app's shell root never did. A one-class fix at this integration boundary resolves the entire systemic class of Modal+multiline-TextField overflow defects, not just the one reported instance.
+- [Phase 06-12]: Stat tiles carry a hint prop ONLY when the value is a genuine, documented structural limitation -- never alongside a real, correct count — EocDashboard.tsx's Open tasks/Pending resource requests tiles were showing real nonzero jurisdiction-scoped values alongside a false 'ships in a later phase' hint, directly contradicting F0's data-provenance rule; removed to match the file's own already-correct active_incidents precedent
 
 ### Pending Todos
 
@@ -315,6 +321,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-19T23:30:30.762Z
-Stopped at: Completed 06-11-PLAN.md
+Last session: 2026-11-19T23:38:53.520Z
+Stopped at: Completed 06-12-PLAN.md
 Resume file: None
