@@ -2,16 +2,15 @@
 pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: in_progress
-stopped_at: Completed 06-05-PLAN.md
-last_updated: "2026-11-19T12:10:13.807Z"
-last_activity: "2026-11-19 — Plan 05-06 complete (see 05-06-SUMMARY.md for full detail), a gap-closure plan for Phase 5's UAT round. Closed UAT-8 (blocker): AppShell.tsx's mobile bottom-bar now selects the Field nav group specifically by a new stable nav_groups[].id (backend, routes.ts), not by flattening+slicing the whole nav array — a field_responder's broad Phase 1-4 view-only grants no longer push the wrong 4 items into the bottom bar. Closed UAT-1 (major): the Field group's 4th SideNav item relabeled 'Profile' -> 'Field home', making the combined tasks+Report-button landing screen discoverable. F-05-01 security finding re-confirmed fixed (16/16 tests), untouched by this plan. Full backend suite (87/87), design-system suite, and all 3 project builds (backend/frontend-app/design-system) green; this plan's own new Playwright spec (2/2) plus app-shell.spec.ts (4/4) and field-mobile-report.spec.ts (1/1) regression-pass. One pre-existing, unrelated test-isolation flake in field-mobile-sync-conflict.spec.ts (jurisdiction-ordering drift from other phases' accumulated test fixtures) logged to deferred-items.md, confirmed unrelated to this plan's changes."
+status: planning
+last_updated: "2026-11-19T12:30:00.000Z"
+last_activity: "2026-11-19 — Phase 6 Plan 01 complete"
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 58
-  completed_plans: 49
-  percent: 84
+  completed_plans: 50
+  percent: 86
 ---
 
 # Project State
@@ -21,15 +20,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 6 — Persona Dashboards & AI Assistance — IN PROGRESS. Plan 06-05 shipped the AIDraft design-system component (F9's sole AI-output UI surface). Phase 5 (Mobile Field Operations) is COMPLETE (all 6 plans shipped, incl. gap-closure plan 05-06).
+**Current focus:** Phase 6 — Persona Dashboards & AI Assistance — IN PROGRESS. Plan 06-01 shipped the F9 AI-governance substrate (schema + shared assertAiOriginApproved guard) and its first real governed consumer (ICS Form Editor draft/approve); Plan 06-05 shipped the AIDraft design-system component. Phase 5 (Mobile Field Operations) is COMPLETE (all 6 plans shipped, incl. gap-closure plan 05-06).
 
 ## Current Position
 
 Phase: 6 of 6 (Persona Dashboards & AI Assistance) — IN PROGRESS
 
-Plan: 1 of 10 complete in current phase (06-05 done; 06-01..06-04/06-06..06-10 not yet executed)
-Status: Phase 6 (Persona Dashboards & AI Assistance) in progress. Plan 06-05 shipped the AIDraft design-system component — the ONE UI surface through which AI output reaches a person anywhere in EPMP per F9's terminology — with a structural approve-only text-egress path (no prop writes outside onApprove) and 5 new unit tests. Ready for 06-08 (ICS-form/SITREP drafting touchpoints) to embed it, and for the remaining Phase 6 plans.
-Last activity: 2026-11-19 — Plan 06-05 complete (see 06-05-SUMMARY.md for full detail). Built AIDraft.tsx (persistent "Not issued" Badge, Provenance-chip rendering, 3-action Discard/Edit/Approve footer) + AIDraft.css + public index.ts export; extended the existing product-patterns.test.tsx with a new AIDraft describe block (5 tests) alongside its pre-existing SyncStatus coverage (8 tests), zero regression. Design-system full suite (65/65), tsc --noEmit (design-system + frontend/app), and design-system's vite build all green.
+Plan: 2 of 10 complete in current phase (06-01, 06-05 done; 06-02/06-03/06-04/06-06..06-10 not yet executed)
+Status: Phase 6 (Persona Dashboards & AI Assistance) in progress. Plan 06-01 (Wave 1) shipped ics_forms/signals/signal_source_events/hazard_feed_config/hazard_feed_events schema, the shared assertAiOriginApproved guard (re-exported from Phase 4's already-landed comms-reporting/notifications.ts, not redefined), the ICS Form Editor's draft/approve backend enforcing both the named-approver gate and the AI-governance guard server-side, GET /api/v1/dashboard/summary (real incident/task/resource-request counts), and seed.ts's incidents:approve grant for incident_commander/eoc_director. Plan 06-05 shipped the AIDraft design-system component — the ONE UI surface through which AI output reaches a person anywhere in EPMP per F9's terminology — with a structural approve-only text-egress path (no prop writes outside onApprove) and 5 new unit tests. Both plans' shared guard/schema/component are ready for 06-02/06-03/06-04/06-08 to build against.
+Last activity: 2026-11-19 — Plan 06-01 complete (see 06-01-SUMMARY.md for full detail). Migration renumbered 1700000000010 -> 1700000000011 (Phase 5's 05-01 has since claimed 1700000000010 — free when 06-01-PLAN.md was authored, not free at execution time). ai_drafts intentionally NOT re-created — confirmed via direct inspection that Phase 4's 04-01 had already landed the identical table and guard, exactly the cross-phase collision this plan's own PLAN.md predicted and instructed resolving via reuse. dashboard.ts computes REAL open_tasks/pending_resource_requests queries (Phase 3's tables genuinely exist, contradicting the plan's stale hardcoded-zero assumption); notifications_pending_ack stays a documented zero (no per-recipient user_id column in this schema). Full backend suite (16 files, 94 tests) green with zero regression; tsc --noEmit and npm run build both clean.
+
+Plan 06-05 (prior, this phase): see 06-05-SUMMARY.md. Built AIDraft.tsx (persistent "Not issued" Badge, Provenance-chip rendering, 3-action Discard/Edit/Approve footer) + AIDraft.css + public index.ts export; extended the existing product-patterns.test.tsx with a new AIDraft describe block (5 tests) alongside its pre-existing SyncStatus coverage (8 tests), zero regression. Design-system full suite (65/65), tsc --noEmit (design-system + frontend/app), and design-system's vite build all green.
 
 Prior (Phase 5, complete): gap closure plan 05-06 shipped, both UAT gaps (ref 8 blocker, ref 1 major) are closed.
 Prior activity: 2026-11-19 — Plan 05-06 complete (see 05-06-SUMMARY.md for full detail), a gap-closure plan for Phase 5's UAT round. Closed UAT-8 (blocker): AppShell.tsx's mobile bottom-bar now selects the Field nav group specifically by a new stable nav_groups[].id (backend, routes.ts), not by flattening+slicing the whole nav array — a field_responder's broad Phase 1-4 view-only grants no longer push the wrong 4 items into the bottom bar. Closed UAT-1 (major): the Field group's 4th SideNav item relabeled 'Profile' -> 'Field home', making the combined tasks+Report-button landing screen discoverable. F-05-01 security finding re-confirmed fixed (16/16 tests), untouched by this plan. Full backend suite (87/87), design-system suite, and all 3 project builds (backend/frontend-app/design-system) green; this plan's own new Playwright spec (2/2) plus app-shell.spec.ts (4/4) and field-mobile-report.spec.ts (1/1) regression-pass. One pre-existing, unrelated test-isolation flake in field-mobile-sync-conflict.spec.ts (jurisdiction-ordering drift from other phases' accumulated test fixtures) logged to deferred-items.md, confirmed unrelated to this plan's changes.
@@ -44,15 +45,15 @@ Plan 05-02 (prior): shipped the client-side half of F6 — SyncStatus design-sys
 
 Plan 05-01 (prior, backend): shipped the F6 backend data layer and API surface — field_reports/field_report_photos/sync_conflicts tables plus idempotent-submit/ordered-batch-sync/photo-upload/conflict-resolve endpoints, every incident-touching write wrapped in the shared withTimelineTransaction invariant. Integration test (4 cases) + full backend suite (15 files, 74 tests) green with zero regression; tsc --noEmit and backend build both clean.
 
-Progress: [████████░░] 84%
+Progress: [████████░░] 86%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 37
+- Total plans completed: 39
 - Average duration: 24 min
-- Total execution time: 13.9 hours
+- Total execution time: 14.3 hours
 
 **By Phase:**
 
@@ -114,6 +115,7 @@ Progress: [████████░░] 84%
 | Phase 05 P04 | 55 min | 3 tasks | 11 files |
 | Phase 05 P06 | 12 min | 3 tasks | 6 files |
 | Phase 06 P05 | 6 min | 2 tasks | 4 files |
+| Phase 06 P01 | 25 min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -247,6 +249,10 @@ Recent decisions affecting current work:
 - [Phase 05-06]: Field group's 4th item relabeled 'Profile' -> 'Field home' (not renamed id/href) — closes UAT-1's discoverability gap with zero blast radius to anything keying off the existing id/href
 - [Phase 06-05]: AIDraft has NO onChange-into-target-field prop — onApprove(finalText)/onEdit/onDiscard are the complete callback surface, and onApprove hands text back to the CALLER rather than writing anywhere itself, making "never appears pre-inserted into the record" true by construction rather than by caller convention
 - [Phase 06-05]: Extended the existing product-patterns.test.tsx (already holding SyncStatus coverage) with a new AIDraft describe block rather than overwriting the file, preserving 8 pre-existing passing tests with zero regression
+- [Phase 06-01]: ai-assist/governance.ts re-exports the EXISTING assertAiOriginApproved/AiOriginNotApprovedError from comms-reporting/notifications.ts rather than redefining it — Phase 4's 04-01 had already landed both the ai_drafts table and the guard, the exact cross-phase collision this plan's own PLAN.md predicted and instructed resolving via reuse
+- [Phase 06-01]: Migration renumbered 1700000000010 -> 1700000000011 (Phase 5's 05-01 has since claimed 1700000000010, which was free when 06-01-PLAN.md was authored) — same renumbering precedent 04-01/04-02/05-01 each independently established
+- [Phase 06-01]: dashboard.ts's open_tasks/pending_resource_requests compute REAL COUNT(*) queries rather than the plan's suggested hardcoded zeros — Phase 3's tasks/resource_requests tables genuinely exist in this codebase; notifications_pending_ack stays a documented zero (no per-recipient user_id column to count against)
+- [Phase 06-01]: seed.ts's incidentsFullAccessRoles grant now includes 'approve' for incident_commander/eoc_director, with an idempotent re-assert UPDATE (findOrInsert alone never widens an already-seeded row) — the first approve-gated incidents action in this codebase
 
 ### Pending Todos
 
@@ -258,6 +264,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-19T12:09:03.000Z
-Stopped at: Completed 06-05-PLAN.md
+Last session: 2026-11-19T12:30:00.000Z
+Stopped at: Completed 06-01-PLAN.md
 Resume file: None
