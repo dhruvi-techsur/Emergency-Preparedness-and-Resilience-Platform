@@ -91,6 +91,21 @@ export function AppShell(): JSX.Element {
   const flatItems = navGroups.flatMap((g) => g.items);
   const currentItem = flatItems.find((item) => location.pathname.startsWith(item.href));
 
+  // UAT gap ref 8 (05-UAT.md, blocker) fix: the mobile bottom-bar must show
+  // the Field group's own 4 items specifically, not the first 4 items of
+  // the WHOLE flattened nav_groups array. A field_responder holds broad
+  // Phase 1-4 view-only grants (plans/incidents/tasks/resource_requests/
+  // notifications/reporting), so those groups populate flatItems BEFORE the
+  // Field group's own items ever appear — flatItems.slice(0,4) therefore
+  // handed SideNav's bottom-bar variant the WRONG 4 items for this exact
+  // real persona. Selecting by nav_groups[].id === 'field' (a stable,
+  // machine-readable identifier the backend now emits per-group,
+  // routes.ts) rather than guessing a position or matching on the
+  // human-readable `label` closes this regardless of emission order or any
+  // future group-label wording change.
+  const fieldGroup = navGroups.find((g) => g.id === 'field');
+  const mobileBottomBarItems = fieldGroup ? fieldGroup.items : flatItems;
+
   const handleSignOut = () => {
     clearSessionToken();
     void signOut();
@@ -175,7 +190,7 @@ export function AppShell(): JSX.Element {
           className="ep-shell__nav ep-shell__nav--bottom-bar"
           variant="bottom-bar"
           groups={[]}
-          mobileBottomBarItems={flatItems}
+          mobileBottomBarItems={mobileBottomBarItems}
           current={currentItem?.id ?? ''}
         />
       ) : null}

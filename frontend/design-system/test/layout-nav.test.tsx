@@ -131,6 +131,16 @@ describe('SideNav — bottom-bar variant', () => {
     expect(container.textContent).not.toContain('Resources');
     expect(container.textContent).not.toContain('Feeds');
   });
+
+  it('renders identically when groups carry the new optional `id` field (type-additive regression guard)', () => {
+    const groupsWithIds: SideNavGroup[] = [
+      { id: 'prepare', label: 'Prepare', items: SEVEN_ITEM_GROUPS[0].items },
+    ];
+    const { container } = render(
+      withTheme('light', <SideNav groups={groupsWithIds} current="incidents" />),
+    );
+    expect(container.querySelector('.ep-sidenav__group-label')?.textContent).toBe('Prepare');
+  });
 });
 
 describe('PageHeader — single h1 per render', () => {
