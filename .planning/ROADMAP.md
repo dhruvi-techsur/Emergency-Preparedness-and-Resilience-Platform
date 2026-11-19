@@ -171,7 +171,7 @@ Plans:
   3. A user can request AI-assisted drafting of an ICS form field or incident/SITREP narrative, and the result renders only inside the `AIDraft` component with `Provenance` source chips — it never appears pre-inserted into the record.
   4. AI-drafted content cannot become part of an official record without a named-person approval, recorded with reviewer identity and timestamp in the incident Timeline; a write carrying `ai_origin: true` without `approved_by` is rejected at the API, not just hidden in the UI.
   5. Signal triage surfaces candidate events clustered from hazard feeds in a queue for human validation but never auto-promotes a signal directly into an active incident.
-**Plans:** 10 plans
+**Plans:** 13 plans
 
 Plans:
 - [ ] 06-01-PLAN.md — Backend F9 governance substrate: ics_forms/ai_drafts/signals/signal_source_events/hazard_feed_* schema, shared assertAiOriginApproved guard, ICS forms API, dashboard/summary API
@@ -184,6 +184,9 @@ Plans:
 - [ ] 06-08-PLAN.md — Frontend: ICS Form Editor with embedded AIDraft+Provenance, wired into Incident Workspace's Reports tab
 - [ ] 06-09-PLAN.md — Frontend: Signal Triage Queue + Signal Detail, Promote-to-incident pre-fill navigation (never auto-creates)
 - [ ] 06-10-PLAN.md — Integration: cross-persona landing/nav-visibility sweep across all 5 personas, closing the PER-02 redirect-mechanism gap
+- [ ] 06-11-PLAN.md — Gap closure (gate ref browser_suite, blocker): replenish signal-triage.spec.ts's hazard-feed fixture pool so it survives repeated full-suite re-runs
+- [ ] 06-12-PLAN.md — Gap closure (UAT ref 1, major): remove stale "ships in a later phase" hint text from EOC Dashboard's now-real Open tasks/Pending resource requests tiles
+- [ ] 06-13-PLAN.md — Gap closure (UAT ref 8, cosmetic): apply missing `.ep` box-sizing:border-box reset class to AppShell's root, fixing the Dismiss Modal's Reason textarea overflow systemically
 
 ## Progress
 
