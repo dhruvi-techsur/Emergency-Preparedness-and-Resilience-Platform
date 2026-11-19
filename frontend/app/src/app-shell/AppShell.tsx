@@ -198,7 +198,7 @@ export function AppShell(): JSX.Element {
   };
 
   return (
-    <div className="ep-shell">
+    <div className="ep ep-shell">
       {/* Skip-to-content MUST be the first focusable element on every page
           (F0 §S0.1) — it is the literal first child rendered here. */}
       <a href="#main-content" className="ep-shell__skip-link">
