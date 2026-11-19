@@ -2301,6 +2301,44 @@ async function main() {
       source: 'USGS',
       issued_at: hazardFeedEventHoursAgoIso(6),
     },
+    // UAT data-doctor fixtures (added post-06-VERIFICATION.md's documented
+    // "signal-triage.spec.ts fixture exhaustion" finding): the 3 original
+    // fixture events above each cluster into exactly ONE signal apiece on
+    // a FIRST seed run, and the Signal Triage Queue's own Promote/Dismiss
+    // actions (exercised repeatedly by both e2e specs and manual UAT
+    // passes in this one long-lived sandbox) permanently flip those
+    // signals out of 'New' status — clusterHazardFeedEvents()'s own
+    // `WHERE NOT EXISTS (signal_source_events link)` idempotency guard
+    // correctly never re-clusters the SAME hazard_feed_events rows, so a
+    // re-seed alone can never replenish 'New' rows once every original
+    // fixture signal has been triaged. These two additional isolated
+    // events (new `external_event_id`s, so findOrInsert's natural-key
+    // match never collides with the originals above, and distinct
+    // type/far-apart geometry so they each form their own fresh,
+    // never-before-clustered group) give clusterHazardFeedEvents() two
+    // more Medium-confidence 'New' signals to create every time this gap
+    // recurs — safe to append again later following this exact pattern if
+    // the queue is ever drained again.
+    {
+      feed_name: 'NWS',
+      external_event_id: 'UAT-SIGNAL-NWS-003',
+      type: 'Flash Flood Warning',
+      severity: 'Elevated',
+      lng: -84.39,
+      lat: 33.75,
+      source: 'NWS',
+      issued_at: hazardFeedEventHoursAgoIso(3),
+    },
+    {
+      feed_name: 'NOAA',
+      external_event_id: 'UAT-SIGNAL-NOAA-004',
+      type: 'Winter Storm Warning',
+      severity: 'Elevated',
+      lng: -104.99,
+      lat: 39.74,
+      source: 'NOAA',
+      issued_at: hazardFeedEventHoursAgoIso(5),
+    },
   ] as const;
 
   for (const e of hazardFeedEventDefs) {
