@@ -3,14 +3,14 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06-08-PLAN.md
-last_updated: "2026-11-19T13:55:58.800Z"
-last_activity: 2026-11-19 -- Plan 06-08 complete (see 06-08-SUMMARY.md for full detail). New IcsFormEditor.tsx embeds AIDraft over the ics_forms backend; single-click governance cascade proven end-to-end via Playwright with a direct-API-bypass rejection proof.
+stopped_at: Completed 06-09-PLAN.md
+last_updated: "2026-11-19T18:43:17.000Z"
+last_activity: 2026-11-19 -- Plan 06-09 complete (see 06-09-SUMMARY.md for full detail). New SignalTriageQueue.tsx/SignalDetail.tsx consume 06-04's signal-clustering backend; Promote only ever navigates to the pre-filled Create Incident form, proven via an explicit before/during/after incidents-count Playwright assertion.
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 58
-  completed_plans: 56
+  completed_plans: 57
   percent: 83
 ---
 
@@ -21,15 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 6 — Persona Dashboards & AI Assistance — IN PROGRESS. Plan 06-01 shipped the F9 AI-governance substrate (schema + shared assertAiOriginApproved guard) and its first real governed consumer (ICS Form Editor draft/approve); Plan 06-05 shipped the AIDraft design-system component; Plan 06-02 populated role_landing_config and shipped GET /api/v1/me/landing-config; Plan 06-03 shipped the AI-drafts request/approve/discard backend lifecycle; Plan 06-04 shipped the Signal Triage Queue backend (real clustering + promote/dismiss); Plan 06-06 shipped PER-01's EOC Dashboard and PER-03's My Work Dashboard, plus RouteGuard's reusable landing-config redirect mechanism; Plan 06-07 shipped PER-04's bottom-bar-only AppShell override and PER-05's dual-facet (Admin/Executive) experience, completing F18's all-5-personas success criterion; Plan 06-08 shipped the ICS Form Editor, the first real reachable consumer of 06-01's ics_forms backend wired to 06-05's AIDraft component, proving F9's governance cascade end-to-end via Playwright including a direct-API-bypass rejection proof. Phase 5 (Mobile Field Operations) is COMPLETE (all 6 plans shipped, incl. gap-closure plan 05-06).
+**Current focus:** Phase 6 — Persona Dashboards & AI Assistance — IN PROGRESS. Plan 06-01 shipped the F9 AI-governance substrate (schema + shared assertAiOriginApproved guard) and its first real governed consumer (ICS Form Editor draft/approve); Plan 06-05 shipped the AIDraft design-system component; Plan 06-02 populated role_landing_config and shipped GET /api/v1/me/landing-config; Plan 06-03 shipped the AI-drafts request/approve/discard backend lifecycle; Plan 06-04 shipped the Signal Triage Queue backend (real clustering + promote/dismiss); Plan 06-06 shipped PER-01's EOC Dashboard and PER-03's My Work Dashboard, plus RouteGuard's reusable landing-config redirect mechanism; Plan 06-07 shipped PER-04's bottom-bar-only AppShell override and PER-05's dual-facet (Admin/Executive) experience, completing F18's all-5-personas success criterion; Plan 06-08 shipped the ICS Form Editor, the first real reachable consumer of 06-01's ics_forms backend wired to 06-05's AIDraft component, proving F9's governance cascade end-to-end via Playwright including a direct-API-bypass rejection proof; Plan 06-09 shipped the Signal Triage Queue/Detail screens, the frontend consumer of 06-04's signal-clustering backend, proving success criterion 5's user-facing half (Promote only ever navigates to the pre-filled Create Incident form). Phase 5 (Mobile Field Operations) is COMPLETE (all 6 plans shipped, incl. gap-closure plan 05-06).
 
 ## Current Position
 
 Phase: 6 of 6 (Persona Dashboards & AI Assistance) — IN PROGRESS
 
-Plan: 8 of 10 complete in current phase (06-01, 06-02, 06-03, 06-04, 06-05, 06-06, 06-07, 06-08 done; 06-09, 06-10 not yet executed)
-Status: Phase 6 (Persona Dashboards & AI Assistance) in progress. Plan 06-08 (Wave 7, depends_on 06-01+06-03+06-05+06-07) shipped the ICS Form Editor (ICS-201), the frontend half of 06-01's ics_forms backend, embedding 06-05's AIDraft component exactly per the mockup: "Draft with AI" never touches the narrative field's own state, the AIDraft panel renders as a separate sibling directly below the field, and a single AIDraft "Approve" click cascades through 06-03's ai-drafts approve, an ics_forms create, and 06-01's ics-forms-level approve (the Timeline write) — all in that one user action. A separate "Approve form" button covers only the manual-no-draft path. IncidentWorkspace's Reports tab gained a real "Open ICS-201 form" button, closing the last ics_forms-specific orphan-page gap. New ics-form-aidraft.spec.ts proves the full flow end-to-end, including the plan's explicit criterion-4 requirement: a raw fetch bypassing the UI's own Approve button against a never-approved draft is still rejected 400 AIDRAFT_UNAPPROVED_WRITE_BLOCKED by 06-01's server-side assertAiOriginApproved guard. Zero deviations — all four integration contracts (06-01, 06-03, 06-05, 06-07) matched their documented shapes exactly. Full backend suite (19 files, 108 tests) green with zero regression; tsc --noEmit and both builds (backend + frontend/app) clean; 7/7 Playwright (1 new spec + 6/6 incident-workspace.spec.ts regression).
-Last activity: 2026-11-19 -- Plan 06-08 complete (see 06-08-SUMMARY.md for full detail). New IcsFormEditor.tsx embeds AIDraft over the ics_forms backend; single-click governance cascade proven end-to-end via Playwright with a direct-API-bypass rejection proof.
+Plan: 9 of 10 complete in current phase (06-01, 06-02, 06-03, 06-04, 06-05, 06-06, 06-07, 06-08, 06-09 done; 06-10 not yet executed)
+Status: Phase 6 (Persona Dashboards & AI Assistance) in progress. Plan 06-09 (Wave 8, depends_on 06-04+06-06+06-08) shipped the Signal Triage Queue (SignalTriageQueue.tsx, /signals) and Signal Detail (SignalDetail.tsx, /signals/:id) — the frontend consumer of 06-04's signal-clustering backend. Confidence renders as qualitative `${label} — ${reason}` text only, never a numeric/percentage indicator. Promote calls only the signals-triage /promote endpoint (which itself writes no incidents row) then navigates to the existing Create Incident form with the backend's pre-fill payload as router state — this plan's own code contains zero incident-creation calls, proving success criterion 5's user-facing half end-to-end alongside 06-04's structural backend proof. Dismiss opens a Modal whose confirm button is disabled until a non-empty reason is typed. Signal Detail renders one real Provenance chip per clustered source event via a new additive source_events field on GET /api/v1/signals (Rule-3 backend extension — the prior source_feeds aggregate couldn't distinguish individual events). One Rule-1 bugfix: 06-04's promote endpoint derives free-text hazard vocabulary (e.g. "Earthquake Advisory") that isn't a member of incidents.type's own CHECK constraint — CreateIncident.tsx now defensively maps any unrecognized pre-fill type to the form's existing 'Other' catch-all before it ever reaches state. New signal-triage.spec.ts (4/4) proves the full flow end-to-end including an explicit before/during/after incidents-count assertion that Promote alone never creates a record. Full backend suite (19 files, 108 tests) green with zero regression; tsc --noEmit (backend + frontend/app + design-system) and both builds (backend + frontend/app) clean; incident-list-create.spec.ts (4/4) regression-passes unaffected.
+Last activity: 2026-11-19 -- Plan 06-09 complete (see 06-09-SUMMARY.md for full detail). New SignalTriageQueue.tsx/SignalDetail.tsx consume 06-04's signal-clustering backend; Promote only ever navigates to the pre-filled Create Incident form, proven via an explicit before/during/after incidents-count Playwright assertion.
+
+Plan 06-08 (prior, this phase): see 06-08-SUMMARY.md for full detail. Shipped the ICS Form Editor (ICS-201), the frontend half of 06-01's ics_forms backend, embedding 06-05's AIDraft component exactly per the mockup: "Draft with AI" never touches the narrative field's own state, the AIDraft panel renders as a separate sibling directly below the field, and a single AIDraft "Approve" click cascades through 06-03's ai-drafts approve, an ics_forms create, and 06-01's ics-forms-level approve (the Timeline write) — all in that one user action. New ics-form-aidraft.spec.ts proves the full flow end-to-end, including a direct-API-bypass rejection proof.
 
 Plan 06-07 (prior, this phase): see 06-07-SUMMARY.md for full detail. Shipped PER-04's AppShell-level bottom-bar-only override (field_responder never renders the desktop SideNav rail, at any viewport width) and PER-05's explicit FacetToggle (Admin/Executive, defaults fresh to 'admin' on every mount, never persisted across reload) plus the new ExecutiveDashboard.tsx at /executive (exactly 3 hardcoded display-scale KPIs, zero charts). Completed F18's all-5-personas and executive-briefing success criteria across this phase's plans. New persona-dashboards-per04-per05.spec.ts (5 tests).
 
@@ -135,6 +137,7 @@ Progress: [████████░░] 83%
 | Phase 06 P06 | 35 min | 3 tasks | 8 files |
 | Phase 06 P07 | 55 min | 3 tasks | 8 files |
 | Phase 06 P08 | 8 min | 3 tasks | 5 files |
+| Phase 06 P09 | 9 min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -289,6 +292,10 @@ Recent decisions affecting current work:
 - [Phase 06-08]: ics_forms has no PATCH endpoint (06-01's own scope) -- each narrative edit after the first create re-POSTs a new ics_forms row rather than updating in place, a documented Phase-6 simplification
 - [Phase 06-08]: "Approve form" button covers only the manual-no-draft path -- a single click of AIDraft's own Approve already completes the full ai-drafts+ics-forms cascade, so this is never a required second click
 - [Phase 06-08]: A fresh page visit never auto-creates an ics_forms row -- POST only fires on first explicit save (AIDraft's Approve cascade or the manual "Save draft" button), avoiding empty draft rows from mere navigation
+- [Phase 06-09]: Extended GET /api/v1/signals with a new additive source_events field (per-event source+occurred_at) rather than adding a dedicated single-id signal route -- the prior source_feeds aggregate can't distinguish individual clustered events sharing a feed name, which Signal Detail's one-Provenance-chip-per-event requirement needs
+- [Phase 06-09]: Signal Detail fetches the full signals list and filters client-side by id -- 06-04 documented no single-id GET route as in scope, and this plan's own fallback note covers exactly this case
+- [Phase 06-09]: Provenance verified/confidence per source-event chip is a documented derived heuristic (Low confidence + exactly 1 contributing source -> unverified), not a literal column read -- signal_source_events has no verified boolean of its own
+- [Phase 06-09]: CreateIncident.tsx's pre-fill type_suggestion is defensively mapped through resolveTypeSuggestion() to the form's existing IncidentType enum (falling back to 'Other') -- 06-04's promote endpoint derives free-text hazard vocabulary (e.g. "Earthquake Advisory") that is not itself a member of incidents.type's own CHECK constraint, and submitting it unedited would 500 on the DB constraint
 
 ### Pending Todos
 
@@ -300,6 +307,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-19T13:55:58.798Z
-Stopped at: Completed 06-08-PLAN.md
+Last session: 2026-11-19T18:43:17.000Z
+Stopped at: Completed 06-09-PLAN.md
 Resume file: None
