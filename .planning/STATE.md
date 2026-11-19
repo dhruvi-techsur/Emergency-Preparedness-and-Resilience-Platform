@@ -2,16 +2,16 @@
 pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: phase complete — ready for verification
-stopped_at: Completed 06-10-PLAN.md
-last_updated: "2026-11-19T14:32:53.295Z"
-last_activity: 2026-11-19 -- Plan 06-10 complete (see 06-10-SUMMARY.md for full detail). Phase 6 and ALL 6 PHASES now complete — milestone v1.0 ready for verification.
+status: gap closure in progress — 06-12, 06-13 remaining
+stopped_at: Completed 06-11-PLAN.md
+last_updated: "2026-11-19T23:30:33.767Z"
+last_activity: 2026-11-19 -- Plan 06-11 complete (see 06-11-SUMMARY.md for full detail). Gap-closure plan: closed the browser_suite:fail gate blocker's signal-triage.spec.ts fixture-exhaustion failure (06-GATE.md failure #3) by extending seed.ts's hazardFeedEventDefs with 6 more fixture rows. Two more gap-closure plans (06-12, 06-13) remain for this phase.
 progress:
   total_phases: 6
-  completed_phases: 6
-  total_plans: 58
-  completed_plans: 58
-  percent: 100
+  completed_phases: 5
+  total_plans: 61
+  completed_plans: 60
+  percent: 83
 ---
 
 # Project State
@@ -21,15 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 6 — Persona Dashboards & AI Assistance — COMPLETE (all 10 plans shipped). Plan 06-01 shipped the F9 AI-governance substrate (schema + shared assertAiOriginApproved guard) and its first real governed consumer (ICS Form Editor draft/approve); Plan 06-05 shipped the AIDraft design-system component; Plan 06-02 populated role_landing_config and shipped GET /api/v1/me/landing-config; Plan 06-03 shipped the AI-drafts request/approve/discard backend lifecycle; Plan 06-04 shipped the Signal Triage Queue backend (real clustering + promote/dismiss); Plan 06-06 shipped PER-01's EOC Dashboard and PER-03's My Work Dashboard, plus RouteGuard's reusable landing-config redirect mechanism; Plan 06-07 shipped PER-04's bottom-bar-only AppShell override and PER-05's dual-facet (Admin/Executive) experience, completing F18's all-5-personas success criterion; Plan 06-08 shipped the ICS Form Editor, the first real reachable consumer of 06-01's ics_forms backend wired to 06-05's AIDraft component, proving F9's governance cascade end-to-end via Playwright including a direct-API-bypass rejection proof; Plan 06-09 shipped the Signal Triage Queue/Detail screens, the frontend consumer of 06-04's signal-clustering backend, proving success criterion 5's user-facing half (Promote only ever navigates to the pre-filled Create Incident form); Plan 06-10 (the phase's terminal integration-proof plan, mirroring 03-08/04-07) shipped one Playwright suite proving all 5 personas end-to-end in a single run, closed the PER-02 landing-config redirect gap no individual plan re-tested, and proved the incidents:approve RBAC gate rejects a non-holder's direct API bypass with 403. Phase 5 (Mobile Field Operations) is COMPLETE (all 6 plans shipped, incl. gap-closure plan 05-06). ALL 6 PHASES NOW COMPLETE — milestone v1.0 ready for verification.
+**Current focus:** Phase 6 — Persona Dashboards & AI Assistance — core 10 plans shipped; 3 gap-closure plans added post-UAT/GATE (06-11 now done, 06-12/06-13 remaining). Plan 06-01 shipped the F9 AI-governance substrate (schema + shared assertAiOriginApproved guard) and its first real governed consumer (ICS Form Editor draft/approve); Plan 06-05 shipped the AIDraft design-system component; Plan 06-02 populated role_landing_config and shipped GET /api/v1/me/landing-config; Plan 06-03 shipped the AI-drafts request/approve/discard backend lifecycle; Plan 06-04 shipped the Signal Triage Queue backend (real clustering + promote/dismiss); Plan 06-06 shipped PER-01's EOC Dashboard and PER-03's My Work Dashboard, plus RouteGuard's reusable landing-config redirect mechanism; Plan 06-07 shipped PER-04's bottom-bar-only AppShell override and PER-05's dual-facet (Admin/Executive) experience, completing F18's all-5-personas success criterion; Plan 06-08 shipped the ICS Form Editor, the first real reachable consumer of 06-01's ics_forms backend wired to 06-05's AIDraft component, proving F9's governance cascade end-to-end via Playwright including a direct-API-bypass rejection proof; Plan 06-09 shipped the Signal Triage Queue/Detail screens, the frontend consumer of 06-04's signal-clustering backend, proving success criterion 5's user-facing half (Promote only ever navigates to the pre-filled Create Incident form); Plan 06-10 (the phase's terminal integration-proof plan, mirroring 03-08/04-07) shipped one Playwright suite proving all 5 personas end-to-end in a single run, closed the PER-02 landing-config redirect gap no individual plan re-tested, and proved the incidents:approve RBAC gate rejects a non-holder's direct API bypass with 403. Plan 06-11 (gap closure) extended seed.ts's hazard-feed fixture pool so signal-triage.spec.ts survives repeated full-suite re-runs, closing 06-GATE.md's browser_suite failure #3. Phase 5 (Mobile Field Operations) is COMPLETE (all 6 plans shipped, incl. gap-closure plan 05-06). 06-12 and 06-13 gap-closure plans remain before Phase 6/the milestone can re-enter verification.
 
 ## Current Position
 
-Phase: 6 of 6 (Persona Dashboards & AI Assistance) — COMPLETE
+Phase: 6 of 6 (Persona Dashboards & AI Assistance) — gap closure in progress
 
-Plan: 10 of 10 complete in current phase (06-01 through 06-10 all done) — PHASE 6 COMPLETE, ALL 6 PHASES COMPLETE
-Status: Phase 6 (Persona Dashboards & AI Assistance) complete. Plan 06-10 (Wave 9, the phase's terminal integration-proof plan, depends_on 06-01+06-06+06-07+06-08+06-09) shipped persona-dashboards-integration.spec.ts (8 tests), a single Playwright suite signing in as all 5 personas in sequence — mirroring Phase 3's 03-08 and Phase 4's 04-07 precedent exactly. Proves PER-01 through PER-05 each land on their own distinct route with SideNav/bottom-bar matching a fresh server-side nav-config fetch; explicitly closes the one gap no individual Phase 6 plan re-tested (PER-02/incident_commander's Phase-2-era landing page now flows through the SAME landing-config mechanism 06-06/06-07 built for the other 4 personas); sanity-rechecks 06-08/06-09's AI-governance screens remain reachable; and proves the incidents:approve RBAC gate rejects planning_logistics_chief's direct API bypass attempt with a real 403, not merely a hidden button. One genuine, pre-existing, non-blocking finding surfaced and documented (not fixed, per this plan's own zero-new-code scope and threat-model transfer rule): PER-01/PER-02 render byte-identical SideNav label sets because GET /api/v1/me/nav-config derives nav items from feature-level permission presence, never per-action — the test's cross-persona uniqueness check was adjusted to assert distinct dashboard IDENTITY (route+nav combined) instead, with the known overlap asserted directly rather than masked. One Rule-1 test-only fix: switching Keycloak identities within a single test requires clearing both sessionStorage's epmp_session_token AND Keycloak's own SSO cookie. Full backend suite (19 files, 108 tests) green with zero regression; tsc --noEmit (backend + frontend/app) and both builds (backend + frontend/app) clean; persona-dashboards.spec.ts (4/4), persona-dashboards-per04-per05.spec.ts (5/5), and app-shell.spec.ts (4/4) regression-pass unaffected.
-Last activity: 2026-11-19 -- Plan 06-10 complete (see 06-10-SUMMARY.md for full detail). Phase 6 and ALL 6 PHASES now complete — milestone v1.0 ready for verification.
+Plan: 11 of 13 complete in current phase (06-01 through 06-11 done; 06-12, 06-13 remaining gap-closure plans)
+Status: Plan 06-11 (gap closure, wave 1, depends_on none) closed the `browser_suite: fail` gate blocker's `signal-triage.spec.ts` failure (06-GATE.md, "Browser Suite" section, failure #3): extended `backend/scripts/seed.ts`'s `hazardFeedEventDefs` array with 6 more isolated, distinct-type, far-apart-geometry fixture rows (UAT-SIGNAL-NOAA-005/NWS-006/USGS-007/NOAA-008/NWS-009/USGS-010), following the array's own pre-established "UAT data-doctor fixtures" pattern exactly. Proved the fix against the EXACT failure condition: ran `npx playwright test e2e/signal-triage.spec.ts --workers=1` twice in direct succession in this same long-lived sandbox — 4/4 passed both times (11 New-status signals after the first full seed+test cycle, 7 remaining after the second — comfortably above the "at least 2 New" precondition both times). `clusterHazardFeedEvents()`'s own idempotency guard (`WHERE NOT EXISTS (signal_source_events link)`) is completely unmodified and re-confirmed working: a bare re-run of `npm run seed` after clustering already ran logs `0 new signal(s) created`. No production route, guard, or schema touched — a pure fixture-data addition. Full backend suite (19 files, 108 tests) green with zero regression; `tsc --noEmit` clean. Zero deviations from plan. The other two recorded browser_suite failures (`admin-users-roles.spec.ts`, `field-mobile-sync-conflict.spec.ts`) remain explicitly out of scope, owned by Phase 1/Phase 5 respectively, per `deferred-items.md`'s documented scope boundary.
+Last activity: 2026-11-19 -- Plan 06-11 complete (see 06-11-SUMMARY.md for full detail). Gap-closure plans 06-12 and 06-13 remain before Phase 6 re-enters verification.
+
+Plan 06-10 (prior, this phase): see 06-10-SUMMARY.md for full detail. The phase's terminal integration-proof plan (Wave 9, depends_on 06-01+06-06+06-07+06-08+06-09) shipped persona-dashboards-integration.spec.ts (8 tests), a single Playwright suite signing in as all 5 personas in sequence — mirroring Phase 3's 03-08 and Phase 4's 04-07 precedent exactly. Proves PER-01 through PER-05 each land on their own distinct route with SideNav/bottom-bar matching a fresh server-side nav-config fetch; explicitly closes the one gap no individual Phase 6 plan re-tested (PER-02/incident_commander's Phase-2-era landing page now flows through the SAME landing-config mechanism 06-06/06-07 built for the other 4 personas); sanity-rechecks 06-08/06-09's AI-governance screens remain reachable; and proves the incidents:approve RBAC gate rejects planning_logistics_chief's direct API bypass attempt with a real 403, not merely a hidden button. One genuine, pre-existing, non-blocking finding surfaced and documented (not fixed, per this plan's own zero-new-code scope and threat-model transfer rule): PER-01/PER-02 render byte-identical SideNav label sets because GET /api/v1/me/nav-config derives nav items from feature-level permission presence, never per-action — the test's cross-persona uniqueness check was adjusted to assert distinct dashboard IDENTITY (route+nav combined) instead, with the known overlap asserted directly rather than masked. One Rule-1 test-only fix: switching Keycloak identities within a single test requires clearing both sessionStorage's epmp_session_token AND Keycloak's own SSO cookie. Full backend suite (19 files, 108 tests) green with zero regression; tsc --noEmit (backend + frontend/app) and both builds (backend + frontend/app) clean; persona-dashboards.spec.ts (4/4), persona-dashboards-per04-per05.spec.ts (5/5), and app-shell.spec.ts (4/4) regression-pass unaffected.
 
 Plan 06-09 (prior, this phase): see 06-09-SUMMARY.md for full detail. Shipped the Signal Triage Queue (SignalTriageQueue.tsx, /signals) and Signal Detail (SignalDetail.tsx, /signals/:id) — the frontend consumer of 06-04's signal-clustering backend. Confidence renders as qualitative `${label} — ${reason}` text only, never a numeric/percentage indicator. Promote calls only the signals-triage /promote endpoint (which itself writes no incidents row) then navigates to the existing Create Incident form with the backend's pre-fill payload as router state. Dismiss opens a Modal whose confirm button is disabled until a non-empty reason is typed. Signal Detail renders one real Provenance chip per clustered source event via a new additive source_events field on GET /api/v1/signals. One Rule-1 bugfix: 06-04's promote endpoint derives free-text hazard vocabulary that isn't a member of incidents.type's own CHECK constraint — CreateIncident.tsx now defensively maps any unrecognized pre-fill type to 'Other'. New signal-triage.spec.ts (4/4).
 
@@ -62,7 +64,7 @@ Plan 05-02 (prior): shipped the client-side half of F6 — SyncStatus design-sys
 
 Plan 05-01 (prior, backend): shipped the F6 backend data layer and API surface — field_reports/field_report_photos/sync_conflicts tables plus idempotent-submit/ordered-batch-sync/photo-upload/conflict-resolve endpoints, every incident-touching write wrapped in the shared withTimelineTransaction invariant. Integration test (4 cases) + full backend suite (15 files, 74 tests) green with zero regression; tsc --noEmit and backend build both clean.
 
-Progress: [██████████] 100%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
@@ -141,6 +143,7 @@ Progress: [██████████] 100%
 | Phase 06 P08 | 8 min | 3 tasks | 5 files |
 | Phase 06 P09 | 9 min | 3 tasks | 7 files |
 | Phase 06 P10 | 35 min | 1 tasks | 1 files |
+| Phase 06 P11 | 12 min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -312,6 +315,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-19T14:32:42.501Z
-Stopped at: Completed 06-10-PLAN.md
+Last session: 2026-11-19T23:30:30.762Z
+Stopped at: Completed 06-11-PLAN.md
 Resume file: None
