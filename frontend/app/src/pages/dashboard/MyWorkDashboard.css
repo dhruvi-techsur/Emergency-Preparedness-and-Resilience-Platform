@@ -1,0 +1,19 @@
+/*
+ * F18 S18.3 — My Work Dashboard layout. 3 EmptyState cards side by side on
+ * desktop, collapsing to a single column below the design system's
+ * --bp-md breakpoint (same value every other page's responsive switch
+ * uses — OperatingPicture.css/IncidentWorkspace.css/EocDashboard.css).
+ */
+
+.ep-my-work-dashboard__cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+@media (max-width: 767px) {
+  .ep-my-work-dashboard__cards {
+    grid-template-columns: 1fr;
+  }
+}

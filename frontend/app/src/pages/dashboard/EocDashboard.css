@@ -1,0 +1,35 @@
+/*
+ * F18 S18.1 — EOC Dashboard layout. 4-column Stat row on desktop,
+ * collapsing to a single column below the design system's --bp-md
+ * breakpoint (same value every other page's responsive switch uses —
+ * OperatingPicture.css/IncidentWorkspace.css). The 2-card row below uses an
+ * 8/4 split (matching OperatingPicture's main/side ratio), also collapsing
+ * to one column at the same breakpoint.
+ */
+
+.ep-eoc-dashboard__stat-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+@media (max-width: 767px) {
+  .ep-eoc-dashboard__stat-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ep-eoc-dashboard__cards {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-6);
+  align-items: start;
+  margin-top: var(--space-6);
+}
+
+@media (max-width: 767px) {
+  .ep-eoc-dashboard__cards {
+    grid-template-columns: 1fr;
+  }
+}
