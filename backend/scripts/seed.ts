@@ -123,15 +123,32 @@ async function main() {
   const incidentsFullAccessRoles = ['incident_commander', 'eoc_director'] as const;
   const incidentsViewOnlyRoles = ['planning_logistics_chief', 'field_responder'] as const;
 
+  // Phase 6 (06-01, F9): 'approve' added to incident_commander/
+  // eoc_director's existing grant — the ICS-form approve route
+  // (ics-forms.ts's POST .../ics-forms/{formId}/approve) is the FIRST
+  // thing in this codebase that needs incidents:approve, since Phase 2 had
+  // no approve-gated incident action of its own to grant it for.
+  // findOrInsert only INSERTs when no matching (role_id, feature) row
+  // exists yet — it does NOT update an existing row's actions column — so
+  // a database where Phase 2's seed has ALREADY run once (leaving the OLD
+  // 3-action row in place) needs the explicit re-assert UPDATE immediately
+  // below, same "re-assert idempotently via UPDATE" pattern sso_config's
+  // group_to_role_mapping block already uses elsewhere in this file.
+  // planning_logistics_chief/field_responder's incidentsViewOnlyRoles loop
+  // below is deliberately UNTOUCHED — they correctly keep ['view'] only.
   for (const roleName of incidentsFullAccessRoles) {
     const result = await findOrInsert(
       'role_permissions',
       ['role_id', 'feature'],
       [roleIds[roleName], 'incidents'],
       ['role_id', 'feature', 'actions'],
-      [roleIds[roleName], 'incidents', ['view', 'create', 'edit']],
+      [roleIds[roleName], 'incidents', ['view', 'create', 'edit', 'approve']],
     );
     record('role_permissions', result);
+    await pool.query(`UPDATE role_permissions SET actions = $1 WHERE role_id = $2 AND feature = 'incidents'`, [
+      ['view', 'create', 'edit', 'approve'],
+      roleIds[roleName],
+    ]);
   }
 
   for (const roleName of incidentsViewOnlyRoles) {

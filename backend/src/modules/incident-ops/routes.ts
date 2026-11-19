@@ -8,6 +8,8 @@ import taskRoutes from './tasks.js';
 import resourceRequestRoutes from './resource-requests.js';
 import fieldReportsRoutes from './field-reports.js';
 import syncConflictsRoutes from './sync-conflicts.js';
+import icsFormsRoutes from './ics-forms.js';
+import dashboardRoutes from './dashboard.js';
 
 /**
  * Mounts the incident-ops module's F1/F2/F4 endpoints as a Fastify plugin,
@@ -29,4 +31,9 @@ export default async function incidentOpsRoutes(app: FastifyInstance) {
   // file's append-only convention.
   await app.register(fieldReportsRoutes);
   await app.register(syncConflictsRoutes);
+  // 06-01 F9/F18 ICS forms (AI-governance touchpoint, deferred from Phase
+  // 2) + dashboard summary — appended after syncConflictsRoutes per this
+  // file's append-only convention.
+  await app.register(icsFormsRoutes);
+  await app.register(dashboardRoutes);
 }
