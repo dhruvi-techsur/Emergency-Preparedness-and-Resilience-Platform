@@ -787,6 +787,20 @@ async function main() {
   // task first, and FieldHome.tsx's "near-due" badge state has a real
   // row to render). Natural key (title, owner_id), same pattern as the
   // UAT-OVERDUE fixture.
+  //
+  // due_at is intentionally far out (30 days), not "due soon" — a
+  // near-term relative due_at computed once at seed time is a ticking
+  // time bomb: findOrInsert() never updates an EXISTING row, so the very
+  // first seed run bakes in a due_at that the Phase-3 overdue-sweep will
+  // correctly flip to 'Overdue' hours later, on every subsequent UAT
+  // round against the same sandbox — at which point MyTasksField.tsx
+  // correctly renders NO action button for either seeded task (Overdue
+  // has no nextStatusFor() transition by design), silently breaking
+  // test 2 for every tester after the first. (Observed directly: a human
+  // UAT pass ~14h after the original seed run found both tasks already
+  // Overdue with no Start/Mark-done buttons.) 30 days is a committed-code
+  // fix, not a one-time instance patch — it must survive every fresh
+  // sandbox this seed runs in, not just the one it was first observed in.
   const uatFieldResponderOpenTask = await findOrInsert(
     'tasks',
     ['title', 'owner_id'],
@@ -807,7 +821,7 @@ async function main() {
       'Open',
       fieldResponderUser.id,
       incidentIdsByName['UAT-ASSIGN-ROLE Default Agency Flood'],
-      new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(), // due in 2h
+      new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // due in 30 days — never goes stale/Overdue
       false,
       commanderUser.id,
     ],
@@ -841,7 +855,7 @@ async function main() {
       'In progress',
       fieldResponderUser.id,
       incidentIdsByName['UAT-ASSIGN-ROLE Default Agency Flood'],
-      new Date(Date.now() + 30 * 60 * 1000).toISOString(), // due in 30 min (near-due)
+      new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // due in 30 days — never goes stale/Overdue (see comment above)
       false,
       commanderUser.id,
     ],
@@ -859,6 +873,25 @@ async function main() {
       [uatFieldResponderInProgressTask.id, fieldResponderUser.id],
     );
   }
+
+  // Self-heal for a sandbox that already ran an OLDER version of this
+  // seed (before the 30-day due_at fix above): findOrInsert() never
+  // updates an existing row, so a sandbox seeded under the old "due in
+  // 2h"/"due in 30 min" values would otherwise carry a stale due_at (and
+  // whatever status the Phase-3 overdue-sweep already flipped it to)
+  // forever, even after this file is corrected and re-run. Idempotent and
+  // narrowly scoped to exactly these two fixture rows by id — never
+  // touches a real, non-fixture task.
+  await pool.query(
+    `UPDATE tasks SET status = 'Open', due_at = now() + interval '30 days'
+     WHERE id = $1 AND due_at < now() + interval '7 days'`,
+    [uatFieldResponderOpenTask.id],
+  );
+  await pool.query(
+    `UPDATE tasks SET status = 'In progress', due_at = now() + interval '30 days'
+     WHERE id = $1 AND due_at < now() + interval '7 days'`,
+    [uatFieldResponderInProgressTask.id],
+  );
 
   // UAT data-doctor fixture (Phase 5/6 UAT pass, field-mobile test 6): a
   // real UNRESOLVED sync_conflicts row reachable at a real
