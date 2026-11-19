@@ -62,6 +62,7 @@ import { SyncConflictResolution } from './pages/field-mobile/SyncConflictResolut
 import { FieldMap } from './pages/field-mobile/FieldMap';
 import { EocDashboard } from './pages/dashboard/EocDashboard';
 import { MyWorkDashboard } from './pages/dashboard/MyWorkDashboard';
+import { ExecutiveDashboard } from './pages/executive/ExecutiveDashboard';
 
 const queryClient = new QueryClient();
 
@@ -193,6 +194,14 @@ root.render(
                   this route tree already established. */}
               <Route path="dashboard" element={<EocDashboard />} />
               <Route path="my-work" element={<MyWorkDashboard />} />
+              {/* F18 (06-07) — PER-05's executive facet, reached only via
+                  AppShell's explicit FacetToggle (never a sign-in
+                  default). Appended AFTER 06-06's own two routes above,
+                  following the SAME append-not-overwrite discipline this
+                  plan's own sequencing note documents — 06-06 (wave 5)
+                  runs strictly before this plan (wave 6), with an
+                  explicit depends_on edge for exactly this file. */}
+              <Route path="executive" element={<ExecutiveDashboard />} />
             </Route>
           </Routes>
         </RouteGuard>
