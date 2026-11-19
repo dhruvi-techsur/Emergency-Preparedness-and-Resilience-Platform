@@ -1,4 +1,5 @@
 import { pool } from '../src/db/client.js';
+import { clusterHazardFeedEvents } from '../src/modules/ai-assist/signal-clustering.js';
 
 interface FindOrInsertResult {
   id: string;
@@ -2167,6 +2168,139 @@ async function main() {
       [roleId, cfg.default_landing_route, JSON.stringify(cfg.nav_groups), mobileBottomBarParam],
     );
   }
+
+  // Phase 6 (06-04, F9): sample hazard_feed_config + hazard_feed_events
+  // rows simulating a real corroborating cluster — no live NOAA/NWS/USGS
+  // feed credential exists in this sandbox (F12 is explicitly deferred to
+  // v2 per .planning/REQUIREMENTS.md), so this seed data stands in for
+  // what a live feed poll would produce, giving
+  // clusterHazardFeedEvents() real variety to demonstrate against:
+  //  - 3 corroborating feeds (NOAA/NWS/USGS), all type='Coastal Flood
+  //    Watch', geometries within 0.5 degrees of each other, issued within
+  //    the last few hours -> clusters into ONE High-confidence signal.
+  //  - 2 isolated single-source events (different type, far-apart
+  //    geometry, one per feed) -> each clusters into its own
+  //    Medium-confidence signal.
+  // Natural key for hazard_feed_config: feed_name (the CHECK constraint
+  // already limits this to exactly 'NOAA'/'NWS'/'USGS', and this seed
+  // only ever creates one config row per feed name).
+  const hazardFeedDefs = [
+    { feed_name: 'NOAA', endpoint_url: 'https://api.weather.gov/alerts/noaa-stub' },
+    { feed_name: 'NWS', endpoint_url: 'https://api.weather.gov/alerts/nws-stub' },
+    { feed_name: 'USGS', endpoint_url: 'https://earthquake.usgs.gov/alerts/usgs-stub' },
+  ] as const;
+
+  const hazardFeedIds: Record<string, string> = {};
+  for (const f of hazardFeedDefs) {
+    const result = await findOrInsert(
+      'hazard_feed_config',
+      ['feed_name'],
+      [f.feed_name],
+      ['feed_name', 'endpoint_url'],
+      [f.feed_name, f.endpoint_url],
+    );
+    hazardFeedIds[f.feed_name] = result.id;
+    record('hazard_feed_config', result);
+  }
+
+  const hazardFeedEventNowMs = Date.now();
+  const hazardFeedEventHoursAgoIso = (h: number) =>
+    new Date(hazardFeedEventNowMs - h * 60 * 60 * 1000).toISOString();
+
+  // Natural key for hazard_feed_events: UNIQUE(feed_id, external_event_id)
+  // per this plan's own migration — findOrInsert matches on exactly that
+  // pair, so a second seed run never re-inserts these fixture rows.
+  const hazardFeedEventDefs = [
+    // The 3 corroborating same-type/nearby-geometry events — all within
+    // the same 0.5-degree grid cell (38.80-38.90 lat, -77.05--76.95 lng
+    // all snap to the same grid cell), same `type`, so
+    // clusterHazardFeedEvents()'s GROUP BY produces exactly ONE group of
+    // 3 for these.
+    {
+      feed_name: 'NOAA',
+      external_event_id: 'UAT-SIGNAL-NOAA-001',
+      type: 'Coastal Flood Watch',
+      severity: 'Elevated',
+      lng: -77.02,
+      lat: 38.85,
+      source: 'NOAA',
+      issued_at: hazardFeedEventHoursAgoIso(2),
+    },
+    {
+      feed_name: 'NWS',
+      external_event_id: 'UAT-SIGNAL-NWS-001',
+      type: 'Coastal Flood Watch',
+      severity: 'Elevated',
+      lng: -77.03,
+      lat: 38.86,
+      source: 'NWS',
+      issued_at: hazardFeedEventHoursAgoIso(1.5),
+    },
+    {
+      feed_name: 'USGS',
+      external_event_id: 'UAT-SIGNAL-USGS-001',
+      type: 'Coastal Flood Watch',
+      severity: 'Elevated',
+      lng: -77.01,
+      lat: 38.84,
+      source: 'USGS',
+      issued_at: hazardFeedEventHoursAgoIso(1),
+    },
+    // Isolated single-source event #1 — different type, far-apart
+    // geometry (no other event anywhere near this grid cell) ->
+    // clusters alone into a Medium-confidence signal.
+    {
+      feed_name: 'NOAA',
+      external_event_id: 'UAT-SIGNAL-NOAA-002',
+      type: 'High Wind Warning',
+      severity: 'Watch',
+      lng: -95.37,
+      lat: 29.76,
+      source: 'NOAA',
+      issued_at: hazardFeedEventHoursAgoIso(4),
+    },
+    // Isolated single-source event #2 — a second distinct type/location,
+    // same reasoning as above.
+    {
+      feed_name: 'USGS',
+      external_event_id: 'UAT-SIGNAL-USGS-002',
+      type: 'Earthquake Advisory',
+      severity: 'Watch',
+      lng: -122.42,
+      lat: 37.77,
+      source: 'USGS',
+      issued_at: hazardFeedEventHoursAgoIso(6),
+    },
+  ] as const;
+
+  for (const e of hazardFeedEventDefs) {
+    const feedId = hazardFeedIds[e.feed_name];
+    const existingEvent = await pool.query<{ id: string }>(
+      `SELECT id FROM hazard_feed_events WHERE feed_id = $1 AND external_event_id = $2`,
+      [feedId, e.external_event_id],
+    );
+    if (existingEvent.rows.length > 0) {
+      record('hazard_feed_events', { id: existingEvent.rows[0].id, inserted: false });
+      continue;
+    }
+    const inserted = await pool.query<{ id: string }>(
+      `INSERT INTO hazard_feed_events
+         (feed_id, external_event_id, type, severity, geometry, confidence, source, issued_at)
+       VALUES ($1,$2,$3,$4, ST_SetSRID(ST_MakePoint($5,$6), 4326), $7, $8, $9)
+       RETURNING id`,
+      [feedId, e.external_event_id, e.type, e.severity, e.lng, e.lat, 'High', e.source, e.issued_at],
+    );
+    record('hazard_feed_events', { id: inserted.rows[0].id, inserted: true });
+  }
+
+  // Run the real clustering job against whatever unclustered
+  // hazard_feed_events rows exist right now — the fixture rows above on a
+  // first run, nothing new on every subsequent run (its own
+  // WHERE NOT EXISTS (signal_source_events link) query condition finds no
+  // unclustered events the second time), leaving the Signal Triage Queue
+  // populated for human review/demo purposes after every `npm run seed`.
+  const clusterResult = await clusterHazardFeedEvents();
+  console.log(`Signal clustering: ${clusterResult.clustersCreated} new signal(s) created from hazard feed events.`);
 
   console.log(
     'Seed summary: ' +
