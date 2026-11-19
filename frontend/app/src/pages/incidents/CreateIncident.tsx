@@ -83,6 +83,34 @@ interface FieldError {
  * this Phase-2 file, non-breaking to Phase 2's own existing
  * incident-list-create.spec.ts Playwright suite.
  */
+/** [Rule 1 - Bug] 06-04's signal-triage promote endpoint derives
+ * `type_suggestion` from free-text hazard-feed vocabulary (e.g.
+ * "Earthquake Advisory", "Hurricane Watch", "High Wind Warning") via
+ * `deriveTypeSuggestion()` — values that are NOT members of this form's
+ * own `incidents.type` CHECK constraint enum. Submitting one of those
+ * unrecognized strings straight through would violate the DB constraint
+ * and 500 on submit (reproduced: POST /api/v1/incidents with
+ * type="Earthquake Advisory" fails the CHECK). This guard maps any
+ * pre-fill suggestion not already a known IncidentType to the form's
+ * existing 'Other' catch-all — the same bucket a human would pick
+ * manually for an unlisted hazard type — rather than letting an invalid
+ * value reach the submit call at all. */
+const KNOWN_INCIDENT_TYPES: readonly IncidentType[] = [
+  'Flood',
+  'Wildfire',
+  'Severe Weather',
+  'HazMat',
+  'Public Health',
+  'Other',
+];
+
+function resolveTypeSuggestion(suggestion: string | undefined): IncidentType {
+  if (suggestion && (KNOWN_INCIDENT_TYPES as readonly string[]).includes(suggestion)) {
+    return suggestion as IncidentType;
+  }
+  return suggestion ? 'Other' : 'Flood';
+}
+
 export function CreateIncident(): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
@@ -93,8 +121,8 @@ export function CreateIncident(): JSX.Element {
   )?.prefill;
 
   const [name, setName] = React.useState(() => prefill?.name_suggestion ?? '');
-  const [type, setType] = React.useState<IncidentType>(
-    () => (prefill?.type_suggestion as IncidentType) ?? 'Flood',
+  const [type, setType] = React.useState<IncidentType>(() =>
+    resolveTypeSuggestion(prefill?.type_suggestion),
   );
   const [severity, setSeverity] = React.useState<Severity>(
     () => (prefill?.severity_suggestion as Severity) ?? 'Normal',

@@ -64,6 +64,8 @@ import { FieldMap } from './pages/field-mobile/FieldMap';
 import { EocDashboard } from './pages/dashboard/EocDashboard';
 import { MyWorkDashboard } from './pages/dashboard/MyWorkDashboard';
 import { ExecutiveDashboard } from './pages/executive/ExecutiveDashboard';
+import { SignalTriageQueue } from './pages/signals/SignalTriageQueue';
+import { SignalDetail } from './pages/signals/SignalDetail';
 
 const queryClient = new QueryClient();
 
@@ -213,6 +215,16 @@ root.render(
                   depends_on this one and appends its own routes after
                   this line. */}
               <Route path="incidents/:incidentId/forms/:formId" element={<IcsFormEditor />} />
+              {/* F9 (06-09) — the Signal Triage Queue + Signal Detail
+                  screens, the frontend consumer of 06-04's signal-
+                  clustering backend. Wave 8, strictly after 06-08's
+                  /incidents/:incidentId/forms/:formId route above
+                  (explicit depends_on edge for this exact file) —
+                  appended last, following the SAME append-not-overwrite
+                  discipline every other multi-plan shared-file edit in
+                  this route tree already established. */}
+              <Route path="signals" element={<SignalTriageQueue />} />
+              <Route path="signals/:id" element={<SignalDetail />} />
             </Route>
           </Routes>
         </RouteGuard>
