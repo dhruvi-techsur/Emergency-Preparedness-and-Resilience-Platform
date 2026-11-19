@@ -46,6 +46,17 @@ test.describe('Persona dashboards — EOC Dashboard (PER-01) and My Work (PER-03
     ]) {
       await expect(page.getByText(label, { exact: true })).toBeVisible({ timeout: 10_000 });
     }
+
+    // Gap closure 06-12 (UAT ref 1, major) regression guard: Open tasks and
+    // Pending resource requests are REAL jurisdiction-scoped counts (this
+    // test's own eoc_director fixture has 2 open tasks, 1 pending resource
+    // request in its jurisdiction per 06-UAT.md's own DB-confirmed values) —
+    // neither tile may ever again show a "ships in a later phase" caveat
+    // alongside a real nonzero number. Notifications pending ack remains the
+    // one genuine structural zero and keeps its hint.
+    await expect(page.getByText('Tasks module ships in a later phase')).toHaveCount(0);
+    await expect(page.getByText('Resource requests module ships in a later phase')).toHaveCount(0);
+    await expect(page.getByText('Per-recipient acknowledgment ships in a later phase')).toBeVisible();
   });
 
   test('2. planning_logistics_chief lands on /my-work with its 3 named primary actions', async ({
