@@ -246,86 +246,23 @@ export default async function notificationsRoutes(app: FastifyInstance) {
   );
 
   // -------------------------------------------------------------------
-  // AI drafts (minimal structural stub — see this plan's documented scope
-  // note. No live Intelligence Layer gateway exists in this sandbox;
-  // TechArch 2.2's AI gateway is a separately-deployed service out of this
-  // phase's scope. This stub produces structurally valid AiDraftResponse
-  // shapes so the send-gating invariant is testable end-to-end without a
-  // real model dependency — replacing the stub body with a real gateway
-  // call is a drop-in Phase 6 change, not a contract change.
+  // AI drafts — RELOCATED to ai-assist/ai-drafts.ts (Phase 6, 06-03).
+  //
+  // This module used to own POST /api/v1/ai-drafts, .../approve,
+  // .../discard inline as a minimal structural stub (gated on
+  // notifications:view since no dedicated ai_assist feature-permission
+  // existed yet at that point in the roadmap). 06-03 is Phase 6's F9-
+  // proper home for these three routes per TechArch's component
+  // boundaries, and moved them into the new ai-assist module — gated on
+  // the new ai_assist feature-permission (PER-01/02/03 only) instead of
+  // notifications:view, with a content-aware stub that actually flags a
+  // context-less request with AIDRAFT_NO_SOURCE rather than always
+  // fabricating a sourced-looking response. See
+  // ai-assist/ai-drafts.ts's own inline note for the full history. This
+  // module's assertAiOriginApproved guard (above) is untouched by the
+  // move — it reads ai_drafts.approved_by directly from the table, not
+  // from either module's routes.
   // -------------------------------------------------------------------
-  app.post<{
-    Body: { target_feature: string; target_field: string; context: string; requesting_user_id: string };
-  }>(
-    '/api/v1/ai-drafts',
-    // Reuses notifications' own 'view' action since no dedicated
-    // ai_assist feature-permission exists yet (documented inline per
-    // this plan's instruction).
-    { preHandler: requirePermission('notifications', 'view') },
-    async (req, reply) => {
-      const { target_feature, target_field, context, requesting_user_id } = req.body ?? ({} as never);
-      const rows = await query<{ id: string; draft_text: string; sources: unknown; confidence_label: string }>(
-        `INSERT INTO ai_drafts (target_feature, target_field, draft_text, sources, confidence_label, requesting_user_id)
-         VALUES ($1,$2, 'Drafted summary (stub \u2014 no live AI gateway in this environment): ' || $3,
-                 jsonb_build_array(jsonb_build_object('source', 'stub', 'time', now()::text, 'confidence', 'Medium')),
-                 'Medium', $4)
-         RETURNING id, draft_text, sources, confidence_label`,
-        [target_feature, target_field, context, requesting_user_id],
-      );
-      const row = rows[0];
-      return reply.code(201).send({
-        id: row.id,
-        draft_text: row.draft_text,
-        sources: row.sources,
-        confidence_label: row.confidence_label,
-      });
-    },
-  );
-
-  app.post<{
-    Params: { id: string };
-    Body: { approver_id?: string; edited_text?: string };
-  }>(
-    '/api/v1/ai-drafts/:id/approve',
-    { preHandler: requirePermission('notifications', 'view') },
-    async (req, reply) => {
-      const { approver_id, edited_text } = req.body ?? ({} as never);
-      if (!approver_id) {
-        return reply.code(403).send({
-          error_code: 'APPROVAL_REQUIRES_NAMED_USER',
-          message: 'AI drafts must be approved by a signed-in person.',
-        });
-      }
-      // Identity re-check — mirrors the /send route's own
-      // effectiveApproverId !== req.epmpUser!.id guard (:468-469). The
-      // approver must be the signed-in caller, never a different
-      // client-asserted identity.
-      if (approver_id !== req.epmpUser!.id) {
-        return reply.code(403).send({
-          error_code: 'APPROVER_MISMATCH',
-          message: "You're not the designated approver for this channel. Route it to the correct approver.",
-        });
-      }
-      const rows = await query<{ id: string; approved_by: string; approved_at: string }>(
-        `UPDATE ai_drafts SET action='approve', approved_by=$1, approved_at=now(), edited_text=$2
-         WHERE id=$3 RETURNING id, approved_by, approved_at`,
-        [approver_id, edited_text ?? null, req.params.id],
-      );
-      if (!rows[0]) {
-        return reply.code(404).send(NOTIFICATION_NOT_FOUND);
-      }
-      return reply.code(200).send(rows[0]);
-    },
-  );
-
-  app.post<{ Params: { id: string } }>(
-    '/api/v1/ai-drafts/:id/discard',
-    { preHandler: requirePermission('notifications', 'view') },
-    async (req, reply) => {
-      await query(`UPDATE ai_drafts SET action='discard' WHERE id=$1`, [req.params.id]);
-      return reply.code(204).send();
-    },
-  );
 
   // -------------------------------------------------------------------
   // Compose
