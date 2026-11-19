@@ -1,9 +1,9 @@
 ---
-status: complete
+status: diagnosed
 phase: 05-mobile-field-operations
 source: [05-01-SUMMARY.md, 05-02-SUMMARY.md, 05-03-SUMMARY.md, 05-04-SUMMARY.md, 05-05-SUMMARY.md]
 started: 2026-11-18T18:21:19Z
-updated: 2026-11-19T09:44:14Z
+updated: 2026-11-19T10:05:00Z
 ---
 
 ## Current Test
@@ -112,10 +112,18 @@ per_test:
   test: 8
   source: self_check
   confidence: proven
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "AppShell.tsx:91 derives the mobile bottom-bar's item source via `flatItems = navGroups.flatMap((g) => g.items)` over the ENTIRE nav_groups array returned by GET /api/v1/me/nav-config, then passes this same undifferentiated flatItems as mobileBottomBarItems to SideNav.tsx's bottom-bar variant (AppShell.tsx:178), which structurally takes only `.slice(0, 4)` of whatever it's given (SideNav.tsx:98). Neither AppShell nor SideNav ever selects the Field group specifically by its label — there is no concept of 'the Field group' at the mobile-bottom-bar call site, only 'the first 4 items in backend emission order.' Because the backend emits nav_groups in a fixed order (Prepare→Monitor→Activate→Coordinate→Improve→Field→Admin, routes.ts:257-430) and the real field_responder role holds broad, intentional view-only grants across Phases 1-4 (plans/incidents/tasks/resource_requests/notifications/reporting — seed.ts lines 124-462) in addition to this phase's field_reports grant, 5 groups (9 items) populate before Field's items ever appear. Confirmed by a live authenticated API call against the real backend/real seeded user (reproduced the exact wrong 4 ids) and by a real Playwright render of the live frontend at a mobile viewport (reproduced the exact wrong 4 labels visually); a desktop-viewport positive control confirmed the rail SideNav's Field group renders correctly and in isolation, isolating the defect specifically to the bottom-bar's item-selection logic in AppShell.tsx, not to nav_groups construction or SideNav's rail rendering."
+  artifacts:
+    - path: "frontend/app/src/app-shell/AppShell.tsx"
+      issue: "Line 91: `flatItems = navGroups.flatMap((g) => g.items)` flattens across ALL nav groups with no Field-group selection; line 178 passes this same flatItems as mobileBottomBarItems with no filtering"
+    - path: "frontend/design-system/src/navigation/SideNav.tsx"
+      issue: "Line 98: `mobileBottomBarItems.slice(0, 4)` — working as documented, but has no awareness of groups at all; the bug is entirely in what it's handed, not in this slice itself"
+    - path: "backend/src/modules/auth-org/routes.ts"
+      issue: "Lines 257-430: nav_groups emitted in fixed order Prepare→Monitor→Activate→Coordinate→Improve→Field→Admin with no group-identifying metadata (e.g. no `id: 'field'` on the group itself) that a consumer could use to select 'the Field group' specifically"
+  missing:
+    - "AppShell.tsx needs to select the Field group specifically (e.g. by group label/id) for mobileBottomBarItems, not flatten the whole nav_groups array"
+    - "nav_groups groups likely need a stable machine-readable group identifier (not just a display `label`) so the frontend can reliably target 'Field' regardless of label wording or emission order"
+  debug_session: .planning/debug/mobile-bottom-nav-wrong-items.md
 
 - truth: "Signing in as field-responder@epmp.local and navigating to /field shows a list of today's tasks AND a sticky 'Report observation' button together on the same screen"
   status: failed
@@ -123,7 +131,16 @@ per_test:
   severity: major
   test: 1
   source: user
-  confidence: hypothesis
-  artifacts: []
-  missing: []
-  debug_session: ""
+  confidence: proven
+  root_cause: "INDEPENDENT of gap 1 (test 8) — confirmed NOT the same root cause, despite the gap's own recorded reason asserting otherwise. Gap 1 is a mobile-only bottom-bar item-selection bug in AppShell.tsx/SideNav.tsx; this gap is a desktop SideNav information-architecture/labeling defect in the Field group's nav_groups definition (backend/src/modules/auth-org/routes.ts:417-429). Live Playwright render of the real desktop rail SideNav (the variant the human tester actually used) shows the Field group rendering correctly and in isolation — architecturally untouched by gap 1's cross-group flattening mechanism, which only affects what AppShell.tsx passes to the bottom-bar variant. The actual defect: the Field group defines 'My Tasks' (href /field/tasks → MyTasksField.tsx, a narrow one-tap task-status screen with NO Report button anywhere in its JSX, by design — its own doc comment scopes it to Start/Mark-done only) and 'Profile' (href /field → FieldHome.tsx, which has BOTH the task list and the sticky 'Report observation' button together). Per routes.ts's own inline comment, 'Profile' was chosen only because the Field group needed exactly 4 items to satisfy the bottom-bar's structural 4-slot constraint and no dedicated profile screen exists — the label was never intended to describe Field Home's actual content. A user clicking 'My Tasks' (which matches what they're looking for almost verbatim) lands on a screen that structurally cannot have a Report button, while the screen that actually has both pieces sits behind an unrelated-sounding 'Profile' label. Confirmed directly: read both screen components in full (MyTasksField.tsx has zero Report-button code paths; FieldHome.tsx has exactly the expected button) and live-rendered the real desktop SideNav showing both items route/highlight correctly per their own hrefs, ruling out any routing or highlighting bug — this is a mapping/labeling defect, not a code-logic defect."
+  artifacts:
+    - path: "backend/src/modules/auth-org/routes.ts"
+      issue: "Lines 417-429: Field group's 'Profile' item (id field-profile, href /field) is a placeholder label chosen only to fill a required 4th bottom-bar slot (per the code's own comment), but its href actually points at Field Home — the screen with the task list + Report button — with nothing in the label signaling that"
+    - path: "frontend/app/src/pages/field-mobile/MyTasksField.tsx"
+      issue: "Screen reached via the 'My Tasks' label (the label a user looking for the task list naturally clicks) has no Report observation button anywhere, by design — it's scoped to one-tap status transitions only"
+    - path: "frontend/app/src/pages/field-mobile/FieldHome.tsx"
+      issue: "Has the task list + Report button the test expects together, but is only reachable via the misleadingly-labeled 'Profile' SideNav item, not any label suggesting 'home' or 'tasks+report'"
+  missing:
+    - "Field group's 4th item needs a label that signals it's the combined tasks+Report landing screen (e.g. 'Field home'), not 'Profile'"
+    - "Decide whether 'My Tasks' should gain a secondary Report entry point, or whether the landing-screen item should be relabeled/reordered so it's the natural first click"
+  debug_session: .planning/debug/field-home-report-button-unreachable-from-my-tasks.md
