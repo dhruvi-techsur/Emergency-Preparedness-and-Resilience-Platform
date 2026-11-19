@@ -94,6 +94,8 @@ export { Provenance } from './product-patterns/Provenance';
 export type { ProvenanceProps } from './product-patterns/Provenance';
 export { SyncStatus } from './product-patterns/SyncStatus';
 export type { SyncStatusProps, SyncStatusState } from './product-patterns/SyncStatus';
+export { AIDraft } from './product-patterns/AIDraft';
+export type { AIDraftProps, AIDraftSource } from './product-patterns/AIDraft';
 
 // DATA VISUALIZATION
 export { LineChart } from './data/LineChart';
