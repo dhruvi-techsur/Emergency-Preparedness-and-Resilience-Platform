@@ -606,6 +606,13 @@ export default async function notificationsRoutes(app: FastifyInstance) {
           failure_reason: r.failure_reason ?? undefined,
         })),
         ack_percentage,
+        // Plan 09-03 (F14 frontend half): additive-only field, zero shape
+        // change to any existing consumer. notification.channels is
+        // already fetched above via fetchNotificationRow for the
+        // not-found check — this is the cheapest possible way to let
+        // DeliveryTracking.tsx distinguish a CAP-formatted public-alert
+        // send from a plain send, with no second query/endpoint needed.
+        is_cap_send: notification.channels.includes('IPAWS'),
       });
     },
   );
