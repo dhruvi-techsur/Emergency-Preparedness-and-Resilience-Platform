@@ -1,8 +1,8 @@
 ---
 phase: 8
-status: issues_found
-blockers: 1
-warnings: 2
+status: clean
+blockers: 0
+warnings: 0
 files_reviewed: 9
 files_reviewed_list:
   - backend/src/modules/integration-gateway/document-adapter.ts
@@ -14,70 +14,59 @@ files_reviewed_list:
   - frontend/app/src/pages/operating-picture/OperatingPicture.tsx
   - frontend/app/src/pages/plans/ImportDocumentModal.tsx
   - frontend/app/src/pages/plans/PlanRepository.tsx
-reviewed_at: 2026-11-20T18:45:35Z
-iteration: 1
+reviewed_at: 2026-11-20T18:52:31Z
+iteration: 2
 ---
 
-# Phase 8 Code Review
+# Phase 8 Code Review (Iteration 2 — re-review of B1 fix)
 
-## Contract-scan disposition (step 0)
+## B1 verification (iteration 1 blocker, fix commit `35df808`)
 
-The single `c-gap` reported (`frontend/app/src/pages/SignInCallback.tsx:65` → `GET /api/v1/auth/sso/callback`, no matching backend route) is a **false positive, out of this review's scope**, confirmed by direct inspection:
+**Original defect:** `POST /api/v1/plans/import`'s `if (plan_id)` branch (attach-to-existing-plan path) unconditionally called `linkDocument()`, ignoring `mode` — so `mode: 'import_copy'` against an existing plan silently wrote a `link_live` row instead of a one-time copy.
 
-- `git diff e545ee4..HEAD --stat` touches neither `SignInCallback.tsx` nor `backend/src/modules/auth-org/routes.ts` — both files are untouched by the 08-07/08-08/08-09/08-10 diff (`SignInCallback.tsx` last changed in `ea23577`, "fix(04-08)"; `routes.ts` last changed in `720036e`, "feat(06-06)" — both predate this gap-closure run entirely).
-- Reading the actual call site (`SignInCallback.tsx:65-69`): `fetch('/api/v1/auth/sso/callback', { method: 'POST', ... })` — the method is declared in the options object, not inline with the URL, which is exactly why the scanner's static method-sniffing mis-detected GET. The backend route (`auth-org/routes.ts:72`) is `app.post<...>('/api/v1/auth/sso/callback', ...)` — a real, matching POST route exists.
+**Fix read directly (`git show 35df808`), not trusted from the commit message:**
 
-Not carried forward as a finding: it is neither real nor in this run's diff.
+1. **`plans.ts:359-394`** — the `if (plan_id)` branch now reads:
+   ```ts
+   if (mode === 'import_copy') {
+     await importDocument(req.epmpUser!.id, source_document_ref, targetPlanId);
+   } else {
+     await linkDocument(req.epmpUser!.id, source_document_ref, targetPlanId, req.epmpUser!.jurisdiction_scope);
+   }
+   ```
+   This is structurally identical to the `else` (new-plan) branch's existing `if (mode === 'import_copy') { importDocument(...) } else { linkDocument(...) }` pattern (plans.ts:438-442), confirmed by direct side-by-side read of both branches. **Confirmed fixed** — `mode` is now honored on both branches.
+
+2. **`document-adapter.ts:142-166`** — `importDocument()`'s signature is now `(userId: string, externalDocId: string, planId?: string)`. The INSERT changed from `(external_document_id, source_system, mode, imported_by)` / 3 bound params to `(plan_id, external_document_id, source_system, mode, imported_by)` / 4 bound params, with `[planId ?? null, externalDocId, sourceSystem, userId]`. Column order and param order line up correctly (`plan_id`↔`planId ?? null`, `external_document_id`↔`externalDocId`, `source_system`↔`sourceSystem`, `mode`↔literal `'import_copy'`, `imported_by`↔`userId`) — **no column/param misalignment**.
+   - **Standalone-import route unaffected, confirmed directly:** `document-adapter.ts:475` (`POST /api/v1/integrations/documents/:id/import`) calls `importDocument(req.epmpUser!.id, req.params.id)` — exactly 2 args, `planId` param left `undefined`, falls through `planId ?? null` to `NULL`, identical behavior to pre-fix. Also directly confirmed via `facility-document-adapter.test.ts` (test 6 and 7, both call `importDocument(userId, docId)` with 2 args) — ran this suite in isolation: **14/14 passing**.
+
+3. **New test (`plans.test.ts:523-564`)** — reads a real `document_links` row via direct `query()` call (not a status-code-only check): `SELECT id, plan_id, mode FROM document_links WHERE plan_id = $1`, asserts `linkRows.length > 0` AND `linkRows.every(row => row.mode === 'import_copy')`. The plan under test is pre-created via a separate `POST /api/v1/plans` call (`existingPlanId`) before the import call, and the import request explicitly sends `plan_id: existingPlanId` — so this genuinely exercises "attach to an EXISTING plan via import_copy," not a new-plan creation. Confirmed this is the previously-missing combination (iteration 1's gap). The response-id assertion (`importRes.body.id === existingPlanId`) additionally confirms the route didn't silently create a new plan.
+   - The adjacent pre-existing `'link_live with an existing plan_id...'` test (plans.test.ts:487-515) was re-read and is untouched by the diff — still exercises the same pattern for `link_live`, still passes.
+
+4. **Re-ran independently (not trusting the fixer's reported numbers):**
+   - `cd backend && npx tsc --noEmit` → clean, no errors.
+   - `cd backend && npm test -- plans.test.ts` → **10/10 passing**.
+   - `cd backend && npm test -- facility-document-adapter.test.ts` → **14/14 passing** (confirms standalone-import route and direct `importDocument`/`linkDocument` callers unaffected).
+   - `cd backend && npm test` (full suite), run **4 times** for reproducibility: one run showed a transient 2-test failure in `field-reports.test.ts` (`sync-batch`/`sync-conflicts resolve` tests) with an unrelated `ENOENT` on a test-fixture photo file and a `NATS not connected` log — this file is **entirely untouched by the phase 8 diff** (last changed in `4231131`, a phase-5 commit; confirmed via `git diff e545ee4..HEAD --name-only`, not in the list). Reverting to the pre-fix commit (`35df808^`) and running the full suite produced a clean 152/152 pass; re-running the full suite 3 more times at the post-fix HEAD produced 153/153 clean every time. This is pre-existing cross-test-file flakiness in an unrelated, undiffed module (likely a shared upload-fixture/ordering issue), **not a regression introduced by `35df808`** — confirmed by reproducibility testing, not assumption.
+   - Final clean full-suite result: **153/153 passing**, matching the fixer's reported number.
+
+5. **Regression check on touched files and all `importDocument`/`linkDocument` call sites:** grepped every call site across the backend (`plans.ts` x2, `document-adapter.ts`'s own route handlers x2, `facility-document-adapter.test.ts` x2). All pre-existing 2-arg/3-arg/4-arg call shapes remain valid against the new optional-3rd-param signature — no caller needed updating, none was missed.
+
+6. **W1/W2 scope check:** `git show 35df808` touches only `document-adapter.ts`, `plans.test.ts`, `plans.ts` — confirmed neither W1 (sandbox-stub content-not-written, `plans.ts:425-426`/439) nor W2 (`jurisdiction_id` unvalidated on new-plan creation, `plans.ts:407-409`) lines were touched by the fix diff. Both remain as explicitly out-of-scope, non-regressed observations from iteration 1; not re-litigated here.
+
+**Verdict: B1 is genuinely fixed.** The existing-plan-attach branch now honors `mode` exactly like the new-plan branch, `importDocument()`'s new optional parameter is correctly threaded and backward-compatible, the new test asserts real DB state (not just HTTP status), and no regression was introduced in any caller or the full test suite.
 
 ## BLOCKERs
 
-### B1: `POST /api/v1/plans/import` with `plan_id` + `mode: 'import_copy'` silently performs a `link_live` write instead, misrepresenting the user's explicit choice
-- **File:** backend/src/modules/plans/plans.ts:359-381
-- **Category:** bug
-- **Evidence:** In the `if (plan_id)` branch (attach-to-existing-plan path), the route unconditionally calls `linkDocument(...)` — never branching on `mode` at all:
-  ```ts
-  if (plan_id) {
-    const existing = await fetchPlanRow(query, plan_id, req.epmpUser!.jurisdiction_scope);
-    if (!existing) { return reply.code(404).send(PLAN_NOT_FOUND); }
-    targetPlanId = plan_id;
-    try {
-      await linkDocument(req.epmpUser!.id, source_document_ref, targetPlanId, req.epmpUser!.jurisdiction_scope);
-      // ^ always linkDocument(), regardless of req.body.mode
-  ```
-  Compare to the `else` (new-plan) branch, which DOES correctly branch:
-  ```ts
-  if (mode === 'import_copy') {
-    await importDocument(req.epmpUser!.id, source_document_ref);
-  } else {
-    await linkDocument(...);
-  }
-  ```
-  Concrete failing input: a user opens `ImportDocumentModal`, selects "Attach to an existing plan," and clicks **"Import copy"** (`handleSubmit('import_copy')`, `ImportDocumentModal.tsx:218`) — the frontend sends `{ mode: 'import_copy', plan_id: <id>, ... }`. The backend ignores `mode` entirely on this branch and always writes a `document_links` row with `mode = 'link_live'` (hardcoded inside `linkDocument()`, `document-adapter.ts:218`). The user asked for a one-time point-in-time copy (no ongoing sync/flagging) and silently got a live, periodically-revalidated sync link instead — the two modes have materially different behavior per the FRD (S3.6: "choose Import copy vs. Link live sync mode," Process step 7: only `link_live` rows are swept by the background job and can be flagged "source changed" for review). The user has no way to discover this happened: the 201 response and UI navigation are identical for both buttons, and `PlanDetail.tsx`'s document_links Alert (flagged "source changed" review UI) will now spuriously apply to a document link the user believed was a disconnected copy.
-  - This also means `importDocument()`'s own `import_copy` row (and its generated `content` body — the actual imported text) is never written or surfaced anywhere for the existing-plan-attach path, regardless of which button the user clicked — there is no code path in this route that ever calls `importDocument()` when `plan_id` is provided, even when `mode === 'import_copy'`.
-  - Neither `plans.test.ts` nor `plan-document-import-link.spec.ts` tests `mode: 'import_copy'` combined with an existing `plan_id` — the gap is untested, which is why it shipped unnoticed (08-09's Task 2 test suite only exercises `import_copy` on the new-plan path and `link_live` on the existing-plan path, never the opposite pairing on either branch).
-- **Fix direction:** Branch on `mode` inside the `if (plan_id)` block exactly as the `else` branch already does: call `importDocument()` when `mode === 'import_copy'` (and, since `importDocument()` itself never accepts a `plan_id`, either extend it to accept one or have the route separately UPDATE the resulting `document_links` row's `plan_id` after the call) vs. `linkDocument(..., targetPlanId, ...)` when `mode === 'link_live'`, matching the semantics the new-plan branch already implements correctly.
-- **Resolution:** fixed (`35df808`) — extended `importDocument()` in `document-adapter.ts` with an optional 3rd `planId` parameter (mirrors `linkDocument()`'s existing optional `planId`), passed `plan_id` straight into the INSERT's VALUES list instead of leaving it NULL. `plans.ts`'s `if (plan_id)` branch now branches on `mode` exactly like the `else` branch: `importDocument(..., targetPlanId)` for `'import_copy'`, `linkDocument(..., targetPlanId, ...)` for `'link_live'`. Added a new test (`plans.test.ts`, "import_copy with an existing plan_id attaches a import_copy row to THAT plan, not a new one") asserting the resulting `document_links` row has `mode = 'import_copy'` and `plan_id` equal to the existing plan, not a new one. Re-ran the existing `'link_live with an existing plan_id attaches to THAT plan, not a new one'` test — still passes, that path is unchanged. `tsc --noEmit` clean; `plans.test.ts` 10/10 passing; full backend suite 153/153 passing.
+None.
 
 ## WARNINGs
 
-### W1: Imported document content is discarded on every `import_copy` path — `source_document_ref` is the only trace of the import, no section/body content is ever written to the new plan
-- **File:** backend/src/modules/plans/plans.ts:425-426
-- **Evidence:** `await importDocument(req.epmpUser!.id, source_document_ref);` — the call's return value (`{ id, content }`, where `content` is the simulated imported document body, `document-adapter.ts:157-160`) is never captured or used. The new plan is created with zero `plan_sections` rows (the INSERT at line 407 only sets `name/type/jurisdiction_id/owner_id/source_document_ref`, no section-population step follows). A user who clicks "Import copy" gets a completely empty Draft plan with no visible connection to the document's actual content — only `source_document_ref` (not rendered anywhere in `PlanDetail.tsx`, confirmed by grep: the field exists in neither `PlanDetailResponse`'s interface nor any JSX in that file) records what was imported. This is a materially incomplete implementation of the FRD's "import... landing it in Draft status" flow (F03 S3.6) — the document is fetched and a `document_links` row is written, but none of its content actually lands in the plan a user can read. Given this is a known sandbox stub (no real SharePoint content to import), this is a WARNING rather than a BLOCKER — the plumbing exists and a future real-adapter swap could wire the content through, but as shipped the "import copy" button produces an empty plan indistinguishable from a blank "Create plan," with no UI surfacing of `source_document_ref` to even confirm an import happened.
-- **Fix direction:** Either write `importDocument()`'s returned `content` into a `plan_sections` row on creation (mirroring `POST /api/v1/plans`'s `content_sections` handling), or surface `source_document_ref` visibly on `PlanDetail.tsx` so a user can at least confirm which document was imported.
-- **Resolution:** out of scope for this fix round per the task's explicit instruction (acceptable given the sandbox stub nature, flagged for future work, not a defect requiring action now) — no code changed.
-
-### W2: Pre-existing `jurisdiction_id`-unvalidated-against-caller-scope pattern reused, not introduced, by the new route — flagged for awareness only
-- **File:** backend/src/modules/plans/plans.ts:407-409
-- **Evidence:** The new-plan creation branch writes `jurisdiction_id` straight from the request body with no check that it is within `req.epmpUser!.jurisdiction_scope` — but this is the *exact same* pattern the pre-existing `POST /api/v1/plans` route already has (confirmed via `git show e545ee4:backend/src/modules/plans/plans.ts`, unchanged by this diff) and is not a regression this gap-closure diff introduced. Noted as an observation, not a finding requiring action in this review (pre-existing defect in an un-diffed code pattern, out of this review's bounded scope per the constraints) — surfacing it here only because the new route is the kind of place a reviewer might otherwise assume jurisdiction validation was freshly added everywhere.
-- **Resolution:** disputed/out of scope — explicitly confirmed pre-existing and out-of-scope per the task's instruction; not touched.
+None (W1/W2 from iteration 1 remain correctly out-of-scope per the fix round's explicit instructions — see point 6 above — and are not carried forward as open findings in this iteration since no code review round of this phase treated them as action items).
 
 ## Cross-file seams checked
 
-- `ImportDocumentModal.tsx`'s `apiPost('/api/v1/plans/import', {...})` body shape ↔ `plans.ts`'s `POST /api/v1/plans/import` `Body` type — fields match exactly (`source_document_ref`, `mode`, `name`, `type`, `jurisdiction_id`, `plan_id`); `mode` enum values (`'import_copy'|'link_live'`) match literally on both sides — OK, except see B1 (backend mishandles one combination, not a signature mismatch).
-- `ImportDocumentModal.tsx`'s `onImported: (planId: string) => void` ↔ `PlanRepository.tsx`'s `onImported={(planId) => navigate(...)}` usage — signature matches, `result.id` from the POST response is the real new-or-existing plan id — OK.
-- `plans.ts`'s new route importing `{ importDocument, linkDocument, hasDocumentAccess }` from `document-adapter.ts` ↔ `document-adapter.ts`'s actual exports — all three exist with matching signatures (`hasDocumentAccess(userId, externalDocId): boolean`, confirmed additive per 08-09-SUMMARY's own disclosure) — OK.
-- `linkDocument()`'s 4th `jurisdictionScope?: string[]` parameter (08-07's fix) ↔ every call site in `plans.ts`'s new route — both call sites pass `req.epmpUser!.jurisdiction_scope` correctly — OK.
-- `OperatingPicture.tsx`'s `<TaskList incidentId={selectedId} />` ↔ `TaskList.tsx`'s `TaskListProps.incidentId?: string` — `selectedId: string | undefined` matches the optional-string prop type exactly, no cast needed — OK.
-- `operating-picture-facility-markers.spec.ts` / `operating-picture-resource-markers.spec.ts`'s Tasks-card-absence assertions (`getByRole('heading', { name: 'Tasks' })` toHaveCount(0)) ↔ `OperatingPicture.tsx`'s `!selectedIsResource && !selectedIsFacility` gate — structurally absent, not merely hidden, confirmed by reading the gate — OK.
-- `plans.test.ts`'s new `describe('POST /api/v1/plans/import...)` fixture user (`importTestId`/`importTestToken`) ↔ `document-adapter.ts`'s module-level `SIMULATED_USER_DOCUMENT_ACCESS` map — correctly isolated from the earlier `simulateDocumentAccessRevocation(authorId, ...)` call in the same file/process, avoiding a false-negative — OK.
-- 08-07's claimed "zero code changes" — independently confirmed: `git diff e545ee4..HEAD --stat` shows no changes to `document-adapter.ts`'s `linkDocument`/`planIsInScope` (the file WAS changed in this diff range, but only by 08-09's `hasDocumentAccess` addition — `linkDocument`/`planIsInScope` content is untouched, matching 08-07-SUMMARY's claim) — OK.
+- `plans.ts`'s `if (plan_id)` branch ↔ `else` (new-plan) branch — both now branch on `mode` identically (`importDocument(...)` for `'import_copy'`, `linkDocument(...)` for `'link_live'`) — OK, confirms B1 fix symmetry.
+- `importDocument()`'s new optional 3rd `planId` param ↔ its 3 call sites (`plans.ts:382` new 3-arg call, `document-adapter.ts:475` pre-existing 2-arg call, `facility-document-adapter.test.ts:194`/`216` pre-existing 2-arg calls) — all compatible, confirmed by running each caller's own test suite — OK.
+- `importDocument()`'s INSERT column list ↔ bound parameter array — `(plan_id, external_document_id, source_system, mode, imported_by)` columns line up positionally with `[planId ?? null, externalDocId, sourceSystem, userId]` + literal `'import_copy'` — OK.
+- New test's DB assertion (`SELECT ... FROM document_links WHERE plan_id = $1`) ↔ actual INSERT performed by the fixed `importDocument()` — the row is genuinely attached to the pre-existing plan at insert time, not via a secondary UPDATE — OK.
+- Full backend test suite (153 tests, 22 files) — reproducibly green at HEAD; one transient unrelated flake in an undiffed file (`field-reports.test.ts`) traced and ruled out as a regression — OK.
