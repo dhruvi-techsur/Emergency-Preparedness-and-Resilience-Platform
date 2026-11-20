@@ -283,4 +283,78 @@ describe('plans module — Draft -> Review -> Approved workflow, self-approval g
     expect(submitRes.status).toBe(422);
     expect(submitRes.body.error_code).toBe('PLAN_EMPTY');
   });
+
+  // 08-06 (F17 final hard requirement): a "Link live" document's flagged
+  // "source changed" state is visible in GET /api/v1/plans/{id}'s new
+  // document_links array, and can ONLY be cleared via the dedicated
+  // acknowledge PATCH route — never automatically.
+  describe('document_links flagged-state surface + acknowledge route', () => {
+    it('GET /api/v1/plans/{id} includes a document_links row with content_status=changed, and the acknowledge route clears it exactly once', async () => {
+      const createRes = await request(app.server)
+        .post('/api/v1/plans')
+        .set('Authorization', `Bearer ${authorToken}`)
+        .send({
+          name: `Live-Link Flag Test ${Date.now()}`,
+          type: 'SOP',
+          jurisdiction_id: testJurisdictionId,
+          content_sections: [{ heading: 'Section A', body: 'Body text' }],
+        });
+      expect(createRes.status).toBe(201);
+      const planId = createRes.body.id;
+
+      // Directly insert a document_links row with content_status already
+      // 'changed', simulating what runDocumentLinkSync() would have
+      // produced on a real detection tick — this test proves the READ
+      // surface and the acknowledge route, not the scheduled job itself
+      // (that's document-adapter's own structural grep verification).
+      const linkInserted = await query<{ id: string }>(
+        `INSERT INTO document_links (plan_id, external_document_id, source_system, mode, imported_by, content_status, content_flagged_at)
+         VALUES ($1, 'DOC-SOP-002', 'SharePoint', 'link_live', $2, 'changed', now())
+         RETURNING id`,
+        [planId, authorId],
+      );
+      const linkId = linkInserted[0].id;
+
+      // 1. GET includes the row with content_status: 'changed'.
+      const getRes = await request(app.server)
+        .get(`/api/v1/plans/${planId}`)
+        .set('Authorization', `Bearer ${authorToken}`);
+      expect(getRes.status).toBe(200);
+      const linkRow = getRes.body.document_links.find((d: { id: string }) => d.id === linkId);
+      expect(linkRow).toBeTruthy();
+      expect(linkRow.content_status).toBe('changed');
+
+      // 2. Acknowledge as the author (holding plans:edit) returns 200, and
+      // a follow-up GET shows content_status: 'current'.
+      const ackRes = await request(app.server)
+        .patch(`/api/v1/plans/${planId}/document-links/${linkId}/acknowledge`)
+        .set('Authorization', `Bearer ${authorToken}`)
+        .send();
+      expect(ackRes.status).toBe(200);
+
+      const getAfterAckRes = await request(app.server)
+        .get(`/api/v1/plans/${planId}`)
+        .set('Authorization', `Bearer ${authorToken}`);
+      expect(getAfterAckRes.status).toBe(200);
+      const linkRowAfterAck = getAfterAckRes.body.document_links.find(
+        (d: { id: string }) => d.id === linkId,
+      );
+      expect(linkRowAfterAck.content_status).toBe('current');
+
+      const ackedRows = await query<{ acknowledged_by: string | null }>(
+        `SELECT acknowledged_by FROM document_links WHERE id = $1`,
+        [linkId],
+      );
+      expect(ackedRows[0].acknowledged_by).toBe(authorId);
+
+      // 3. A second acknowledge attempt on the SAME (already-acknowledged)
+      // link returns 409 DOCUMENT_LINK_NOT_FLAGGED.
+      const secondAckRes = await request(app.server)
+        .patch(`/api/v1/plans/${planId}/document-links/${linkId}/acknowledge`)
+        .set('Authorization', `Bearer ${authorToken}`)
+        .send();
+      expect(secondAckRes.status).toBe(409);
+      expect(secondAckRes.body.error_code).toBe('DOCUMENT_LINK_NOT_FLAGGED');
+    });
+  });
 });

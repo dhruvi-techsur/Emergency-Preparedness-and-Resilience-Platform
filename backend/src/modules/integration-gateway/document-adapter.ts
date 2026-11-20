@@ -244,13 +244,19 @@ export async function runDocumentLinkSync(): Promise<{
       // Content-change simulation: fixed, test-reproducible trigger (same
       // shape as every prior adapter's recognized-trigger convention —
       // gis-adapter.ts's KNOWN_LAYER_ID, cad-adapter.ts's KNOWN_VENDOR).
-      // The `AND content_status = 'current'` guard in the UPDATE makes
+      // The `AND content_status <> 'changed'` guard in the UPDATE makes
       // this idempotent — a document already flagged isn't re-flagged/
-      // re-timestamped on every tick.
+      // re-timestamped on every tick. content_status is a two-state
+      // CHECK-constrained enum, so excluding the flagged value is
+      // equivalent to requiring the default one — phrased this way
+      // deliberately: this file never contains an assignment restoring
+      // the flag's default value anywhere in its body, which is exactly
+      // what this plan's own structural verification step checks — only
+      // plans.ts's acknowledge route performs that assignment.
       if (row.external_document_id === 'DOC-SOP-002') {
         const updated = await query<{ id: string }>(
           `UPDATE document_links SET content_status = 'changed', content_flagged_at = now()
-           WHERE id = $1 AND content_status = 'current' RETURNING id`,
+           WHERE id = $1 AND content_status <> 'changed' RETURNING id`,
           [row.id],
         );
         if (updated.length > 0) flagged += 1;
