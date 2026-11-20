@@ -742,6 +742,49 @@ async function main() {
     }
   }
 
+  // Phase 7 (F15, 07-02) UAT fixture: a cad_config find-or-insert +
+  // ONE cad_dispatch_events fixture row linked to the UAT-ESCALATE-READY
+  // incident above, so the Incident Workspace (Plan 07-04) has a real,
+  // immediately-visible dispatch-status panel on a known demo incident
+  // right after `npm run seed`, without requiring the scheduler's first
+  // tick or a manual runCadIngestion() call.
+  const uatCadConfig = await findOrInsert(
+    'cad_config',
+    ['vendor'],
+    ['agency_cad'],
+    ['vendor', 'endpoint_config', 'incident_matching_strategy'],
+    ['agency_cad', JSON.stringify({ stub: true }), 'human_confirmed'],
+  );
+  record('cad_config', uatCadConfig);
+
+  const uatEscalateReadyIncidentId = incidentIdsByName['UAT-ESCALATE-READY Default Agency Wildfire'];
+  const uatCadDispatchEvent = await findOrInsert(
+    'cad_dispatch_events',
+    ['config_id', 'external_event_id'],
+    [uatCadConfig.id, 'UAT-CAD-001'],
+    [
+      'config_id',
+      'external_event_id',
+      'cad_incident_number',
+      'linked_incident_id',
+      'status',
+      'unit_ids',
+      'source',
+      'updated_at',
+    ],
+    [
+      uatCadConfig.id,
+      'UAT-CAD-001',
+      'CAD-UAT-001',
+      uatEscalateReadyIncidentId,
+      'On scene',
+      ['Engine 12'],
+      'agency_cad',
+      new Date().toISOString(),
+    ],
+  );
+  record('cad_dispatch_events', uatCadDispatchEvent);
+
   // Phase 3 (F3, 03-08) UAT fixture: planner@epmp.local and
   // eocdirector@epmp.local, pre-provisioned with the 'Default Agency'
   // jurisdiction_scope up front — identical rationale/pattern to
