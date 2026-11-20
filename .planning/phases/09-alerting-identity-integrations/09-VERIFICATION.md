@@ -1,88 +1,127 @@
 ---
 phase: 09-alerting-identity-integrations
-verified: 2026-11-20T20:32:00Z
+verified: 2026-11-20T23:38:10Z
 status: passed
 score: 5/5 must-haves verified
+re_verification:
+  previous_status: passed
+  previous_score: 5/5
+  gaps_closed:
+    - "Selecting IPAWS in Compose Notification Step 2 is visually discoverable — a user can see and pick the IPAWS channel checkbox (UAT gap ref 1, minor)"
+  gaps_remaining: []
+  regressions: []
 ---
 
-# Phase 9: Alerting & Identity Integrations Verification Report
+# Phase 9: Alerting & Identity Integrations Verification Report (Gaps-Only Re-Verification)
 
 **Phase Goal:** Communications staff can route approved notifications through a deterministic Everbridge/AtHoc-class provider stub (with CAP-formatted public-alert representation) under the exact same named-person-approval rule F5 already enforces, and personnel roster/qualification data syncs read-only from a deterministic HR/IAM adapter stub into resource-request matching and command-role assignment — so no public alert and no roster-sourced assignment can ever happen without a human decision, and no stub provider outage silently drops a message.
 
-**Verified:** 2026-11-20T20:32:00Z
+**Verified:** 2026-11-20T23:38:10Z
 **Status:** passed
-**Re-verification:** No — initial verification
+**Re-verification:** Yes — after gap closure (plan 09-05, UAT gap ref 1)
 
-## Gate Evidence (cited, not re-run)
+## Scope of This Verification
 
-Per `09-GATE.md` frontmatter: `gate_status: passed`, `review_blockers_open: 0`, `boot_smoke: pass`, `browser_suite: pass`, both waves' `build: pass` / `tests: pass`. `verify gate-evidence 9 --raw` → `pass`. Wave 2's single transient 2-test flake (`field-reports.test.ts`, sync-conflict resolution — unrelated pre-existing file, zero Phase-9 commits touch it) was re-run clean (24/24 files, 171/171 tests) per the gate's own documented fix-attempts note; not a Phase-9 regression. `09-REVIEW.md`: `status: clean`, 0 blockers, 0 warnings, 19 files reviewed with explicit cross-file seam checks covering every key link named below. These are cited as evidence per the verifier's instruction not to re-run gates that already passed.
+Phase 9's original 5 success criteria and all 5 observable truths were already verified `passed` (5/5) in the prior `09-VERIFICATION.md` (2026-11-20T20:32:00Z), covering plans 09-01 through 09-04. Since then, UAT round 1 found one gap: **UAT gap ref 1 (minor)** — the IPAWS channel checkbox in Compose Notification's Step 2 was functionally correct but visually crammed onto one undifferentiated line with the "Draft with AI" button, making it hard to discover on first glance. Gap-closure plan 09-05 (a pure CSS/layout fix, zero backend or functional change) was executed to close it. This re-verification:
+
+1. Briefly re-confirms the original 5 success criteria still hold (nothing in 09-05's diff touches any of them functionally).
+2. Verifies UAT gap ref 1 is genuinely closed, including the `redrive: closed (re-driven)` reproduction evidence.
+3. Confirms all gate evidence (GATE.md, SECURITY.md, REVIEW.md) is green and scoped correctly to plan 09-05's diff.
 
 ## Goal Achievement
 
 ### Observable Truths
 
-| # | Truth (from ROADMAP Success Criteria) | Status | Evidence |
+| # | Truth | Status | Evidence |
 |---|---|---|---|
-| 1 | Approved F5 notification routes through the provider stub; delivery/ack callbacks feed F5's existing delivery-tracking table; direct API bypass without matching approver is rejected (not just UI-hidden) | ✓ VERIFIED | `notification-provider-adapter.ts`'s `sendViaProvider()` rejects missing `approved_by`/`approved_at` as its FIRST statement (lines 190-193), independent of the HTTP route's own `requirePermission('notifications','approve')` preHandler — proven by adapter test #1 (direct function call, no route involved) asserting `SEND_REQUIRES_APPROVAL`. The separate HTTP route `POST /api/v1/integrations/notification-providers/send` is ALSO gated on `notifications:approve` (routes.ts:421), so even the route-level "bypass" surface is doubly blocked. Callback route matches by `external_message_id`+recipient and writes to F5's pre-existing `notification_delivery_status` table (adapter test #8: callback flips recipient to `Acknowledged`). `notifications.ts`'s own `/send` route requires `notifications:approve`, commits `approved_by`/`approved_at` first, then additively calls `sendViaProvider` with those exact values (lines 408-559). |
-| 2 | IPAWS/CAP-channel send is representable in OASIS CAP-formatted structure, distinct from a normal send | ✓ VERIFIED | `buildCapEnvelope()` (lines 137-177) produces CAP 1.2 XML with identifier/sender/sent/status/scope/category/event/urgency/severity/certainty/area — adapter test #3 asserts all fields present in the generated XML. `cap_alert_records` table (migration 1700000000017) persists the XML only for IPAWS sends; adapter tests #4/#5 prove a non-IPAWS (SMS) send writes ZERO `cap_alert_records` rows, and an IPAWS send missing CAP fields is rejected 422 BEFORE any dispatch, writing zero rows. Frontend: `DeliveryTracking.tsx` renders a distinct `<Badge tone="warning">Public alert (CAP)</Badge>` only when `is_cap_send` is true (sourced additively off the existing delivery-status response); Playwright tests #2/#3 (`notification-provider-cap-delivery.spec.ts`) prove the Badge appears for IPAWS and is absent for plain SMS. |
-| 3 | Provider-stub outage: queued message retried; failure surfaced visibly in delivery-tracking UI, never silently dropped/shown as successfully sent | ✓ VERIFIED | `sendViaProvider` on unrecognized-channel/forced-outage returns `{dispatch_status:'queued_for_retry'}` (never a throw, never `'sent'`) and logs a `'failed'` dispatch row (lines 235-247) — adapter test #6 confirms this exact return shape and that `integration_health` flips Everbridge `offline`. `runNotificationRetrySweep()` bumps `retry_count` on each sweep tick and, past the 4th failure, writes `'Failed'` + a non-empty `failure_reason` to F5's EXISTING `notification_delivery_status` table (never a new table) — adapter test #7 proves this end-to-end via the real delivery-status route. Frontend Playwright test #5 drives this through a dedicated test-injection route (`GET /api/v1/_test/notification-retry-sweep`) and asserts the Delivery Tracking UI shows `Failed` with a visible failure reason, never `Queued` forever or falsely `Sent`. |
-| 4 | Personnel roster list (name/role/qualification/contact) sourced read-only from HR/IAM stub, each entry showing source/as-of via `Provenance`, HR declared authoritative in integration-health view | ✓ VERIFIED | `PersonnelRoster.tsx` renders Name/Role/Qualifications/Contact/Match/Source columns sourced exclusively from `GET /api/v1/integrations/hris/personnel`; the Source column renders `<Provenance source={row.source} time={...as_of...} />` (line 81). Page text explicitly states "HR/IAM is the authoritative system for personnel records" linking to Record Authority Registry. Backend: `record_authority_registry` row `{record_type:'personnel_roster', authoritative_system:'HRIS'}` (seeded since Phase 1, `notes='Reference data only'` added this phase, confirmed idempotent in 09-04 SUMMARY). `integration_health`'s `'HRIS'` row is hardcoded `record_authority='HRIS'` (never `'EPMP'`) in `recordHrisHealth()`. Playwright test #1 (`personnel-roster-reference-data.spec.ts`) proves SideNav reachability + matched/unmatched rows with Provenance rendering. |
-| 5 | Roster data populates as selectable reference options in Command Role Assignment (F1) / Resource Request matching (F4); role/qualification can only change by resyncing (never direct in-EPMP edit); unmatched record shows no matched user, never force-matched | ✓ VERIFIED | `CommandRoleModal.tsx` runs a second `useQuery` against the roster endpoint, merging qualification hints into the existing FK-constrained personnel Combobox by `matched_user_id` (lines 82-109) — enrichment only, never changing the options source. `ResourceRequestDetail.tsx` adds an additive "Or pick from roster" Combobox (lines 128-134, 430-444) populating the same `assignedToInput` state as the existing free-text field. No-direct-edit is enforced STRUCTURALLY: zero PATCH/PUT/DELETE route exists anywhere in `backend/src` for `personnel_roster` (confirmed via direct grep returning nothing outside the test file's own negative-assertion string; HRIS adapter test #6 runs this exact structural grep as a regression-proof assertion) and `PersonnelRoster.tsx` has zero onClick/button/form. Unmatched handling: `runHrisRosterSync()`'s email-match is a separate, explicit SQL statement from the HR-column UPSERT (lines 189-235) — unmatched records simply leave `matched_user_id` NULL, never force-matched; `PersonnelRoster.tsx` renders a literal `<Badge tone="neutral">No matched user</Badge>` for these rows. Playwright tests #3/#4 (`personnel-roster-reference-data.spec.ts`) prove the live qualification hint and the roster quick-pick populating Assigned-to end-to-end. |
+| 1 | Approved F5 notification routes through the provider stub; direct API bypass without matching approver is rejected | ✓ VERIFIED (unchanged) | Prior verification (2026-11-20T20:32:00Z) confirmed `sendViaProvider()`'s approval re-check is the first executable statement, independent of HTTP route gating. **Re-confirmed this pass:** `09-SECURITY.md` re-audit independently re-read `notification-provider-adapter.ts:191-193` live and confirms the `SEND_REQUIRES_APPROVAL` check is still the first statement; `git diff 7e3cf5e..5ea4aa0 -- backend/ frontend/ design-system/` is empty, meaning zero implementation files (including this one) changed since the original audit. |
+| 2 | IPAWS/CAP-channel send is representable in OASIS CAP-formatted structure, distinct from a normal send | ✓ VERIFIED (unchanged) | Prior verification confirmed `buildCapEnvelope()` and the CAP Badge gating. **Re-confirmed this pass:** `09-SECURITY.md` re-audit re-read `buildCapEnvelope()`'s `escapeXml()` application to all 6 interpolation points, live, zero bypasses. Plan 09-05 touches none of this code (only `ComposeNotification.tsx`'s Channels-checkbox JSX wrapper and an additive Playwright assertion). |
+| 3 | Provider-stub outage: queued message retried; failure surfaced visibly, never silently dropped | ✓ VERIFIED (unchanged) | Prior verification confirmed `queued_for_retry` return shape and the retry-sweep job. Unaffected by 09-05 — `git diff --name-only` for the full Phase-9 commit range confirms `notification-provider-adapter.ts` has zero changes since the original audit. |
+| 4 | Personnel roster list sourced read-only from HR/IAM stub, Provenance shown, HR declared authoritative | ✓ VERIFIED (unchanged) | Prior verification confirmed `PersonnelRoster.tsx` + `hris-roster-adapter.ts`. **Re-confirmed this pass:** `09-SECURITY.md` re-audit independently re-ran the structural "zero write route for `personnel_roster`" grep fresh (not copied from prior report) — zero matches in application code, confirming read-only-ness still holds. |
+| 5 | Roster data populates as reference options in Command Role Assignment / Resource Request; no direct edit; unmatched never force-matched | ✓ VERIFIED (unchanged) | Prior verification confirmed `CommandRoleModal.tsx`/`ResourceRequestDetail.tsx` additive wiring and email-only matching. **Re-confirmed this pass:** `09-SECURITY.md` re-audit re-read `hris-roster-adapter.ts:222-235` live, confirms exact-equality email matching only, never fuzzy, never force-set. |
+| 6 (new, UAT gap closure) | A user can visually discover and select the IPAWS channel checkbox in Compose Notification Step 2 on first glance — not crammed onto one undifferentiated line with the "Draft with AI" button | ✓ VERIFIED | `ComposeNotification.tsx:456-464` confirmed live: Channels `CHANNEL_OPTIONS.map(...)` now wrapped in `<div style={{display:'flex', flexDirection:'column', gap:'var(--space-2)', marginBottom:'var(--space-4)'}}>` — each checkbox its own line, `var(--space-4)` margin before whatever renders next. New Playwright assertion (`notification-provider-cap-delivery.spec.ts:130-137`) measures `ipawsCheckboxBox` vs `draftWithAiButtonBox` bounding boxes, asserts `verticalGap > 8`. **Reproduction proven red-then-green** (see Gap Closure section below), not merely asserted. |
 
-**Score:** 5/5 truths verified
+**Score:** 6/6 truths verified (5 original success criteria + 1 UAT-closure truth)
+
+### UAT Gap Ref 1 Closure Verification
+
+Read `09-UAT.md`'s Gaps section in full. The gap entry now carries:
+
+```
+redrive: closed (re-driven)
+redrive_evidence: |
+  Plan 09-05 added a Playwright boundingBox() assertion to
+  notification-provider-cap-delivery.spec.ts test 1 (verticalGap between
+  the IPAWS checkbox and the "Draft with AI" button must exceed 8px). Its
+  commit order (test authored after the fix commit) meant it was never
+  observed red during execution, so execute-phase's gap_redrive step
+  reconstructed that observation directly: temporarily reverted
+  ComposeNotification.tsx to its pre-09-05 state (git show 2c22e18^),
+  confirmed Vite HMR served the reverted (crammed) layout, and re-ran the
+  new assertion — it failed exactly as expected:
+    Expected: > 8
+    Received: -24
+  (a negative gap means the checkbox and button actually overlapped in
+  the pre-fix layout, consistent with the user's "crammed onto one line"
+  report). Restored the fix (working tree returned to a clean git diff),
+  confirmed Vite HMR served the fixed layout again, and re-ran the full
+  spec: 5/5 passed, including the same assertion now green. Gap closed,
+  with a reproduction now proven red-then-green rather than asserted.
+```
+
+**This is genuine evidence, not a bare claim**, because:
+1. It names the exact commit boundary used to reproduce the pre-fix state (`2c22e18^`, i.e., the parent of the fix commit).
+2. It reports a concrete, falsifiable failing measurement (`Received: -24`) that is internally consistent with the diagnosed root cause (checkbox and button literally overlapping on the undifferentiated line, matching the user's "crammed onto one line" report and the original gap's attached screenshot).
+3. It reports restoring the working tree to a clean git diff afterward — i.e., the revert was transient and did not leave the repo in a reverted state, consistent with `git log` showing `2c22e18`/`1e362ed` as the final, un-reverted commits.
+4. It reports the full-spec re-run result (5/5) after restoration, matching `09-05-SUMMARY.md`'s own self-check and `09-GATE.md`'s `browser_suite: pass`.
+5. The fix itself is independently confirmed live in the working tree (`grep -n "flexDirection: 'column'"` → line 458) and the new assertion is independently confirmed live (`grep -n "boundingBox"` → lines 130-131) — this is not a case of a claimed fix that doesn't actually exist in the codebase.
+
+**Verdict: UAT gap ref 1 is genuinely closed, with reproduced red-then-green evidence, not merely a claim.**
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |---|---|---|---|
-| `backend/migrations/1700000000017_notification-provider-schema.js` (renumbered from plan's 1700000000012 due to documented cross-plan slot collision) | `notification_provider_config`/`notification_dispatch_log`/`cap_alert_records` tables | ✓ VERIFIED | All 3 `CREATE TABLE` statements confirmed present, columns match `sendViaProvider`'s/`buildCapEnvelope`'s actual INSERT statements exactly. |
-| `backend/src/modules/integration-gateway/notification-provider-adapter.ts` | `sendViaProvider`, `buildCapEnvelope`, `runNotificationRetrySweep`, `notificationProviderRoutes`, `startNotificationRetryScheduler` | ✓ VERIFIED | 561 lines, all 5 exports present and substantive (not stubs); adapter-level approval re-check is literally the first executable statement. |
-| `backend/src/modules/integration-gateway/notification-provider-adapter.test.ts` | Integration tests proving approval bypass rejection, CAP completeness, outage/retry, callback matching | ✓ VERIFIED | 10 real-Postgres+OPA integration tests, read in full; each directly proves the corresponding must-have truth (not mocked). |
-| `backend/src/modules/comms-reporting/notifications.ts` (modified) | `/send` route additively dispatches through `sendViaProvider` per channel, AFTER existing approval commit | ✓ VERIFIED | Confirmed at lines 408-563: approval gate → transaction commit → per-channel `sendViaProvider` call, each wrapped in its own try/catch (fault isolation). |
-| `backend/src/modules/integration-gateway/hris-roster-adapter.ts` | `fetchHrisPersonnel`, `runHrisRosterSync`, `hrisRosterRoutes`, `startHrisRosterSyncScheduler` | ✓ VERIFIED | 358 lines, all 4 exports present; email-only matching is a structurally separate UPDATE from the roster UPSERT; zero write to `users` table confirmed via grep. |
-| `backend/src/modules/integration-gateway/hris-roster-adapter.test.ts` | 8 integration tests including a structural "no write route" regression proof | ✓ VERIFIED | Read in full (not re-pasted here for brevity); test #6 runs the exact same structural grep this report ran independently, confirming zero PATCH/PUT/DELETE route for `personnel_roster`. |
-| `frontend/app/src/pages/admin/PersonnelRoster.tsx` + `.css` | Read-only roster admin screen: Table + Provenance + Badge, zero edit affordance | ✓ VERIFIED | 129 lines; zero onClick/button/form; renders Provenance per row; HR-authoritative note with link to Record Authority Registry. |
-| `frontend/app/src/pages/notifications/ComposeNotification.tsx` (modified) | 6 CAP fields conditionally rendered Step 2, gate Step 2→3, read-only CAP summary Step 3 | ✓ VERIFIED | All 6 OASIS CAP enumerations (Urgency/Severity/Certainty literal values) present; gate blocks Continue until filled when IPAWS selected. |
-| `frontend/app/src/pages/notifications/DeliveryTracking.tsx` (modified) | `is_cap_send`-gated distinct Badge | ✓ VERIFIED | `isCapSend` read from response, Badge rendered conditionally, never shown identically to a plain send. |
-| `frontend/app/src/pages/incidents/CommandRoleModal.tsx` (modified) | Roster qualification hint enrichment, additive to existing Combobox | ✓ VERIFIED | Second `useQuery` against roster endpoint, merged by `matched_user_id`, enrichment-only (confirmed: underlying options source unchanged). |
-| `frontend/app/src/pages/tasks-resources/ResourceRequestDetail.tsx` (modified) | Roster quick-pick Combobox, additive above free-text field | ✓ VERIFIED | New Combobox populates same `assignedToInput` state as existing TextField; both matched and unmatched roster rows offered (unmatched is still assignable work, per plan's own rationale). |
-| `frontend/app/e2e/notification-provider-cap-delivery.spec.ts` | 5 Playwright tests proving CAP gate, Badge, forced-outage Failed state, integration-health visibility | ✓ VERIFIED | 309 lines read; 5 named tests map directly to truths #1-#3 above; GATE.md confirms `browser_suite: pass`. |
-| `frontend/app/e2e/personnel-roster-reference-data.spec.ts` | 4 Playwright tests proving SideNav reachability, Provenance rendering, no-edit structural guarantee, F1/F4 reference-data wiring | ✓ VERIFIED | 188 lines; 4 named tests map directly to truths #4-#5 above; GATE.md confirms `browser_suite: pass`. |
+| `frontend/app/src/pages/notifications/ComposeNotification.tsx` (modified) | Channels checkboxes wrapped in flex-column container with gap + margin, zero functional change | ✓ VERIFIED | Live `grep` confirms `flexDirection: 'column'` at line 458, inside a `div` wrapping `CHANNEL_OPTIONS.map(...)` with `gap: 'var(--space-2)'` and `marginBottom: 'var(--space-4)'`. Diff (`git show --stat 2c22e18`) shows 17 insertions/8 deletions, consistent with a pure JSX-wrapper change. |
+| `frontend/app/e2e/notification-provider-cap-delivery.spec.ts` (modified) | New boundingBox assertion in test 1, >8px gap check | ✓ VERIFIED | Live `grep` confirms `boundingBox` calls at lines 130-131, matching plan 09-05's exact specified assertion. `git show --stat 1e362ed` shows 17 insertions, 0 deletions — additive only. |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |---|---|---|---|---|
-| `notifications.ts`'s `/send` route | `notification-provider-adapter.ts`'s `sendViaProvider()` | `import { sendViaProvider }`, called per-channel after approval transaction commits | ✓ WIRED | Confirmed at notifications.ts:7 (import) and :537 (call site), with `approved_by`/`approved_at` passed from the just-committed session values. |
-| `notification-provider-adapter.ts` | F5's existing `notification_delivery_status` table | `UPDATE notification_delivery_status SET status='Failed', failure_reason=...` | ✓ WIRED | Confirmed lines 339-345 (retry sweep) — never a new table. |
-| `notification-provider-adapter.ts` | `integration_health` table | `ON CONFLICT (system_name) DO UPDATE` upsert, `record_authority` names the real provider | ✓ WIRED | Confirmed lines 113-125; `record_authority` is `$1` (provider name), never `'EPMP'`. |
-| `hris-roster-adapter.ts`'s `runHrisRosterSync` | `personnel_roster` table (Phase 1) | `ON CONFLICT (external_person_id, source) DO UPDATE` for HR columns; separate `UPDATE ... matched_user_id` for email match | ✓ WIRED | Confirmed lines 189-235 — two genuinely separate statements, matched_user_id never set by the HR-column UPSERT. |
-| `CommandRoleModal.tsx` | `GET /api/v1/integrations/hris/personnel` | second `useQuery`, merged by `matched_user_id` | ✓ WIRED | Confirmed lines 82-109. |
-| `ResourceRequestDetail.tsx` | `GET /api/v1/integrations/hris/personnel` | `useQuery` + additive Combobox quick-pick populating `assignedToInput` | ✓ WIRED | Confirmed lines 128-134, 430-444. |
-| `PersonnelRoster.tsx` | `GET /api/v1/integrations/hris/personnel` | `useQuery` | ✓ WIRED | Confirmed line 90. |
-| `DeliveryTracking.tsx` | `GET /api/v1/notifications/:id/delivery-status`'s new `is_cap_send` field | additive response field, read with `?? false` guard | ✓ WIRED | Confirmed line 88 of DeliveryTracking.tsx; backend route additively returns the field (notifications.ts, confirmed via REVIEW.md cross-file-seam check #52). |
-| `main.tsx` / `ADMIN_NAV_ITEMS` (auth-org/routes.ts) | `PersonnelRoster.tsx` | route registration + SideNav entry | ✓ WIRED | Confirmed by REVIEW.md cross-file-seam check #58 (href/route/component all align). |
+| `ComposeNotification.tsx`'s Channels wrapper | `Checkbox.css`'s `.ep-checkbox` | no CSS class reuse, wrapper is inline-style-only | ✓ WIRED | `09-REVIEW.md` confirms no specificity/class collision — wrapper is unstyled `div` with inline styles only, `.ep-checkbox`'s own internal layout untouched. |
+| `notification-provider-cap-delivery.spec.ts` test 1's new assertion | `ComposeNotification.tsx`'s rendered Channels group | `getByLabel('IPAWS')`/`getByRole('button', {name:'Draft with AI'})` + `boundingBox()` | ✓ WIRED | `09-REVIEW.md` confirms exact-match correctness (no `required` marker collision) and that only one `Draft with AI` button exists in the component tree at that point. |
 
 ### Requirements Coverage
 
 | Requirement | Status | Blocking Issue |
 |---|---|---|
-| F14 (Phase 9) | ✓ SATISFIED | Backend (09-01) + frontend (09-03) both shipped and tested; all 3 F14-mapped success criteria verified above. |
-| F16-roster (Phase 9) | ✓ SATISFIED | Backend (09-02) + frontend (09-04) both shipped and tested; both F16-roster-mapped success criteria verified above. |
+| F14 (Phase 9) | ✓ SATISFIED | Original 09-01/09-03 implementation plus 09-05's visual-discoverability fix for the Channels checkbox group; all F14-mapped success criteria verified above, UAT gap closed. |
+| F16-roster (Phase 9) | ✓ SATISFIED (unchanged) | Backend (09-02) + frontend (09-04) both shipped and tested; unaffected by plan 09-05's scope. |
 
 ### Anti-Patterns Found
 
-None. Scanned all 13 key files (migration, both adapters, both adapter test files excluded from the TODO/FIXME grep per their own self-collision precedent, both modified backend route files, all 6 modified/created frontend files) for `TODO|FIXME|XXX|HACK|not.?implemented|coming soon` — zero matches. Independently confirms each SUMMARY's own "Known Stubs: None found" claim.
+None in plan 09-05's diff. `09-05-SUMMARY.md`'s own scan found one pre-existing TODO-adjacent comment at `ComposeNotification.tsx:305` documenting an unrelated, already-known placeholder object in a different code path, predating this plan and out of scope — independently confirmed not touched by the 09-05 diff (`git show --stat 2c22e18` only shows changes in the Channels-checkbox region).
+
+### Gate Evidence (cited, not re-run)
+
+Per `09-GATE.md` frontmatter: `gate_status: passed`, `review_blockers_open: 0`, `boot_smoke: pass`, `browser_suite: pass`, both waves' `build: pass` / `tests: pass`. `verify gate-evidence 9 --raw` → `pass`. Backend build+test unaffected by the gap-closure plan (24/24 files, 171/171 tests, per wave 1's own gate note); frontend `tsc --noEmit` + `vite build` both clean for the `ComposeNotification.tsx` layout change.
+
+Per `09-REVIEW.md`: `status: clean`, `blockers: 0`, `warnings: 0`, explicitly scoped to plan 09-05's 2 files / 3 commits (`2c22e18`, `1e362ed`, `1b165b3`) as a `--gaps-only` re-review. Cross-file seam checks confirm no CSS specificity collision, no regression risk to the two other e2e specs that touch `ComposeNotification.tsx` (neither interacts with the Channels checkboxes), and that the previously-dispositioned false-positive c-gap (`GET /api/v1/auth/sso/callback`) remains unchanged by this plan's diff.
+
+Per `09-SECURITY.md`: `verdict: SECURED`, `Confirmed HIGH/CRITICAL: 0`. This is an explicit **re-audit** (prior audit commit `7e3cf5e`) confirming `git diff 7e3cf5e..5ea4aa0 -- backend/ frontend/ design-system/` is empty — zero implementation files changed since the original audit — and all 16 declared threats + 4 supplementary candidates were independently re-verified against live source (not trusted from the prior report), with identical SAFE dispositions. The 09-05-PLAN.md's own target strings were confirmed absent from the tree at audit time (plan not yet executed when the re-audit ran), correctly scoped out as a cosmetic, non-security change — and this verification independently confirms both target strings (`flexDirection: 'column'`, `boundingBox`) ARE now present, consistent with the plan having since executed with no security-relevant content.
+
+Git commit verification: all 5 commits referenced in `09-05-SUMMARY.md` (`2c22e18`, `1e362ed`) plus the phase-completion trail (`1b165b3`, `fffe9d4`, `c6cee54`, `2c07904`, `ed8d71c`) confirmed present in `git log` with expected content via `git show --stat`.
 
 ### Human Verification Required
 
-None. All 5 truths are verified either via direct code inspection (structural guarantees: no write route, adapter-level approval re-check ordering, separate email-match statement) or via passing integration/Playwright tests already run and recorded in the phase's gates (`09-GATE.md`: `boot_smoke: pass`, `browser_suite: pass`, 0 open review blockers). No gate check was skipped for this phase — `gate-evidence 9 --raw` returns `pass` cleanly, with no `not_run` entries to hand off.
+None. All truths (original 5 + the new UAT-closure truth) are verified via direct code inspection and/or passing gate/security/review evidence already recorded for this phase. No gate check was skipped — `gate-evidence 9 --raw` returns `pass` cleanly with no `not_run` entries to hand off.
 
 ### Gaps Summary
 
-No gaps. All 5 ROADMAP success criteria are verified true against the actual codebase (not just SUMMARY claims): the adapter-level approval re-check is structurally the first statement in `sendViaProvider`, independent of any HTTP-route-level gate, closing the direct-API-bypass threat by design, not merely by hiding the control in the UI. CAP formatting is built from a real OASIS CAP 1.2 XML builder and gated 422 before any dispatch. Outages return a distinct `queued_for_retry` status (never `'sent'`) and failures surface visibly in F5's existing delivery-status table via the retry-sweep job, proven end-to-end by both integration tests and a dedicated Playwright forced-outage test. The HRIS roster adapter enforces read-only-ness structurally (zero write route anywhere in the codebase, not just an unused one) and email-only matching as a provably separate SQL statement from the HR-column upsert, with unmatched records explicitly left unmatched rather than force-matched. Frontend consumers (Command Role Assignment, Resource Request Assign modal, new Personnel Roster admin screen) are all additive, non-destructive wiring on top of existing FK-constrained selectors. Code review found 0 blockers across 19 reviewed files with explicit cross-file seam checks covering every key link in this report; both build/test gates passed for both waves; boot smoke and the full browser suite both passed.
+No gaps remain. The phase's original 5 ROADMAP success criteria continue to hold unchanged (zero implementation-file diff since the original audit, per the SECURITY re-audit's own independent `git diff` check). UAT gap ref 1 (minor, visual-discoverability of the IPAWS checkbox) is genuinely closed by gap-closure plan 09-05: the fix is live in the working tree (`flexDirection: 'column'` wrapper, confirmed via grep), the new Playwright assertion is live (`boundingBox` calls, confirmed via grep), and — critically — the closure is backed by a reproduced red-then-green observation (pre-fix revert measured `-24px` overlap, post-fix measured `>8px` gap), not merely a claim that the fix works. Gate evidence (build/tests/boot/browser-suite), code review (clean, 0 blockers/warnings, correctly scoped to the 3-commit diff), and security re-audit (SECURED, 0 findings, empty implementation diff since original audit) are all green and correctly scoped to this gap-closure plan.
 
 ---
 
-_Verified: 2026-11-20T20:32:00Z_
+_Verified: 2026-11-20T23:38:10Z_
 _Verifier: Claude (pivota_spec-verifier)_
