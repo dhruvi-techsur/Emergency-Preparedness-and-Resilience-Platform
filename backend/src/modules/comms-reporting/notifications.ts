@@ -4,6 +4,7 @@ import { requirePermission } from '../auth-org/rbac.js';
 import { query, pool } from '../../db/client.js';
 import { TimelineService, withTimelineTransaction } from '../incident-ops/timeline.js';
 import { fetchIncidentForMutation } from '../incident-ops/incidents.js';
+import { sendViaProvider } from '../integration-gateway/notification-provider-adapter.js';
 
 export type RecipientGroupType = 'Role' | 'Jurisdiction' | 'Geography';
 export type DeliveryStatus = 'Queued' | 'Sent' | 'Delivered' | 'Failed' | 'Acknowledged';
@@ -483,6 +484,83 @@ export default async function notificationsRoutes(app: FastifyInstance) {
 
         return updated;
       });
+
+      // -----------------------------------------------------------------
+      // Plan 09-01 (F14): dispatch through the provider adapter for every
+      // distinct channel this notification uses, ADDITIVELY — run AFTER
+      // the withTimelineTransaction block above has already committed
+      // approved_by/approved_at/sent_at. Never reorders or removes any
+      // existing gate above; this is purely an additional, best-effort
+      // side effect layered on top of F5's own already-successful send.
+      //
+      // Each channel's adapter call is wrapped in its OWN try/catch — one
+      // channel's adapter failure must not abort the others, same
+      // per-item fault isolation as Phase 7/8's per-feed/per-type loops.
+      // A thrown SEND_REQUIRES_APPROVAL/CAP_FIELDS_INCOMPLETE here would
+      // indicate a genuine bug (this code path only runs AFTER the
+      // route's own approval gate already succeeded) — logged via
+      // req.log.error, never failing the whole send response, since F5's
+      // own sent_at/approved_by write already committed and must not be
+      // rolled back by a downstream adapter concern.
+      const distinctChannels = Array.from(new Set(updatedRow.channels));
+      for (const channel of distinctChannels) {
+        try {
+          const channelRecipients = await query<{ recipient_name: string | null; recipient_contact: string | null }>(
+            `SELECT recipient_name, recipient_contact FROM notification_recipients
+             WHERE notification_id = $1 AND channel = $2`,
+            [id, channel],
+          );
+
+          // IPAWS-specific note: this plan does NOT add new UI/body
+          // fields for CAP's sender/event/urgency/severity/certainty/area
+          // in THIS task (Plan 09-03's frontend task owns surfacing those
+          // as composer fields) — for channel 'IPAWS', this call passes a
+          // documented placeholder capFields object so an end-to-end
+          // IPAWS send is provably CAP-complete even before Plan 09-03
+          // ships a dedicated composer UI for these fields. Documented
+          // inline as an explicit Plan 09-01->09-03 handoff point,
+          // matching Plan 07-01->07-03/08-01->08-03's established
+          // cross-plan backend-then-frontend sequencing.
+          let area = 'Agency service area';
+          if (channel === 'IPAWS' && updatedRow.incident_id) {
+            const incidentJurisdictionRows = await query<{ jurisdiction_name: string }>(
+              `SELECT j.name AS jurisdiction_name FROM incidents i
+               JOIN jurisdictions j ON j.id = i.jurisdiction_id
+               WHERE i.id = $1`,
+              [updatedRow.incident_id],
+            );
+            if (incidentJurisdictionRows[0]?.jurisdiction_name) {
+              area = incidentJurisdictionRows[0].jurisdiction_name;
+            }
+          }
+
+          await sendViaProvider({
+            notification_id: id,
+            channel,
+            recipients: channelRecipients.map((r) => ({
+              name: r.recipient_name ?? '',
+              contact: r.recipient_contact,
+            })),
+            message: updatedRow.message_body,
+            approved_by: req.epmpUser!.id,
+            approved_at: new Date().toISOString(),
+            ...(channel === 'IPAWS'
+              ? {
+                  capFields: {
+                    sender: 'EPMP Agency Alerting Authority',
+                    event: 'General Emergency Notification',
+                    urgency: 'Immediate',
+                    severity: 'Severe',
+                    certainty: 'Observed',
+                    area,
+                  },
+                }
+              : {}),
+          });
+        } catch (err) {
+          req.log.error(err, `Notification provider dispatch failed for channel ${channel}`);
+        }
+      }
 
       const approverRows = await query<{ name: string }>(`SELECT name FROM users WHERE id = $1`, [req.epmpUser!.id]);
       return reply.code(200).send(
