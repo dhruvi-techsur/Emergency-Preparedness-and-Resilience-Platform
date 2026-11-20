@@ -2,17 +2,17 @@
 pivota_spec_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
-current_plan: 9
-status: executing
-stopped_at: "Completed 08-09-PLAN.md (gap-closure: POST /api/v1/plans/import, F17 UAT gap ref 4 backend)"
-last_updated: "2026-11-20T18:00:23.399Z"
+current_plan: 10
+status: planning
+stopped_at: "Completed 08-10-PLAN.md (gap-closure: ImportDocumentModal/PlanRepository frontend half, F17 UAT gap ref 4 CLOSED — Phase 8 fully complete, 10/10 plans)"
+last_updated: "2026-11-20T18:13:13.374Z"
 last_activity: 2026-11-20
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 14
-  completed_plans: 13
-  percent: 33
+  completed_plans: 14
+  percent: 67
 ---
 
 # Project State
@@ -26,11 +26,13 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 
 ## Current Position
 
-Phase: Phase 8 (Record Authority & Sync Integrations)
-Current Plan: 9
+Phase: Phase 8 (Record Authority & Sync Integrations) — COMPLETE
+Current Plan: 10
 Total Plans in Phase: 10 (6 original + 4 gap-closure: 08-07/08-08/08-09/08-10)
-Status: In progress — 08-10 (gap-closure, F17 import-flow frontend half) remains unexecuted
+Status: Phase 8 fully complete — all 10 plans shipped (6 original + 4 gap-closure). Ready for Phase 9 planning or milestone completion.
 Last Activity: 2026-11-20
+
+Plan 08-10 (this phase, FINAL gap-closure plan): see 08-10-SUMMARY.md for full detail. Closed the frontend half of UAT gap ref 4 (major), completing what 08-09's backend route started. `ImportDocumentModal.tsx` now offers a "Create a new plan" (default)/"Attach to an existing plan" `Select` once a document is selected — new-plan fields (name pre-filled+editable, type, jurisdiction Combobox) or an existing-plan Combobox sourced from `GET /api/v1/plans?page_size=100`, each gated via React Query `enabled` on the chosen mode — and `handleSubmit` now calls the real `POST /api/v1/plans/import` with the backend's literal `mode` enum values (`import_copy`/`link_live`), returning the resulting plan id via `onImported(planId)`. `PlanRepository.tsx`'s `onImported` changed from `() => void refetch()` to `navigate(`/plans/${planId}`)`, mirroring `CreateTask.tsx`/`CreateResourceRequest.tsx`'s own navigate-to-new-resource convention. Extended `plan-document-import-link.spec.ts` to 5/5 tests: test 2 drives the new default "create a new plan" path end-to-end (asserts real navigation + a `Draft` status Badge), test 4 switches to "attach to an existing plan" and confirms via direct Postgres query that a real `link_live` `document_links` row landed on that same plan, and new test 5 proves the imported plan is immediately visible in the Plans & playbooks list — directly closing the "doesn't take me anywhere... list is unchanged" user report. Two test-only Rule-1 deviations (both confined to the new spec file, no production code affected): a `.inputValue()` read raced the pre-fill `useEffect` (fixed with an explicit `toHaveValue()` wait), and the pre-filled plan name needed to be made unique per run to avoid colliding with prior suite runs' identically-named fixture plans on the shared compose DB. `tsc --noEmit` and `npm run build` (frontend/app) both clean; full backend suite (22 files, 152 tests, unaffected — zero backend changes this plan) and regression specs (`plans.spec.ts` 4/4, `plan-live-link-flagged-review.spec.ts` 3/3) all green. Plan 08-06's "Source changed, review" Alert is now reachable through genuine product usage for the first time. Phase 8 is now FULLY complete: all 10 plans (6 original + 4 gap-closure) shipped.
 
 Plan 08-09 (this phase, gap-closure): see 08-09-SUMMARY.md for full detail. Closed the backend half of UAT gap ref 4 (major): clicking "Import copy"/"Link live" in the Plan Repository's Import modal wrote a real `document_links` row but never created/attached a Plan and never wrote `plans.source_document_ref` — a silent no-op from the user's perspective. New `POST /api/v1/plans/import` route either creates a brand-new Draft/v1 plan with `source_document_ref` set (no `plan_id` supplied, the FRD's literal default) or attaches to an existing in-scope plan the caller names, delegating ALL document-permission enforcement to the already-shipped `importDocument`/`linkDocument` functions so the permission boundary stays in exactly one place. A small additive `hasDocumentAccess()` export on `document-adapter.ts` lets the new-plan path pre-flight the access-set check BEFORE the plans-table INSERT — the plan's own preferred approach over a delete-after-the-fact rollback — guaranteeing zero orphaned Draft plans survive a rejected import on either `import_copy` or `link_live`. New tests (4 cases) prove new-plan creation + GET-reachability + DB-level `source_document_ref` write, existing-plan attachment, 404 on out-of-jurisdiction-scope `plan_id` (closing a second potential F-08-01-style IDOR code path before it could open), and no-orphan on rejection for both new-plan sub-paths. One test-only Rule-1 deviation: a dedicated fixture user was needed for the new tests to avoid a cross-describe-block collision with the file's pre-existing permission-revocation test's module-level `simulateDocumentAccessRevocation` call. Full backend suite (22 files, 152 tests) zero regression; `tsc --noEmit` and `npm run build` both clean; `npm run seed` re-confirmed idempotent.
 
@@ -92,7 +94,7 @@ Plan 05-02 (prior): shipped the client-side half of F6 — SyncStatus design-sys
 
 Plan 05-01 (prior, backend): shipped the F6 backend data layer and API surface — field_reports/field_report_photos/sync_conflicts tables plus idempotent-submit/ordered-batch-sync/photo-upload/conflict-resolve endpoints, every incident-touching write wrapped in the shared withTimelineTransaction invariant. Integration test (4 cases) + full backend suite (15 files, 74 tests) green with zero regression; tsc --noEmit and backend build both clean.
 
-Progress: [███░░░░░░░] 33%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -187,6 +189,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 08-record-authority-sync-integrations P07 | 12 min | 2 tasks | 1 files |
 | Phase 08-record-authority-sync-integrations P08 | 25 min | 2 tasks | 3 files |
 | Phase 08-record-authority-sync-integrations P09 | 18 min | 2 tasks | 3 files |
+| Phase 08 P10 | 22 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -370,6 +373,7 @@ Recent decisions affecting current work:
 - [Phase 08-08]: Reworded the fix's explanatory doc comment to avoid literally embedding the stale placeholder string the plan's own verify step greps the file for — the identical self-collision class 08-06 documented for its idempotency-guard wording
 - [Phase 08-08]: Scoped the new Playwright "Tasks" heading locator to h3.ep-card__title specifically, since TaskList's own embedded PageHeader independently renders an h1 also reading "Tasks" — a bare name-only heading locator is ambiguous once the real component (not a placeholder) is mounted
 - [Phase 08-record-authority-sync-integrations]: 08-09: pre-flight hasDocumentAccess() check before plans-table INSERT (not delete-after-the-fact rollback) guarantees zero orphaned Draft plans on a rejected import
+- [Phase 08-10]: handleSubmit's mode values renamed to the backend's literal enum (import_copy/link_live), closing a naming mismatch against 08-09's route; new-plan name field kept editable (not read-only pre-fill) for collision-free repeated test runs
 
 ### Pending Todos
 
@@ -381,6 +385,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-20T18:00:23.397Z
-Stopped at: Completed 08-09-PLAN.md (gap-closure: POST /api/v1/plans/import, F17 UAT gap ref 4 backend)
+Last session: 2026-11-20T18:07:36.547Z
+Stopped at: Completed 08-10-PLAN.md (gap-closure: ImportDocumentModal/PlanRepository frontend half, F17 UAT gap ref 4 CLOSED — Phase 8 fully complete, 10/10 plans)
 Resume file: None
