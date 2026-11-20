@@ -6,6 +6,7 @@ import { gisHealthRoutes } from './gis-adapter.js';
 import { hazardFeedRoutes } from './hazard-feed-adapter.js';
 import { cadRoutes } from './cad-adapter.js';
 import { eocCotsRoutes } from './eoc-cots-adapter.js';
+import eocCotsConflictsRoutes from './eoc-cots-conflicts.js';
 import { facilityRoutes } from './facility-adapter.js';
 import { documentRoutes } from './document-adapter.js';
 
@@ -26,6 +27,9 @@ export default async function integrationGatewayRoutes(app: FastifyInstance) {
   await app.register(cadRoutes);
   // F13 EOC COTS — exchange-records/conflicts/health routes (Plan 08-01).
   await app.register(eocCotsRoutes);
+  // F13 EOC COTS conflict-resolve route (Plan 08-03) — kept in its own
+  // file, the sole code path permitted to set eoc_cots_conflicts.resolution.
+  await app.register(eocCotsConflictsRoutes);
   // F17 (Plan 08-02): facility/asset-status adapter routes (status, health,
   // operating-picture/facilities) + document adapter routes (browse,
   // import, link, health) — two independent adapter contracts, both
