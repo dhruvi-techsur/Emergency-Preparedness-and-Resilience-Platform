@@ -1,17 +1,18 @@
 ---
 pivota_spec_state_version: 1.0
 milestone: v2.0
-milestone_name: External Integrations
-status: Roadmap created for v2.0 (Phases 7-9); no plans written yet.
-stopped_at: Roadmap created (ROADMAP.md, Phases 7-9)
-last_updated: "2026-11-20T03:30:00.000Z"
-last_activity: 2026-11-20 -- v2.0 ROADMAP.md created: 3 phases (7-9) covering F12-F17, 100% requirement coverage. Next step is /pivota_spec-plan-phase 7.
+milestone_name: milestone
+current_plan: 2
+status: executing
+stopped_at: Completed 07-01-PLAN.md
+last_updated: "2026-11-20T09:56:37.243Z"
+last_activity: 2026-11-20
 progress:
   total_phases: 3
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 4
+  completed_plans: 1
+  percent: 100
 ---
 
 # Project State
@@ -25,9 +26,11 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 
 ## Current Position
 
-Phase: Phase 7 (Operating-Picture Read Overlays) — not yet planned
-Plan: —
-Status: v2.0 ROADMAP.md created (3 phases, 6/6 requirements mapped, 100% coverage). Next: `/pivota_spec-plan-phase 7`.
+Phase: Phase 7 (Operating-Picture Read Overlays, Weather & Dispatch)
+Current Plan: 2
+Total Plans in Phase: 4
+Status: Ready to execute
+Last Activity: 2026-11-20
 
 ## v1.0 Summary (for reference, not yet archived to MILESTONES.md)
 
@@ -151,6 +154,7 @@ Progress: [██████████] 100%
 | Phase 06 P11 | 12 min | 1 tasks | 1 files |
 | Phase 06 P12 | 12 min | 2 tasks | 2 files |
 | Phase 06 P13 | 10 min | 2 tasks | 2 files |
+| Phase 07 P01 | 25 min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -313,6 +317,7 @@ Recent decisions affecting current work:
 - [Phase 06-10]: Switching Keycloak-SSO identities within a single test requires clearing BOTH sessionStorage's epmp_session_token AND context().clearCookies() -- every other multi-identity spec in this codebase switches across separate test() calls with a fresh context instead, so this exact sequence had never been needed before this plan's single-test two-identity RBAC proof
 - [Phase 06-13]: Fixed the systemic missing-.ep-class root cause on AppShell.tsx's shell root rather than patching individual Modal.css/TextField.css stylesheets — The design system's own test harnesses already wrap fixtures in .ep to activate tokens.css's box-sizing:border-box reset; the real app's shell root never did. A one-class fix at this integration boundary resolves the entire systemic class of Modal+multiline-TextField overflow defects, not just the one reported instance.
 - [Phase 06-12]: Stat tiles carry a hint prop ONLY when the value is a genuine, documented structural limitation -- never alongside a real, correct count — EocDashboard.tsx's Open tasks/Pending resource requests tiles were showing real nonzero jurisdiction-scoped values alongside a false 'ships in a later phase' hint, directly contradicting F0's data-provenance rule; removed to match the file's own already-correct active_incidents precedent
+- [Phase 07-01]: recordFeedHealth's UPSERT keys on integration_health.system_name ('<feed> Hazard Feed'), the first adapter in this codebase writing directly into the shared table — same convention Plan 07-02's cad-adapter.ts independently adopted
 
 ### Pending Todos
 
@@ -324,6 +329,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-19T23:34:25Z
-Stopped at: Completed 06-13-PLAN.md
+Last session: 2026-11-20T09:56:37.241Z
+Stopped at: Completed 07-01-PLAN.md
 Resume file: None
