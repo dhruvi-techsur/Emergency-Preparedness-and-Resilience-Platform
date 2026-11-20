@@ -452,14 +452,23 @@ export function ComposeNotification(): JSX.Element {
           />
 
           <h3 className="h4">Channels</h3>
-          {CHANNEL_OPTIONS.map((opt) => (
-            <Checkbox
-              key={opt.value}
-              label={opt.label}
-              checked={channels.has(opt.value)}
-              onChange={() => toggleChannel(opt.value)}
-            />
-          ))}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'var(--space-2)',
+              marginBottom: 'var(--space-4)',
+            }}
+          >
+            {CHANNEL_OPTIONS.map((opt) => (
+              <Checkbox
+                key={opt.value}
+                label={opt.label}
+                checked={channels.has(opt.value)}
+                onChange={() => toggleChannel(opt.value)}
+              />
+            ))}
+          </div>
 
           {channels.has('IPAWS') ? (
             <Card title="CAP public-alert fields">
