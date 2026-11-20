@@ -3,15 +3,15 @@ pivota_spec_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
 current_plan: 6
-status: executing
-stopped_at: Completed 08-03-PLAN.md
-last_updated: "2026-11-20T12:34:41.978Z"
+status: verifying
+stopped_at: Completed 08-06-PLAN.md (Phase 8 fully complete — all 6 plans)
+last_updated: "2026-11-20T12:45:19.202Z"
 last_activity: 2026-11-20
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 10
-  completed_plans: 9
+  completed_plans: 10
   percent: 100
 ---
 
@@ -29,8 +29,10 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 Phase: Phase 8 (Record Authority & Sync Integrations)
 Current Plan: 6
 Total Plans in Phase: 6
-Status: Executing
+Status: Ready for verification (all 6 plans complete)
 Last Activity: 2026-11-20
+
+Plan 08-06 (this phase, FINAL): see 08-06-SUMMARY.md for full detail. Shipped F17's final hard requirement and this phase's success criterion 5 — a background sync job for "Link live" documents that detects a simulated source-document change and flags it (`document_links.content_status='changed'`, new migration-ALTER columns, new isolated `document_link_sync` job_type), surfaced as a persistent "Source changed, review" Alert in `PlanDetail.tsx`'s reading view, with a grep-verified structural guarantee of zero write path from the sync job to `plans`/`plan_sections`/`plan_versions`. `revalidateDocumentLinkPermission()` is called synchronously by `GET /api/v1/plans/{id}` for every `link_live` row on every request — satisfying F17's literal "at minimum, before each render" cadence, not just the 5-minute scheduled tick. New `PATCH .../document-links/{linkId}/acknowledge` is the ONLY code path clearing the flag (409 on double-acknowledge, audited). New `plan-live-link-flagged-review.spec.ts` (3/3) drives the REAL detection trigger (a genuine `link_live` row + the actual idempotent UPDATE the sync job itself issues) rather than a hand-set fixture, proving plan content stays byte-identical across the full flagged/acknowledged lifecycle. One self-correction: reworded the idempotency guard from `content_status = 'current'` to the logically equivalent `<> 'changed'` to avoid a literal-string collision with this plan's own structural grep. Full backend suite (22 files, 143 tests) zero regression; both builds + `tsc --noEmit` clean; `npm run seed` re-confirmed idempotent. Phase 8 is now fully complete (all 6 plans shipped).
 
 Plan 08-05 (this phase): see 08-05-SUMMARY.md for full detail. Shipped F17's Plan Repository frontend half — new `ImportDocumentModal.tsx` (TextField search + `Table` results, Import copy/Link live footer buttons) consuming Plan 08-02's permission-aware document adapter, with `PlanRepository.tsx`'s "Import plan" action changed from Phase 3's documented disabled placeholder to a real, enabled entry point. The results list renders exactly what `GET /api/v1/integrations/documents/browse` returns with zero client-side re-filtering — the server-side filter in 08-02's `browseDocuments()` is the sole enforcement mechanism, proven by a new `plan-document-import-link.spec.ts` (4/4) asserting the withheld third document (`DOC-ANNEX-003`) has `toHaveCount(0)` in the modal's DOM, plus a direct `page.evaluate`+`fetch` bypass of the browse UI proving the import route still rejects it with a real 403 `IMPORT_PERMISSION_DENIED`. Reused the existing `signInAsPlanningChief` identity (no new seed needed). Zero deviations; `tsc --noEmit`/`npm run build` clean, backend suite (21 files, 138 tests) and `plans.spec.ts` (4/4) regression both green.
 
@@ -175,6 +177,7 @@ Progress: [██████████] 100%
 | Phase 08 P05 | 18 min | 3 tasks | 3 files |
 | Phase 08-record-authority-sync-integrations P04 | 18 min | 2 tasks | 2 files |
 | Phase 08 P03 | 10 min | 3 tasks | 6 files |
+| Phase 08 P06 | 25 min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -352,6 +355,8 @@ Recent decisions affecting current work:
 - [Phase 08-05]: Reused existing signInAsPlanningChief Playwright identity for F17 document import/link e2e coverage rather than seeding a new identity
 - [Phase 08-record-authority-sync-integrations]: [Phase 08-04]: Facility markers polled via their own useQuery, merged client-side into the existing visibleMarkers/canvasMarkers pipeline rather than widening the existing markers endpoint, per Plan 08-02's own file-ownership note avoiding a cross-plan collision in the same wave
 - [Phase 08-03]: Added system_name to 08-01's GET conflicts response (one-line cross-plan touch-up) rather than a second lookup endpoint, since this stub adapter has exactly one configured vendor
+- [Phase 08-06]: Migration renumbered 1700000000014->1700000000016 (both 1700000000014/1700000000015 already claimed by this phase's own 08-01/08-02 by execution time) — same cross-plan collision precedent every prior phase has resolved identically
+- [Phase 08-06]: runDocumentLinkSync()'s idempotency guard phrased as content_status <> 'changed' rather than = 'current' — functionally identical on the two-state CHECK-constrained enum, rewritten specifically so this file's own text never collides with this plan's structural grep verifying only plans.ts's acknowledge route clears the flag
 
 ### Pending Todos
 
@@ -363,6 +368,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-20T12:34:41.976Z
-Stopped at: Completed 08-03-PLAN.md
+Last session: 2026-11-20T12:45:19.200Z
+Stopped at: Completed 08-06-PLAN.md (Phase 8 fully complete — all 6 plans)
 Resume file: None
