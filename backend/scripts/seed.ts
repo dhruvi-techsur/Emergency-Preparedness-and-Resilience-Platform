@@ -3,6 +3,7 @@ import { clusterHazardFeedEvents } from '../src/modules/ai-assist/signal-cluster
 import { syncHazardLayersFromEvents, runHazardFeedIngestion } from '../src/modules/integration-gateway/hazard-feed-adapter.js';
 import { runEocCotsSync } from '../src/modules/integration-gateway/eoc-cots-adapter.js';
 import { runFacilitySync } from '../src/modules/integration-gateway/facility-adapter.js';
+import { linkDocument, runDocumentLinkSync } from '../src/modules/integration-gateway/document-adapter.js';
 
 interface FindOrInsertResult {
   id: string;
@@ -1284,6 +1285,66 @@ async function main() {
     ],
   );
   record('plan_versions', uatUnlinkedPlanVersion);
+
+  // UAT data-doctor fixture (Phase 8 UAT pass, test "Live-Linked Document
+  // Flagged Review" — 08-06's F17 final hard requirement): a REAL
+  // mode='link_live' document_links row, already flagged
+  // content_status='changed', attached to the existing UAT-LINK-TASKS-READY
+  // plan above, so a human tester's UAT walkthrough of PlanDetail.tsx's
+  // "Source changed, review" Alert never has to perform the full
+  // import/link-then-wait-for-a-background-sync-tick flow themselves just
+  // to SEE the flagged state once.
+  //
+  // Driven through the REAL functions document-adapter.ts exports — never
+  // a hand-inserted row bypassing the module's own logic (mirrors this
+  // file's own established "run the real adapter function" precedent for
+  // EOC COTS/facility/hazard-feed sync above, and matches
+  // plan-live-link-flagged-review.spec.ts's own "prefer the real detection
+  // path" design note):
+  //  1. linkDocument(userId, externalDocId, planId) — the EXACT function
+  //     POST /api/v1/integrations/documents/:id/link calls, called here
+  //     with plannerUser.id (planning_logistics_chief, who already holds
+  //     the `plans:edit` grant that route requires) and the fixed
+  //     'DOC-SOP-002' external_document_id — the ONE id
+  //     runDocumentLinkSync()'s own content-change simulation recognizes
+  //     as its deterministic trigger (document-adapter.ts's own doc
+  //     comment on that function names it explicitly).
+  //  2. runDocumentLinkSync() — the REAL scheduled-sweep function, called
+  //     once here exactly like this file's EOC COTS/facility precedent
+  //     above, which performs the actual
+  //     `UPDATE document_links SET content_status = 'changed', ...` the
+  //     scheduler would otherwise only perform on its first 5-minute tick.
+  //
+  // Idempotent: linkDocument() has no natural-key guard of its own (a
+  // document CAN legitimately be linked to the same plan twice in real
+  // usage), so this block first checks for an existing link_live row for
+  // this exact (plan_id, external_document_id) pair before calling
+  // linkDocument() again — a second seed run must not create a duplicate
+  // row. runDocumentLinkSync() itself is already idempotent (its own
+  // `AND content_status <> 'changed'` guard), so calling it again on an
+  // already-flagged row here is always a safe no-op.
+  const existingUatLiveLinkRow = await pool.query<{ id: string; content_status: string }>(
+    `SELECT id, content_status FROM document_links
+     WHERE plan_id = $1 AND external_document_id = $2 AND mode = 'link_live'
+     LIMIT 1`,
+    [uatUnlinkedPlan.id, 'DOC-SOP-002'],
+  );
+
+  if (existingUatLiveLinkRow.rows.length === 0) {
+    const linked = await linkDocument(plannerUser.id, 'DOC-SOP-002', uatUnlinkedPlan.id);
+    record('document_links', { id: linked.id, inserted: true });
+  } else {
+    record('document_links', { id: existingUatLiveLinkRow.rows[0].id, inserted: false });
+  }
+
+  // Always re-run the real sync sweep — idempotent, and self-healing for a
+  // sandbox where the row above was already linked (e.g. by a prior seed
+  // run or a human tester) but hadn't yet been flagged by a scheduled tick.
+  const uatDocLinkSyncResult = await runDocumentLinkSync();
+  console.log(
+    `Document link sync: checked ${uatDocLinkSyncResult.checked} link_live row(s), ` +
+      `${uatDocLinkSyncResult.flagged} newly flagged, ${uatDocLinkSyncResult.permission_revoked} permission-revoked.`,
+  );
 
   // UAT data-doctor fixture (Phase 3 UAT re-run, tests "Resource Request
   // Lifecycle (create -> approve/decline)" and "Resource Request Visible on
