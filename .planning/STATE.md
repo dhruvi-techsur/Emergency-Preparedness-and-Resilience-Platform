@@ -2,16 +2,16 @@
 pivota_spec_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
-current_plan: 2
+current_plan: 3
 status: executing
-stopped_at: Completed 07-01-PLAN.md
-last_updated: "2026-11-20T09:56:37.243Z"
+stopped_at: Completed 07-02-PLAN.md
+last_updated: "2026-11-20T10:04:52.014Z"
 last_activity: 2026-11-20
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 4
-  completed_plans: 1
+  completed_plans: 2
   percent: 100
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: Phase 7 (Operating-Picture Read Overlays, Weather & Dispatch)
-Current Plan: 2
+Current Plan: 3
 Total Plans in Phase: 4
 Status: Ready to execute
 Last Activity: 2026-11-20
@@ -155,6 +155,7 @@ Progress: [██████████] 100%
 | Phase 06 P12 | 12 min | 2 tasks | 2 files |
 | Phase 06 P13 | 10 min | 2 tasks | 2 files |
 | Phase 07 P01 | 25 min | 3 tasks | 7 files |
+| Phase 07 P02 | 22 min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -318,6 +319,8 @@ Recent decisions affecting current work:
 - [Phase 06-13]: Fixed the systemic missing-.ep-class root cause on AppShell.tsx's shell root rather than patching individual Modal.css/TextField.css stylesheets — The design system's own test harnesses already wrap fixtures in .ep to activate tokens.css's box-sizing:border-box reset; the real app's shell root never did. A one-class fix at this integration boundary resolves the entire systemic class of Modal+multiline-TextField overflow defects, not just the one reported instance.
 - [Phase 06-12]: Stat tiles carry a hint prop ONLY when the value is a genuine, documented structural limitation -- never alongside a real, correct count — EocDashboard.tsx's Open tasks/Pending resource requests tiles were showing real nonzero jurisdiction-scoped values alongside a false 'ships in a later phase' hint, directly contradicting F0's data-provenance rule; removed to match the file's own already-correct active_incidents precedent
 - [Phase 07-01]: recordFeedHealth's UPSERT keys on integration_health.system_name ('<feed> Hazard Feed'), the first adapter in this codebase writing directly into the shared table — same convention Plan 07-02's cad-adapter.ts independently adopted
+- [Phase 07-02]: runCadIngestion re-evaluates incident matching on every tick (no sticky/COALESCE link) -- matches the plan's literal shared-number rule exactly
+- [Phase 07-02]: cad-adapter.ts's job_type='cad_ingestion' kept structurally distinct from Plan 07-01's 'feed_ingestion' via this plan's own background_jobs_job_type_check ALTER, so the two independently-scheduled adapters never clobber the same background_jobs row
 
 ### Pending Todos
 
@@ -329,6 +332,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-20T09:56:37.241Z
-Stopped at: Completed 07-01-PLAN.md
+Last session: 2026-11-20T10:04:52.013Z
+Stopped at: Completed 07-02-PLAN.md
 Resume file: None
