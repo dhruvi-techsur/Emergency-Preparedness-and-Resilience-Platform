@@ -15,6 +15,7 @@ import staticRoutes from './static.js';
 import { connectNats } from './modules/integration-gateway/nats-client.js';
 import { startWebhookDeliveryWorker } from './modules/integration-gateway/webhook-delivery-worker.js';
 import { startOverdueSweepScheduler } from './modules/incident-ops/overdue-sweep.js';
+import { startHazardFeedIngestionScheduler } from './modules/integration-gateway/hazard-feed-adapter.js';
 import { syncRolePermissionsToOpa, type RolePermissionRow } from './modules/auth-org/opa-client.js';
 import { query } from './db/client.js';
 
@@ -117,6 +118,14 @@ async function start() {
     startOverdueSweepScheduler();
   } catch (err) {
     app.log.warn(err, 'Overdue sweep scheduler failed to start — automatic Overdue transitions disabled');
+  }
+
+  // 07-01 (F12) — same graceful-degradation posture as the schedulers
+  // above: a scheduler-start failure must never crash the server.
+  try {
+    startHazardFeedIngestionScheduler();
+  } catch (err) {
+    app.log.warn(err, 'Hazard-feed ingestion scheduler failed to start — scheduled polling disabled');
   }
 
   try {
