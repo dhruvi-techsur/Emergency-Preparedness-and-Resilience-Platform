@@ -1,82 +1,57 @@
 ---
 phase: 8
-status: issues_found
-blockers: 1
-warnings: 1
-files_reviewed: 24
+status: clean
+blockers: 0
+warnings: 0
+files_reviewed: 6
 files_reviewed_list:
-  - backend/migrations/1700000000014_eoc-cots-schema.js
-  - backend/migrations/1700000000015_facility-document-schema.js
-  - backend/migrations/1700000000016_document-links-extend-flagged-state.js
-  - backend/scripts/seed.ts
-  - backend/src/modules/integration-gateway/document-adapter.ts
-  - backend/src/modules/integration-gateway/eoc-cots-adapter.test.ts
   - backend/src/modules/integration-gateway/eoc-cots-adapter.ts
-  - backend/src/modules/integration-gateway/eoc-cots-conflicts.test.ts
-  - backend/src/modules/integration-gateway/eoc-cots-conflicts.ts
-  - backend/src/modules/integration-gateway/facility-adapter.ts
-  - backend/src/modules/integration-gateway/facility-document-adapter.test.ts
-  - backend/src/modules/integration-gateway/routes.ts
+  - backend/src/modules/integration-gateway/document-adapter.ts
   - backend/src/modules/plans/plans.test.ts
-  - backend/src/modules/plans/plans.ts
-  - backend/src/server.ts
-  - frontend/app/e2e/eoc-cots-conflict-resolution.spec.ts
-  - frontend/app/e2e/operating-picture-facility-markers.spec.ts
-  - frontend/app/e2e/plan-document-import-link.spec.ts
-  - frontend/app/e2e/plan-live-link-flagged-review.spec.ts
-  - frontend/app/src/pages/admin/IntegrationHealth.tsx
-  - frontend/app/src/pages/operating-picture/OperatingPicture.tsx
-  - frontend/app/src/pages/plans/ImportDocumentModal.tsx
-  - frontend/app/src/pages/plans/PlanDetail.tsx
-  - frontend/app/src/pages/plans/PlanRepository.tsx
-reviewed_at: 2026-11-20T12:56:40Z
-iteration: 1
+  - backend/src/modules/integration-gateway/eoc-cots-adapter.test.ts
+  - backend/src/modules/integration-gateway/eoc-cots-conflicts.test.ts
+  - backend/src/modules/integration-gateway/facility-document-adapter.test.ts
+reviewed_at: 2026-11-20T13:25:00Z
+iteration: 2
 ---
 
 # Phase 8 Code Review
 
 ## BLOCKERs
 
-### B1: runEocCotsSync() inserts a brand-new, unresolved duplicate `eoc_cots_conflicts` row for the same external record on every scheduled tick, so a resolved conflict silently reappears 5 minutes later and the conflict table grows unbounded
-- **File:** backend/src/modules/integration-gateway/eoc-cots-adapter.ts:285-296
-- **Category:** bug
-- **Evidence:**
-  ```ts
-  if (record.external_id === KNOWN_CONFLICT_EXTERNAL_ID) {
-    await query(
-      `INSERT INTO eoc_cots_conflicts (config_id, record_type, epmp_record_id, epmp_value, external_value)
-       VALUES ($1, $2, gen_random_uuid(), $3, $4)`,
-      [configId, type, JSON.stringify({...}), JSON.stringify(record.payload)],
-    );
-    conflicts += 1;
-  }
-  ```
-  There is no existence/dedup check (no `WHERE NOT EXISTS (... AND resolution IS NULL)`, no `ON CONFLICT` guard) before this INSERT, unlike every comparable adapter write in this codebase — `facility-adapter.ts`'s `facilities` upsert uses `ON CONFLICT (external_facility_id, source) DO UPDATE`, and `cad-adapter.ts`'s `cad_dispatch_events` upsert uses `ON CONFLICT (config_id, external_event_id) DO UPDATE` precisely to avoid this class of duplication.
-
-  `fetchExchangeRecords('incident')` (same file, lines 97-126) is a deterministic stub that **always** returns the fixed `EOC-CONFLICT-001` record on every call. `startEocCotsSyncScheduler()` (line 520) is registered unconditionally in `server.ts` (line 152) and fires `runEocCotsSync()` every 300,000ms (5 minutes) in the running server — not just in tests. `seed.ts` also declares `'incident'` as EPMP-authoritative (line ~2034), which is exactly the condition (`authority === 'EPMP'`) that routes this record into the conflict-insert branch rather than the plain sync-log branch.
-
-  Concrete failing sequence: at t=0 the scheduler runs and inserts conflict row R1 for `EOC-CONFLICT-001`. An admin resolves R1 via `POST .../conflicts/:id/resolve` (the eoc-cots-conflicts.ts route, built correctly and non-idempotent **per row**). At t=5min the scheduler ticks again, `fetchExchangeRecords` returns the identical `EOC-CONFLICT-001` record again, and since there is no check for an already-existing unresolved (or even already-resolved) row for this external_id, a **brand-new** row R2 is inserted with `resolution = NULL`. `GET /api/v1/integrations/eoc-cots/conflicts` (which filters `WHERE resolution IS NULL`) now shows R2 as a fresh, never-before-seen unresolved conflict — the admin's resolution of R1 is invisible to the UI/API and the "conflict" reappears forever, every 5 minutes, unbounded, for the lifetime of the server. This directly undermines F13's explicit-resolution workflow: a human can never actually make this conflict "go away" — they must re-resolve an apparently-identical conflict every single tick, and the `eoc_cots_conflicts` table grows one new row every 5 minutes indefinitely.
-
-  Neither `eoc-cots-adapter.test.ts` nor `eoc-cots-conflicts.test.ts` catches this: test #4 in `eoc-cots-adapter.test.ts` calls `runEocCotsSync()` more than once across the suite and only asserts `items.length > 0` / finds *a* matching row by `record_type`, never asserting there is exactly one unresolved conflict per external record.
-- **Fix direction:** Before inserting into `eoc_cots_conflicts`, check for an existing row with the same `(config_id, record_type, epmp_record_id-equivalent-key)` that is still unresolved (or has already been resolved for this exact external value) and skip/update instead of blindly inserting — e.g. a `WHERE NOT EXISTS (SELECT 1 FROM eoc_cots_conflicts WHERE config_id = $1 AND record_type = $2 AND resolution IS NULL)` guard, or a real natural key (e.g. `external_id`) with an `ON CONFLICT ... DO NOTHING`/`DO UPDATE` clause, mirroring the dedup pattern already established by `facility-adapter.ts` and `cad-adapter.ts` in this same module.
-- **Resolution:** fixed (c47134d) — added a `SELECT ... WHERE config_id = $1 AND record_type = $2 AND external_value = $3::jsonb LIMIT 1` existence guard before the INSERT in `eoc-cots-adapter.ts`; a conflict row (resolved or unresolved) for the identical external value is never re-inserted, while a genuinely changed external_value still raises a fresh conflict. Verified: `eoc-cots-adapter.test.ts` (8/8 pass, including test #4 which calls `runEocCotsSync()` across the suite) and `eoc-cots-conflicts.test.ts` (4/4 pass) both pass; a manual repro script confirmed 3 consecutive `runEocCotsSync()` calls produce exactly 1 conflict row, and that resolving it and re-running still leaves exactly 1 (resolved) row — the exact failing sequence described in this finding no longer reproduces.
+None.
 
 ## WARNINGs
 
-### W1: `document_links.permission_status` can never actually become `'revoked'` in this build — the entire "Access removed" detection/UI path is dead, untested code
-- **File:** backend/src/modules/integration-gateway/document-adapter.ts:47-56, 161-196
-- **Evidence:** `SIMULATED_USER_DOCUMENT_ACCESS[userId]` is lazily seeded once per user to the fixed constant `GRANTED_DOCUMENT_IDS = ['DOC-EOP-001', 'DOC-SOP-002']` (line 49, 52-54) and is never mutated, shrunk, or reassigned anywhere else in the file (confirmed via grep across the whole module — the only write is the one-time lazy-seed). `checkAndPersistPermission`'s `stillGranted` check (line 168: `accessSet.includes(row.external_document_id)`) can therefore never be false for any row that was legitimately created via `importDocument`/`linkDocument` (both of which only ever insert a `document_links` row *after* confirming the same access set already contains that `external_document_id`). The `permission_status = 'revoked'` write path (line 177-181), `runDocumentLinkSync`'s `permission_revoked` counter (line 225/242), `revalidateDocumentLinkPermission`'s `'revoked'` return value, and `PlanDetail.tsx`'s entire "Access removed" `Alert` (filtering `permission_status === 'revoked'`, PlanDetail.tsx:344-351) are consequently unreachable in this codebase as shipped — no seed fixture, test, or Playwright spec exercises or could exercise this branch (confirmed via grep: zero occurrences of `'revoked'`/`permission_status` assertions in any phase 8 test or e2e file). This mirrors the FRD requirement ("a permission downgrade at the source immediately restricts the EPMP-side link's visibility") being implemented as inert code with no reachable trigger, rather than a deliberately-scoped-out stub — unlike the facility/EOC-COTS adapters' failure triggers, which are documented, explicit, and test-covered (`simulateFailure`, `FORCE_AUTH_FAILURE`).
-- **Fix direction:** Add a deterministic test-reachable trigger for a simulated permission downgrade (mirroring every other adapter's `simulateFailure`-style pattern in this same phase) — e.g. a fixed external_document_id or an explicit test-only parameter that removes an id from a user's access set — so the revocation detection and the "Access removed" UI path are genuinely exercised by at least one test, not merely theoretically correct dead code.
-- **Resolution:** fixed (ad51b49) — added `simulateDocumentAccessRevocation(userId, externalDocId)` to `document-adapter.ts`, a deterministic test-only trigger (mirrors every other adapter's `simulateFailure` pattern) that removes a document id from a user's lazily-seeded simulated access set. Added a new test in `plans.test.ts` that links a document via the real route, calls the trigger, then re-GETs `/api/v1/plans/{id}` and asserts `permission_status` flips from `'valid'` to `'revoked'` (driving the real `revalidateDocumentLinkPermission` → `checkAndPersistPermission` path, not a hand-set fixture column) and that the DB row is persisted as `'revoked'`. Verified: `plans.test.ts` (5/5 pass) and `facility-document-adapter.test.ts` (10/10 pass, no regression from the new exported function).
+None.
+
+## Verification detail
+
+### B1 (unbounded duplicate `eoc_cots_conflicts` rows) — fix confirmed correct
+- **Fix (c47134d):** `eoc-cots-adapter.ts:285-317` now runs `SELECT id FROM eoc_cots_conflicts WHERE config_id = $1 AND record_type = $2 AND external_value = $3::jsonb LIMIT 1` before the INSERT, and skips the insert entirely (no `conflicts += 1` bump either) if a row already exists for that `(config_id, record_type, external_value)` triple — whether that prior row is resolved or still open.
+- **Read the actual guard, not just the commit message:** the guard keys on `external_value` (the full JSON payload, stable across ticks since `fetchExchangeRecords`'s stub returns an identical fixed payload for `EOC-CONFLICT-001` every call), not a weaker key like `config_id+record_type` alone — so a genuinely changed external value for the same record_type would still raise a new row, matching the stated fix direction exactly.
+- **Manual repro (ad-hoc script run against the live dev Postgres via the real `runEocCotsSync()`/`findOrCreateEocCotsConfig()` exports, not a mock):**
+  - 3 consecutive `runEocCotsSync()` calls → exactly 1 `eoc_cots_conflicts` row for `record_type='incident'` (previously: 3).
+  - Manually marking that row `resolution='keep_epmp'`, then running `runEocCotsSync()` once more → still exactly 1 row, now showing the resolved value — confirming a resolved conflict does **not** reappear on the next tick, which was the literal failure mode B1 described.
+  - Output: `After 3 ticks, rows: 1 [...resolution:null]` / `After resolve + 1 more tick, rows: 1 [...resolution:"keep_epmp"]`.
+- **Automated tests:** `eoc-cots-adapter.test.ts` (8/8 pass) and `eoc-cots-conflicts.test.ts` (4/4 pass), run live against the project's real Postgres/OPA compose stack, no mocking.
+- B1 is genuinely fixed; no regression found in `eoc-cots-conflicts.ts`'s resolve route (untouched, still enforces the `AND resolution IS NULL` race guard and caller-identity check correctly).
+
+### W1 (dead document-permission-revocation path) — fix confirmed correct
+- **Fix (ad51b49):** `document-adapter.ts:73-79` adds `simulateDocumentAccessRevocation(userId, externalDocId)`, which mutates the SAME in-memory `SIMULATED_USER_DOCUMENT_ACCESS` map `resolveUserAccessSet`/`checkAndPersistPermission` already read — not a separate fixture or a hand-set DB column. It is exported exactly once and consumed exactly once, in `plans.test.ts`.
+- **The new test genuinely drives the production path, not a mock:** `plans.test.ts`'s new `describe('document_links permission revocation (F17)')` block (1) creates a real plan via `POST /api/v1/plans`, (2) links `DOC-EOP-001` via the real `POST /api/v1/integrations/documents/:id/link` route (which lazily seeds `authorId`'s access set with `GRANTED_DOCUMENT_IDS` — the identical seeding path every other document-adapter caller uses), (3) confirms `permission_status: 'valid'` via a real `GET /api/v1/plans/{id}`, (4) calls the new trigger to remove `DOC-EOP-001` from `authorId`'s access set, (5) re-GETs `/api/v1/plans/{id}` and asserts the response flips to `'revoked'`, and (6) independently confirms the DB row itself was persisted as `'revoked'` via a direct `SELECT`. This exercises `plans.ts`'s real `fetchPlanDocumentLinks` → `revalidateDocumentLinkPermission` → `checkAndPersistPermission`'s `stillGranted === false` branch end-to-end — exactly the path that was previously unreachable.
+- **Confirmed the UI consumer is wired to the same field:** `PlanDetail.tsx:345-347` filters `document_links` on `permission_status === 'revoked'` and renders the "Access removed" `Alert` — this field is the same one the new test now proves is reachable, so the UI path is no longer dead.
+- **Test isolation checked:** `simulateDocumentAccessRevocation` is called only once, against `authorId`/`DOC-EOP-001`, in a `describe` block that runs after all other `plans.test.ts` tests that reference `authorId` for unrelated assertions (`submitted_by`, `acknowledged_by`) — none of those prior assertions depend on `authorId`'s document-access set, so the revocation introduces no test-order coupling within the file. `facility-document-adapter.test.ts` and `eoc-cots-adapter.test.ts`/`eoc-cots-conflicts.test.ts` were confirmed via `git diff` to be byte-for-byte untouched by either fix commit (the task description's framing of them as "fixer-touched" does not match the actual diff — verified no changes were made, no regression possible there).
+- **Automated tests:** `plans.test.ts` (5/5 pass) and `facility-document-adapter.test.ts` (10/10 pass) both pass live against the real stack.
+
+### Regression sweep
+- Full backend suite re-run (`npx vitest run`, live Postgres/NATS/OPA stack): **22 test files, 144 tests, all pass** — no regression anywhere in the repo from either fix.
+- `npx tsc --noEmit` on the backend package: clean, no type errors.
+- `git diff e9d74d9 HEAD --stat` confirms the fixer touched exactly the 3 files the fix commits claim (`eoc-cots-adapter.ts`, `document-adapter.ts`, `plans.test.ts`) plus this REVIEW.md — no stray edits elsewhere in the phase's file set.
 
 ## Cross-file seams checked
-- `frontend/app/src/pages/SignInCallback.tsx:65` (contract-scan `c-gap`) ↔ `backend/src/modules/auth-org/routes.ts:72` — verified-false-positive: SignInCallback.tsx is untouched by this phase's diff (last modified before wave 1 began, no 08-0x commit touches it), and the call is a `POST` matching the backend's `app.post(...)` route exactly, not the `GET` the scanner inferred.
-- `frontend/app/src/lib/api-client.ts:121` (contract-scan `c-adv`, dynamic path) — pre-existing code (`uploadFieldReportPhoto`, Phase 5), unrelated to and untouched by this phase's diff — advisory only, no action needed.
-- `routes.ts` ↔ `eoc-cots-adapter.ts`/`eoc-cots-conflicts.ts`/`facility-adapter.ts`/`document-adapter.ts` exports — all imports (`eocCotsRoutes`, `eocCotsConflictsRoutes` default export, `facilityRoutes`, `documentRoutes`) match their respective module's actual export shape. OK.
-- `ImportDocumentModal.tsx` POST `/api/v1/integrations/documents/${id}/import|link` ↔ `document-adapter.ts`'s `app.post('/api/v1/integrations/documents/:id/import'|'/:id/link', ...)` — OK.
-- `PlanDetail.tsx` PATCH `/api/v1/plans/${id}/document-links/${linkId}/acknowledge` ↔ `plans.ts`'s `app.patch('/api/v1/plans/:id/document-links/:linkId/acknowledge', ...)` — OK, response shape (`document_links[].content_status`/`permission_status`/`content_flagged_at`) matches `PlanDocumentLink` interface exactly.
-- `IntegrationHealth.tsx` GET `/api/v1/integrations/eoc-cots/conflicts` + POST `.../resolve` ↔ `eoc-cots-adapter.ts`/`eoc-cots-conflicts.ts` routes — response shape (`items[].system_name` cross-plan touch-up) and request body (`resolution`, `resolved_by: user.id`) both match the backend's expectations. OK.
-- `OperatingPicture.tsx` GET `/api/v1/operating-picture/facilities` ↔ `facility-adapter.ts`'s `facilityRoutes` — `ApiFacilityMarker` interface (id/type/shape/tone/label/status/location/source/as_of) matches the route's constructed `markers` shape exactly. OK.
-- `PlanRepository.tsx`'s `ImportDocumentModal` wiring (`onImported`/`onClose`) ↔ component props — OK.
-- `document-adapter.ts`'s `checkAndPersistPermission` ↔ `plans.ts`'s `revalidateDocumentLinkPermission` import — signature and return type (`'valid' | 'revoked'`) match the caller's usage in `fetchPlanDocumentLinks`. OK.
-- Migration renumbering (1700000000014/015/016) — no slot collisions; `eoc_cots_schema.js` uses legacy CJS `exports.up/down` style (inconsistent with every sibling migration's `export const up/down`) but verified functionally equivalent via `node-pg-migrate`'s `jiti`-based loader, which transparently handles both — not a defect.
+- `eoc-cots-adapter.ts`'s dedup `SELECT` ↔ `eoc_cots_conflicts` schema (`1700000000014_eoc-cots-schema.js`) — `external_value JSONB NOT NULL` column exists and the `$3::jsonb` cast matches; `idx_eoc_cots_conflicts_unresolved` partial index is unaffected (guard doesn't rely on it). OK.
+- `document-adapter.ts`'s `simulateDocumentAccessRevocation` export ↔ `plans.test.ts`'s import — signature (`(userId: string, externalDocId: string): void`) matches the single call site exactly. OK.
+- `plans.ts`'s `revalidateDocumentLinkPermission` import/usage ↔ `document-adapter.ts`'s export — unchanged by either fix, still matches (confirmed in iteration 1, re-confirmed here since `document-adapter.ts` was touched). OK.
+- `PlanDetail.tsx`'s `permission_status === 'revoked'` filter ↔ `plans.ts`'s GET response shape — unchanged, still matches; now proven reachable by the new test rather than merely structurally correct. OK.
+- No other seams in this iteration's touched-file scope (`eoc-cots-adapter.ts`, `document-adapter.ts`, `plans.test.ts`) were altered in ways that affect any other consumer — `eocCotsRoutes`'s exported shape, `isRecordTypeDeclared`, `findOrCreateEocCotsConfig`, `browseDocuments`, `importDocument`, `linkDocument`, `runDocumentLinkSync`, and `checkAndPersistPermission`'s signatures are all byte-identical to iteration 1.
