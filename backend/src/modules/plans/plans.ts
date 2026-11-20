@@ -3,6 +3,7 @@ import type { PoolClient } from 'pg';
 import { requirePermission } from '../auth-org/rbac.js';
 import { query, pool } from '../../db/client.js';
 import { AuditService } from '../auth-org/audit.js';
+import { revalidateDocumentLinkPermission } from '../integration-gateway/document-adapter.js';
 
 export type PlanStatus = 'Draft' | 'Review' | 'Approved';
 export type PlanType = 'EOP' | 'SOP' | 'Annex';
@@ -41,6 +42,18 @@ interface PlanVersionRow {
   reviewed_by: string | null;
   review_action: ReviewAction | null;
   reviewed_at: string | null;
+}
+
+interface DocumentLinkRow {
+  id: string;
+  external_document_id: string;
+  source_system: string;
+  mode: 'import_copy' | 'link_live';
+  permission_status: 'valid' | 'revoked';
+  content_status: 'current' | 'changed';
+  content_flagged_at: string | null;
+  acknowledged_at: string | null;
+  created_at: string;
 }
 
 function shapePlanListRow(row: PlanRow) {
@@ -109,6 +122,38 @@ async function fetchLinkedTaskTemplateIds(sectionIds: string[]): Promise<Map<str
   return map;
 }
 
+// F17's "re-validated at minimum before each render" rule, enforced
+// synchronously on EVERY GET /api/v1/plans/{id} request (not cached from
+// the last scheduled runDocumentLinkSync() tick): for each mode='link_live'
+// row, revalidateDocumentLinkPermission() is called BEFORE this function
+// returns. An 'import_copy'-mode row needs no such re-check — a
+// point-in-time copy has no ongoing source-permission dependency. Each
+// row's re-check is wrapped in its own try/catch so one row's re-check
+// failure never blocks the whole plan detail response from returning —
+// same per-item fault isolation discipline as every prior adapter's
+// per-feed/per-type loop.
+async function fetchPlanDocumentLinks(planId: string): Promise<DocumentLinkRow[]> {
+  const rows = await query<DocumentLinkRow>(
+    `SELECT id, external_document_id, source_system, mode, permission_status, content_status, content_flagged_at, acknowledged_at, created_at
+     FROM document_links WHERE plan_id = $1`,
+    [planId],
+  );
+
+  for (const row of rows) {
+    if (row.mode !== 'link_live') continue;
+    try {
+      const result = await revalidateDocumentLinkPermission(row.id);
+      row.permission_status = result;
+    } catch {
+      // Per-row fault isolation: a re-check failure must not block the
+      // rest of the plan detail response — this row simply keeps
+      // whatever permission_status was already persisted.
+    }
+  }
+
+  return rows;
+}
+
 async function fetchVersionHistory(planId: string) {
   const rows = await query<PlanVersionRow>(
     `SELECT version_number, submitted_by, reviewed_by, review_action, reviewed_at
@@ -134,6 +179,7 @@ async function fetchPlanDetail(planId: string, jurisdictionScope?: string[]) {
   const sections = await fetchPlanSections(planId);
   const templateMap = await fetchLinkedTaskTemplateIds(sections.map((s) => s.id));
   const version_history = await fetchVersionHistory(planId);
+  const document_links = await fetchPlanDocumentLinks(planId);
 
   return {
     ...shapePlanListRow(plan),
@@ -145,6 +191,15 @@ async function fetchPlanDetail(planId: string, jurisdictionScope?: string[]) {
       linked_task_templates: templateMap.get(s.id) ?? [],
     })),
     version_history,
+    document_links: document_links.map((d) => ({
+      id: d.id,
+      external_document_id: d.external_document_id,
+      source_system: d.source_system,
+      mode: d.mode,
+      permission_status: d.permission_status,
+      content_status: d.content_status,
+      content_flagged_at: d.content_flagged_at ?? undefined,
+    })),
   };
 }
 
@@ -606,6 +661,59 @@ export default async function plansRoutes(app: FastifyInstance) {
       void task_template_ids;
 
       return reply.code(204).send();
+    },
+  );
+
+  // F17's final hard requirement: the ONLY code path that clears
+  // document_links.content_status back to 'current'. It requires an
+  // explicit named-person PATCH call; it is NEVER cleared automatically by
+  // runDocumentLinkSync() or any scheduled process (structurally verified —
+  // see document-adapter.ts, which contains no `content_status = 'current'`
+  // write anywhere in its own body).
+  app.patch<{ Params: { id: string; linkId: string } }>(
+    '/api/v1/plans/:id/document-links/:linkId/acknowledge',
+    // Acknowledging a flag is an authoring action, matching the feature's
+    // existing edit-level gate.
+    { preHandler: requirePermission('plans', 'edit') },
+    async (req, reply) => {
+      const { id, linkId } = req.params;
+
+      // Jurisdiction-scope enforcement (F-01 fix, 03-SECURITY.md) — same
+      // pattern as every other mutating plans.ts route.
+      const plan = await fetchPlanRow(query, id, req.epmpUser!.jurisdiction_scope);
+      if (!plan) {
+        return reply.code(404).send(PLAN_NOT_FOUND);
+      }
+
+      // Verify the document_links row belongs to THIS plan — 404
+      // PLAN_NOT_FOUND (reusing the existing error shape) if not, never
+      // leaking whether a DIFFERENT plan's link id exists.
+      const linkRows = await query<{ id: string }>(
+        `SELECT id FROM document_links WHERE id = $1 AND plan_id = $2`,
+        [linkId, id],
+      );
+      if (!linkRows[0]) {
+        return reply.code(404).send(PLAN_NOT_FOUND);
+      }
+
+      const updated = await query<{ id: string }>(
+        `UPDATE document_links SET content_status = 'current', acknowledged_by = $1, acknowledged_at = now()
+         WHERE id = $2 AND plan_id = $3 AND content_status = 'changed'
+         RETURNING id`,
+        [req.epmpUser!.id, linkId, id],
+      );
+
+      if (updated.length === 0) {
+        return reply.code(409).send({
+          error_code: 'DOCUMENT_LINK_NOT_FLAGGED',
+          message: 'This document is not currently flagged for review.',
+        });
+      }
+
+      await AuditService.record(req.epmpUser!.id, 'document_link_acknowledge', 'document_link', linkId, {});
+
+      const detail = await fetchPlanDetail(id, req.epmpUser!.jurisdiction_scope);
+      return reply.code(200).send(detail);
     },
   );
 }
