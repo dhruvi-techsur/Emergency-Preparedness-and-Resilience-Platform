@@ -2,16 +2,16 @@
 pivota_spec_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
-current_plan: 8 (gap-closure)
+current_plan: 9
 status: executing
-stopped_at: "Completed 08-08-PLAN.md (gap-closure: Operating Picture Tasks Card UAT gap ref 3 fix)"
-last_updated: "2026-11-20T17:51:30.028Z"
+stopped_at: "Completed 08-09-PLAN.md (gap-closure: POST /api/v1/plans/import, F17 UAT gap ref 4 backend)"
+last_updated: "2026-11-20T18:00:23.399Z"
 last_activity: 2026-11-20
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 14
-  completed_plans: 12
+  completed_plans: 13
   percent: 33
 ---
 
@@ -27,10 +27,12 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: Phase 8 (Record Authority & Sync Integrations)
-Current Plan: 8 (gap-closure)
+Current Plan: 9
 Total Plans in Phase: 10 (6 original + 4 gap-closure: 08-07/08-08/08-09/08-10)
-Status: In progress — 08-09/08-10 (gap-closure, F17 import-flow) remain unexecuted
+Status: In progress — 08-10 (gap-closure, F17 import-flow frontend half) remains unexecuted
 Last Activity: 2026-11-20
+
+Plan 08-09 (this phase, gap-closure): see 08-09-SUMMARY.md for full detail. Closed the backend half of UAT gap ref 4 (major): clicking "Import copy"/"Link live" in the Plan Repository's Import modal wrote a real `document_links` row but never created/attached a Plan and never wrote `plans.source_document_ref` — a silent no-op from the user's perspective. New `POST /api/v1/plans/import` route either creates a brand-new Draft/v1 plan with `source_document_ref` set (no `plan_id` supplied, the FRD's literal default) or attaches to an existing in-scope plan the caller names, delegating ALL document-permission enforcement to the already-shipped `importDocument`/`linkDocument` functions so the permission boundary stays in exactly one place. A small additive `hasDocumentAccess()` export on `document-adapter.ts` lets the new-plan path pre-flight the access-set check BEFORE the plans-table INSERT — the plan's own preferred approach over a delete-after-the-fact rollback — guaranteeing zero orphaned Draft plans survive a rejected import on either `import_copy` or `link_live`. New tests (4 cases) prove new-plan creation + GET-reachability + DB-level `source_document_ref` write, existing-plan attachment, 404 on out-of-jurisdiction-scope `plan_id` (closing a second potential F-08-01-style IDOR code path before it could open), and no-orphan on rejection for both new-plan sub-paths. One test-only Rule-1 deviation: a dedicated fixture user was needed for the new tests to avoid a cross-describe-block collision with the file's pre-existing permission-revocation test's module-level `simulateDocumentAccessRevocation` call. Full backend suite (22 files, 152 tests) zero regression; `tsc --noEmit` and `npm run build` both clean; `npm run seed` re-confirmed idempotent.
 
 Plan 08-08 (this phase, gap-closure): see 08-08-SUMMARY.md for full detail. Closed UAT gap ref 3 (major): OperatingPicture.tsx's side-panel Tasks Card had rendered a stale "Tasks ship in a later phase — Task tracking (F4) is built in Phase 3" placeholder unconditionally for every marker selection since Phase 2, including Phase 8's own new facility markers — despite Phase 3 having shipped real task tracking over a year of roadmap time ago. Replaced it with the real, incident-scoped `<TaskList incidentId={selectedId} />`, mirroring 03-08's identical fix for IncidentWorkspace.tsx's equivalent placeholder exactly. Also fixed the secondary structural finding UAT's root-cause analysis flagged: the Tasks Card is now gated behind the same `!selectedIsResource && !selectedIsFacility` condition the file's own incident-detail queries already use, so it renders for NO selection that lacks an incident_id to scope by (not merely an empty list). New/extended Playwright coverage proves both halves end-to-end: `operating-picture-facility-markers.spec.ts` (5/5, 1 extended + 1 new test) and `operating-picture-resource-markers.spec.ts` (3/3, 1 extended test) — the resource half of this gate had zero prior test coverage before this plan. Zero regression on `operating-picture.spec.ts` (5/5); `tsc --noEmit` and `npm run build` (frontend/app) both clean. Two trivial self-caught Rule-1 deviations (both documented in 08-08-SUMMARY.md): a doc-comment that initially self-collided with the plan's own stale-string verification grep, and a Playwright strict-mode locator ambiguity between the Tasks Card's own heading and TaskList's internally-rendered PageHeader heading, both also reading "Tasks".
 
@@ -184,6 +186,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 08 P06 | 25 min | 3 tasks | 7 files |
 | Phase 08-record-authority-sync-integrations P07 | 12 min | 2 tasks | 1 files |
 | Phase 08-record-authority-sync-integrations P08 | 25 min | 2 tasks | 3 files |
+| Phase 08-record-authority-sync-integrations P09 | 18 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -366,6 +369,7 @@ Recent decisions affecting current work:
 - [Phase 08-record-authority-sync-integrations]: [Phase 08-07]: Plan treated as fully satisfied by independent re-verification (not re-implementation) since a prior standalone security-audit-fix round (commits a5230d4, 9820718) had already shipped F-08-01's fix and full test coverage before this plan executed
 - [Phase 08-08]: Reworded the fix's explanatory doc comment to avoid literally embedding the stale placeholder string the plan's own verify step greps the file for — the identical self-collision class 08-06 documented for its idempotency-guard wording
 - [Phase 08-08]: Scoped the new Playwright "Tasks" heading locator to h3.ep-card__title specifically, since TaskList's own embedded PageHeader independently renders an h1 also reading "Tasks" — a bare name-only heading locator is ambiguous once the real component (not a placeholder) is mounted
+- [Phase 08-record-authority-sync-integrations]: 08-09: pre-flight hasDocumentAccess() check before plans-table INSERT (not delete-after-the-fact rollback) guarantees zero orphaned Draft plans on a rejected import
 
 ### Pending Todos
 
@@ -377,6 +381,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-20T17:44:42.419Z
-Stopped at: Completed 08-08-PLAN.md (gap-closure: Operating Picture Tasks Card UAT gap ref 3 fix)
+Last session: 2026-11-20T18:00:23.397Z
+Stopped at: Completed 08-09-PLAN.md (gap-closure: POST /api/v1/plans/import, F17 UAT gap ref 4 backend)
 Resume file: None
