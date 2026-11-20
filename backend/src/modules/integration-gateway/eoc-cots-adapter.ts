@@ -487,7 +487,14 @@ export async function eocCotsRoutes(app: FastifyInstance) {
       const rows = await query<EocCotsConflictRow>(
         `SELECT * FROM eoc_cots_conflicts WHERE resolution IS NULL ORDER BY created_at ASC`,
       );
-      return reply.code(200).send({ items: rows });
+      // Plan 08-03 cross-plan touch-up: this stub adapter has exactly one
+      // configured vendor (KNOWN_VENDOR = 'WebEOC'), so every conflict row
+      // is attributable to it — added here so IntegrationHealth.tsx's
+      // conflict-row expansion (08-03) can join conflicts to the
+      // integration-health row by system_name without inventing a second
+      // lookup. A genuinely multi-vendor adapter would derive this from
+      // eoc_cots_config.vendor via config_id instead of a hardcoded literal.
+      return reply.code(200).send({ items: rows.map((row) => ({ ...row, system_name: KNOWN_VENDOR })) });
     },
   );
 
