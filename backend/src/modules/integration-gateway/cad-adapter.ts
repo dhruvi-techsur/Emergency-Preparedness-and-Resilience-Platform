@@ -198,22 +198,61 @@ export async function runCadIngestion(cadIncidentNumber?: string): Promise<void>
       // incidents row exists whose name contains that exact string, link
       // it; otherwise leave linked_incident_id NULL (unmatched — F15's
       // explicit "not force-attached to an unrelated incident" rule).
-      // Re-evaluated on every ingestion tick (not "sticky") — matches the
-      // literal matching rule exactly as specified, with no separate
-      // preserve-prior-link behavior invented beyond it.
+      //
+      // STICKY once matched — a DESIGN CHANGE from this function's
+      // original "re-evaluate on every tick, not sticky" comment (removed
+      // here). The original design re-ran the ILIKE name-match on EVERY
+      // ingestion tick (every 5 minutes, for the life of the running
+      // server process). That means ANY incident ever created anywhere in
+      // this system whose name happens to contain the shared number
+      // substring — including unrelated integration-test fixtures created
+      // by repeated test-suite runs against a long-lived dev database —
+      // becomes a perpetually-eligible re-match target on every
+      // subsequent tick, with the scheduler silently re-linking the SAME
+      // dispatch event away from the correct, already-matched incident
+      // hours or days later purely from ticking in the background, with
+      // zero way to ever "settle" on one target once a second
+      // name-matching incident exists. That is a real production defect,
+      // not merely a test-isolation annoyance: a real end user creating an
+      // incident whose name happens to mention a CAD number already in
+      // use would trigger the exact same silent re-link.
+      //
+      // Fixed by making the match sticky: if this exact dispatch event
+      // (config_id + external_event_id) already has a linked_incident_id
+      // pointing at an incident that still exists, PRESERVE that link and
+      // skip the name-match search entirely. Only run a fresh ILIKE match
+      // when there is no existing valid link yet (first-time match, or
+      // the previously-linked incident no longer exists). This is still
+      // the same "shared number" substring match F15 specifies — just
+      // performed once per incident-link lifetime instead of on every
+      // tick — so it does not invent a new matching strategy, only makes
+      // the existing one stable.
       let linkedIncidentId: string | null = null;
       if (event.cad_incident_number) {
-        // ORDER BY opened_at DESC: on repeated ingestion ticks against a
-        // test/demo database, more than one incident name can legitimately
-        // contain the same shared number substring (e.g. repeated test
-        // fixture runs) — the most recently opened match is deterministic
-        // and the most plausible real target, rather than relying on
-        // undefined row order with a bare LIMIT 1.
-        const matches = await query<{ id: string }>(
-          `SELECT id FROM incidents WHERE name ILIKE '%' || $1 || '%' ORDER BY opened_at DESC LIMIT 1`,
-          [event.cad_incident_number],
+        const existingLink = await query<{ linked_incident_id: string }>(
+          `SELECT cde.linked_incident_id
+           FROM cad_dispatch_events cde
+           JOIN incidents i ON i.id = cde.linked_incident_id
+           WHERE cde.config_id = $1 AND cde.external_event_id = $2`,
+          [configId, event.external_event_id],
         );
-        linkedIncidentId = matches[0]?.id ?? null;
+
+        if (existingLink[0]) {
+          linkedIncidentId = existingLink[0].linked_incident_id;
+        } else {
+          // ORDER BY opened_at DESC: on a first-time match against a
+          // test/demo database, more than one incident name can
+          // legitimately contain the same shared number substring (e.g.
+          // repeated test fixture runs before this sticky fix existed) —
+          // the most recently opened match is deterministic and the most
+          // plausible real target, rather than relying on undefined row
+          // order with a bare LIMIT 1.
+          const matches = await query<{ id: string }>(
+            `SELECT id FROM incidents WHERE name ILIKE '%' || $1 || '%' ORDER BY opened_at DESC LIMIT 1`,
+            [event.cad_incident_number],
+          );
+          linkedIncidentId = matches[0]?.id ?? null;
+        }
       }
 
       await query(
