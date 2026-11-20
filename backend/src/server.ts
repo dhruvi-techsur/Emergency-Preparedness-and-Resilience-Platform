@@ -16,6 +16,7 @@ import { connectNats } from './modules/integration-gateway/nats-client.js';
 import { startWebhookDeliveryWorker } from './modules/integration-gateway/webhook-delivery-worker.js';
 import { startOverdueSweepScheduler } from './modules/incident-ops/overdue-sweep.js';
 import { startHazardFeedIngestionScheduler } from './modules/integration-gateway/hazard-feed-adapter.js';
+import { startCadIngestionScheduler } from './modules/integration-gateway/cad-adapter.js';
 import { syncRolePermissionsToOpa, type RolePermissionRow } from './modules/auth-org/opa-client.js';
 import { query } from './db/client.js';
 
@@ -126,6 +127,14 @@ async function start() {
     startHazardFeedIngestionScheduler();
   } catch (err) {
     app.log.warn(err, 'Hazard-feed ingestion scheduler failed to start — scheduled polling disabled');
+  }
+
+  // 07-02 (F15) — same graceful-degradation posture as the schedulers
+  // above: a scheduler-start failure must never crash the server.
+  try {
+    startCadIngestionScheduler();
+  } catch (err) {
+    app.log.warn(err, 'CAD ingestion scheduler failed to start — scheduled polling disabled');
   }
 
   try {
