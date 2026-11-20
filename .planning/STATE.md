@@ -4,14 +4,14 @@ milestone: v2.0
 milestone_name: milestone
 current_plan: 10 (phase has only 4 plans; counter stays at last value per advance-plan's last_plan edge case)
 status: verifying
-stopped_at: Completed 09-03-PLAN.md
-last_updated: "2026-11-20T20:10:28.895Z"
+stopped_at: Completed 09-05-PLAN.md
+last_updated: "2026-11-20T23:21:40.498Z"
 last_activity: 2026-11-20
 progress:
   total_phases: 3
   completed_phases: 3
-  total_plans: 18
-  completed_plans: 18
+  total_plans: 19
+  completed_plans: 19
   percent: 67
 ---
 
@@ -26,11 +26,13 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 
 ## Current Position
 
-Phase: Phase 9 (Alerting & Identity Integrations) — COMPLETE (ready for verification)
-Current Plan: 10 (phase has only 4 plans; counter stays at last value per advance-plan's last_plan edge case)
-Total Plans in Phase: 4 (09-01 through 09-04)
-Status: All 4 plans of Phase 9 complete (09-01/09-02 wave 1 parallel, 09-03/09-04 wave 2 parallel). Ready for /pivota_spec-verify-work.
+Phase: Phase 9 (Alerting & Identity Integrations) — COMPLETE including gap closure (UAT gap ref 1 closed by 09-05)
+Current Plan: 10 (phase has only 4 original + 1 gap-closure plan; counter stays at last value per advance-plan's last_plan edge case)
+Total Plans in Phase: 5 (09-01 through 09-04, plus gap-closure plan 09-05)
+Status: All 5 plans of Phase 9 complete (09-01/09-02 wave 1 parallel, 09-03/09-04 wave 2 parallel, 09-05 gap-closure). UAT gap ref 1 (minor) closed. Ready for /pivota_spec-verify-work re-check.
 Last Activity: 2026-11-20
+
+Plan 09-05 (this phase, gap-closure): see 09-05-SUMMARY.md for full detail. Closed UAT gap ref 1 (minor): Compose Notification Step 2's Channels checkboxes (SMS/Email/IPAWS) were rendering crammed onto one undifferentiated line immediately adjacent to the "Draft with AI" button (`.ep-checkbox` is `display: inline-flex` with no sibling spacing), making IPAWS read as decoration beside the button rather than a selectable option on first glance. Fixed with a page-local inline-style flex-column wrapper (`display:flex, flexDirection:column, gap:var(--space-2), marginBottom:var(--space-4)`) around the existing `CHANNEL_OPTIONS.map(...)` Checkbox list, matching the exact convention already used in `IntegrationHealth.tsx`/`RecordAuthority.tsx`/`SsoConfigForm.tsx`/`ApiClients.tsx` — no new CSS class or design-system component, and `Checkbox.css` untouched to avoid affecting any other page's standalone-checkbox spacing. New Playwright bounding-box assertion in `notification-provider-cap-delivery.spec.ts` test 1 proves a measurable (>8px) vertical gap between the IPAWS checkbox and the "Draft with AI" button, measured in the UN-checked state to match the UAT reporter's literal pre-interaction complaint. Zero functional/behavioral change: channel selection, CAP-field gating, and Step 3 Review summary all untouched. Zero deviations — plan executed exactly as written. `tsc --noEmit`/`npm run build` (frontend/app) both clean; `notification-provider-cap-delivery.spec.ts` (5/5) and regression `notifications-compose.spec.ts` (9/9) both pass with zero failures.
 
 Plan 09-04 (this phase): see 09-04-SUMMARY.md for full detail. Shipped F16-roster's frontend half — new read-only `PersonnelRoster.tsx` admin screen (Table+Provenance+Badge, mirroring IntegrationHealth.tsx/RecordAuthority.tsx's exact composition) sourced exclusively from Plan 09-02's `GET /api/v1/integrations/hris/personnel`, with a literal "No matched user" Badge on unmatched rows and zero onClick/button/form anywhere on the page — the structural no-edit-affordance guarantee matching the backend's own no-write-route contract. Wired into `main.tsx`'s routes and `ADMIN_NAV_ITEMS` (icon='file', the only ICON_NAMES-valid unclaimed value — several pre-existing entries in that array use icon strings that aren't actual ICON_NAMES members at all, a pre-existing mismatch left untouched). Closed a genuine Phase-1-era gap: `record_authority_registry`'s `personnel_roster` row has carried `notes=NULL` since Phase 1 — a new standalone `ON CONFLICT DO UPDATE` statement in `seed.ts` (not a `findOrInsert` change, which cannot update an existing row) now sets `notes='Reference data only'`, proven idempotent across two consecutive seed runs via direct post-seed DB query. `CommandRoleModal.tsx`'s personnel Combobox gained a roster-qualification hint via a second, independent useQuery merged by `matched_user_id`, with the underlying FK-constrained options list unchanged. `ResourceRequestDetail.tsx`'s Assign modal gained an additive "Or pick from roster" Combobox above the existing free-text field (Combobox.tsx has no accept-arbitrary-typed-text mode, so it populates the same state rather than replacing the TextField). New `personnel-roster-reference-data.spec.ts` (4/4 passing) proves SideNav reachability, matched/unmatched Provenance, the zero-edit-control structural guarantee, Command Role Assignment's live qualification hint, and Resource Request's roster quick-pick. Zero deviations — plan executed exactly as written. Full backend suite (24 files, 171 tests) zero regression; both builds + both `tsc --noEmit` checks clean. One pre-existing, unrelated test-timing flake in `tasks-resources.spec.ts` test 5 (Overdue-sweep polling vs. Playwright's 60s default test-timeout) logged to `deferred-items.md`, confirmed unrelated via isolated re-run of the Resource-Request-specific tests 6/7 in that same file (both pass).
 
@@ -200,6 +202,7 @@ Progress: [███████░░░] 67%
 | Phase 09-alerting-identity-integrations P02 | 25 min | 2 tasks | 5 files |
 | Phase 09-alerting-identity-integrations P04 | 18 min | 2 tasks | 8 files |
 | Phase 09-alerting-identity-integrations P03 | 24 min | 2 tasks | 5 files |
+| Phase 09 P05 | 14 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -393,6 +396,7 @@ Recent decisions affecting current work:
 - [Phase 09-alerting-identity-integrations]: [Phase 09-03]: IntegrationHealth.tsx needed zero code change for Everbridge/IPAWS visibility -- no hardcoded system_name allowlist, EmptyState copy already generic, same confirm-only posture 07-04/08-03 established
 - [Phase 09-alerting-identity-integrations]: [Phase 09-03]: CAP-send signal on Delivery Tracking sourced via a new additive is_cap_send boolean on the EXISTING GET /api/v1/notifications/:id/delivery-status response, not a new endpoint
 - [Phase 09-alerting-identity-integrations]: [Phase 09-03]: Added GET /api/v1/_test/notification-retry-sweep test-injection route (mirrors cad-adapter.ts's /_test/cad-forced-outage) so Playwright can deterministically drive the retry-sweep's 4th-failure Failed escalation without waiting for the real 5-minute scheduler
+- [Phase 09-05]: Fixed via page-local inline-style flex-column wrapper matching existing IntegrationHealth.tsx/RecordAuthority.tsx convention, not a Checkbox.css/design-system change — Avoids altering checkbox spacing on every other page that renders standalone Checkboxes without their own stacking wrapper
 
 ### Pending Todos
 
@@ -404,6 +408,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-20T20:10:28.893Z
-Stopped at: Completed 09-03-PLAN.md
+Last session: 2026-11-20T23:21:40.496Z
+Stopped at: Completed 09-05-PLAN.md
 Resume file: None
