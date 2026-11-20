@@ -9,6 +9,8 @@ import { eocCotsRoutes } from './eoc-cots-adapter.js';
 import eocCotsConflictsRoutes from './eoc-cots-conflicts.js';
 import { facilityRoutes } from './facility-adapter.js';
 import { documentRoutes } from './document-adapter.js';
+import { notificationProviderRoutes } from './notification-provider-adapter.js';
+import { hrisRosterRoutes } from './hris-roster-adapter.js';
 
 /**
  * Mounts the integration-gateway module's F10 registry/governance endpoints
@@ -36,4 +38,9 @@ export default async function integrationGatewayRoutes(app: FastifyInstance) {
   // appended per this file's existing append-only convention.
   await app.register(facilityRoutes);
   await app.register(documentRoutes);
+  // F14 (Plan 09-01): Everbridge/AtHoc-class notification-provider adapter
+  // + OASIS CAP envelope builder + retry-sweep scheduled job + send/
+  // callback/health routes — appended per this file's existing
+  // append-only registration convention.
+  await app.register(notificationProviderRoutes);
 }
