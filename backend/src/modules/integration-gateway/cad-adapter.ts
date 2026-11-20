@@ -198,10 +198,19 @@ export async function runCadIngestion(cadIncidentNumber?: string): Promise<void>
       // incidents row exists whose name contains that exact string, link
       // it; otherwise leave linked_incident_id NULL (unmatched — F15's
       // explicit "not force-attached to an unrelated incident" rule).
+      // Re-evaluated on every ingestion tick (not "sticky") — matches the
+      // literal matching rule exactly as specified, with no separate
+      // preserve-prior-link behavior invented beyond it.
       let linkedIncidentId: string | null = null;
       if (event.cad_incident_number) {
+        // ORDER BY opened_at DESC: on repeated ingestion ticks against a
+        // test/demo database, more than one incident name can legitimately
+        // contain the same shared number substring (e.g. repeated test
+        // fixture runs) — the most recently opened match is deterministic
+        // and the most plausible real target, rather than relying on
+        // undefined row order with a bare LIMIT 1.
         const matches = await query<{ id: string }>(
-          `SELECT id FROM incidents WHERE name ILIKE '%' || $1 || '%' LIMIT 1`,
+          `SELECT id FROM incidents WHERE name ILIKE '%' || $1 || '%' ORDER BY opened_at DESC LIMIT 1`,
           [event.cad_incident_number],
         );
         linkedIncidentId = matches[0]?.id ?? null;
@@ -218,7 +227,7 @@ export async function runCadIngestion(cadIncidentNumber?: string): Promise<void>
            status = EXCLUDED.status,
            unit_ids = EXCLUDED.unit_ids,
            location = EXCLUDED.location,
-           linked_incident_id = COALESCE(cad_dispatch_events.linked_incident_id, EXCLUDED.linked_incident_id),
+           linked_incident_id = EXCLUDED.linked_incident_id,
            updated_at = EXCLUDED.updated_at`,
         [
           configId,
