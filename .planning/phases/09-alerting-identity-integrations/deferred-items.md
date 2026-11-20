@@ -17,3 +17,10 @@
   tests in that same file (tests 6 and 7) in isolation — both pass clean.
   Logged here rather than fixed, per this plan's scope boundary (only
   auto-fix issues directly caused by the current task's changes).
+
+## Phase-end browser suite: field-mobile-sync-conflict.spec.ts (pre-existing, out of scope)
+
+**Found during:** Phase 9's `browser_suite_gate` full Playwright run (137 tests, 2 unexpected).
+**Symptom:** Test `1-6. field_responder seeds a conflict via sync-batch...` fails on `getByRole('heading', { name: 'Your version' })` never appearing.
+**Root cause:** Identical, previously-documented root cause from `05-mobile-field-operations/deferred-items.md`'s "05-06: Pre-existing test-isolation flakiness in field-mobile-sync-conflict.spec.ts" entry — the spec's `setup` picks `jurisdictions.items[0]` (alphabetical) as the test incident's jurisdiction, and an unrelated prior phase's test-fixture jurisdiction continues to sort first in the shared compose-stack DB, landing the created incident outside both seeded identities' `jurisdiction_scope` (the F-05-01 enforcement correctly rejecting it, not a defect). Zero phase-9 commits touch this spec file, `jurisdictions`, `incidents`, or `sync_conflicts`.
+**Action:** Not fixed (deviation-rules scope boundary — pre-existing, unrelated, previously logged against a different phase). Confirmed by isolated re-run: this is the ONLY failure in the file (1 failed / 1 passed in isolation), consistent with the documented root cause.
