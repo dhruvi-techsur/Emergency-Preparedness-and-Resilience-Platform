@@ -58,3 +58,25 @@ Appends the two "Resolution:" paragraphs to iteration 1's `07-REVIEW.md` under e
 ## Conclusion
 
 Both iteration-1 WARNINGs are genuinely fixed, verified against the live compose stack (not just commit-message trust), and introduce no new defects. No new findings in the fixer's commits. Phase 7 is clean.
+
+## Post-gate fix pass — browser suite BLOCKERs (2026-11-20, same day)
+
+Phase 7's browser-suite gate found 2 real, phase-7-introduced test failures in `incident-workspace-dispatch-status.spec.ts` (a 3rd, in `field-mobile-sync-conflict.spec.ts`, is the pre-existing Phase-5 test-isolation flake documented in `05-06-SUMMARY.md`/STATE.md, unrelated to Phase 7, not touched).
+
+### B1 — shared `cad_dispatch_events` fixture re-linked away from seed by `incidents.test.ts`'s own CAD-matching test
+
+Root cause confirmed exactly as diagnosed: `incidents.test.ts`'s "after runCadIngestion() links a dispatch event by shared number..." test creates its own `CAD-UAT-001 Matchable Incident {ts}` fixture in `testJurisdictionId` and calls `runCadIngestion()`, which deterministically re-links the ONE shared `UAT-CAD-001` row (ORDER BY opened_at DESC, no sticky behavior) away from seed.ts's `UAT-ESCALATE-READY Default Agency Wildfire` incident. Running `npm test` (backend) before the Playwright suite — the exact sequence CI performs — permanently broke the e2e fixture until a manual `npm run seed`.
+
+**Resolution: fixed (aac30df)** — chose **option (a)**: added an `afterAll` hook, scoped to the `07-02: F15 CAD/911 dispatch-status` describe block only, that restores the shared row's `linked_incident_id` back to the seed's `UAT-ESCALATE-READY Default Agency Wildfire` incident after that describe block's tests complete. Option (b) (a dedicated non-shared CAD config/external_event_id for this test) was considered but rejected — the test's own stated purpose is proving the REAL "shared number" matching behavior against the REAL stub's one fixed `external_event_id`/`cad_incident_number`, so faking a second config would test a different, less faithful contract. Verified: full backend suite (19 files, 119 tests) green; direct psql query after the full suite run confirms `UAT-CAD-001` → `UAT-ESCALATE-READY Default Agency Wildfire` (Default Agency jurisdiction), matching the required post-condition exactly.
+
+### B2 — `incident-workspace-dispatch-status.spec.ts` test 4 imports backend source directly into the Playwright process
+
+Root cause confirmed exactly as diagnosed: test 4 imported `fetchCadDispatchEvents` from backend source and called it in the Playwright test runner's own Node process, which has no `DATABASE_URL` set (only the real backend server process does) — crashing with "no PostgreSQL user name specified in startup packet". This is the same cross-process env assumption iteration-1's W2 only partially addressed (declaring the workspace dependency, not fixing the underlying pattern).
+
+**Resolution: fixed (d13e883, f119b85)** — mirrored `operating-picture.ts`'s `force_gis_failure` pattern exactly, per the established precedent:
+- **d13e883** (backend): added `GET /api/v1/_test/cad-forced-outage` to `cad-adapter.ts`'s `cadRoutes`, gated on `requirePermission('incidents', 'view')` (same grant commander@epmp.local's seeded role already holds). The route calls `fetchCadDispatchEvents(undefined, true)` SERVER-SIDE inside the already-running backend process (real `DATABASE_URL`-backed pool), catches the deterministic `CAD_FEED_UNREACHABLE` throw, and returns `200 { forced: true, message }`. Exposed as a dedicated route rather than a query param on an existing route because `fetchCadDispatchEvents` is this adapter's own live-fetch boundary, not a parameter of `GET /api/v1/incidents/:id/dispatch-status` (which only ever reads the already-cached `cad_dispatch_events` table).
+- **f119b85** (frontend): removed the direct backend-source import; test 4 now calls the new route via `page.evaluate(() => fetch(...))` reading the session token out of `sessionStorage`, the exact `apiGetViaPage`-style pattern already established by `operating-picture-resource-markers.spec.ts`, `tasks-resources.spec.ts`, and others. Removed the now-unneeded `@epmp/backend` devDependency from `frontend/app/package.json` (confirmed via grep it was the only consumer) and regenerated `package-lock.json` (1-line diff).
+
+Verified: `tsc --noEmit` clean in both `backend` and `frontend/app`; `npm run build` clean in `backend`; live Playwright run of `incident-workspace-dispatch-status.spec.ts` — **4/4 pass**; sibling spec `operating-picture-hazard-layers.spec.ts` — **3/3 pass**, confirming no regression from the shared-fixture restoration in B1.
+
+**Commits:** `aac30df` (B1), `d13e883` (B2 server-side route), `f119b85` (B2 spec + dependency cleanup).
