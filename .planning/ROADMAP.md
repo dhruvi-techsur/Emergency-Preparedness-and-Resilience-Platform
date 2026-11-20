@@ -96,7 +96,13 @@ Plans:
   3. When the notification-provider stub simulates an outage, the queued message is retried and any resulting delivery failure is surfaced visibly in the delivery-tracking UI — never silently dropped, discarded, or shown as successfully sent.
   4. A user can view a personnel roster list (name, role, qualification, contact) sourced read-only from the HR/IAM adapter stub, each entry showing source/as-of via `Provenance`, with HR declared as the authoritative system for personnel records in the integration-health view.
   5. Roster/qualification data populates as selectable reference options in Command Role Assignment (F1) and Resource Request matching (F4), but a person's role/qualification value can only change by resyncing from the HR stub (never a direct in-EPMP edit), and an unmatched roster record shows no matched user rather than being force-matched or guessed.
-**Plans:** TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 09-01-PLAN.md — F14 backend: notification-provider adapter stub (Everbridge/IPAWS), CAP-envelope builder, adapter-level approval re-verification, retry-sweep job, delivery-callback wiring into F5's existing delivery-tracking table
+- [ ] 09-02-PLAN.md — F16-roster backend: HR/IAM roster adapter stub (read-only, email-only matching), populating Phase 1's existing personnel_roster table, integration_health wiring
+- [ ] 09-03-PLAN.md — F14 frontend: CAP fields in Compose Notification's Step 2 + send gate, CAP-send Badge on Delivery Tracking, integration-health confirmation (depends on 09-01)
+- [ ] 09-04-PLAN.md — F16-roster frontend: Personnel Roster admin screen + SideNav wiring, qualification hints in Command Role Assignment, roster quick-pick in Resource Request assignment (depends on 09-02)
 
 ## Progress
 
@@ -107,4 +113,4 @@ Phases execute in numeric order: 7 → 8 → 9 (continuing from v1.0's completed
 |-------|----------------|--------|-----------|
 | 7. Operating-Picture Read Overlays (Weather & Dispatch) | 0/TBD | Complete | 2026-11-20 |
 | 8. Record-Authority & Sync Integrations | 0/6 | In progress | - |
-| 9. Alerting & Identity Integrations | 0/TBD | Not started | - |
+| 9. Alerting & Identity Integrations | 0/4 | Not started | - |
