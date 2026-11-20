@@ -32,6 +32,7 @@ import { IntegrationHealth } from './pages/admin/IntegrationHealth';
 import { ApiClients } from './pages/admin/ApiClients';
 import { FederationGrants } from './pages/admin/FederationGrants';
 import { RecordAuthority } from './pages/admin/RecordAuthority';
+import { PersonnelRoster } from './pages/admin/PersonnelRoster';
 import { IncidentList } from './pages/incidents/IncidentList';
 import { CreateIncident } from './pages/incidents/CreateIncident';
 import { IncidentWorkspace } from './pages/incidents/IncidentWorkspace';
@@ -97,6 +98,7 @@ root.render(
               <Route path="admin/api-clients" element={<ApiClients />} />
               <Route path="admin/federation-grants" element={<FederationGrants />} />
               <Route path="admin/record-authority" element={<RecordAuthority />} />
+              <Route path="admin/personnel-roster" element={<PersonnelRoster />} />
               <Route path="incidents" element={<IncidentList />} />
               <Route path="incidents/new" element={<CreateIncident />} />
               <Route path="incidents/:id" element={<IncidentWorkspace />} />

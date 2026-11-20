@@ -2158,6 +2158,25 @@ async function main() {
     record('record_authority_registry', result);
   }
 
+  // Plan 09-04 (F16-roster): `record_type` carries a real UNIQUE constraint
+  // (this file's migration 1700000000000_auth-org-schema.js), so this
+  // ON CONFLICT upsert is valid against it. Deliberately a standalone
+  // statement, NOT a findOrInsert() call — findOrInsert is find-or-insert-
+  // ONLY (see its own doc comment above) and would silently no-op against
+  // the 'personnel_roster' row the authorityRows loop just above this one
+  // already found-or-inserted with `notes` left NULL (that row has existed
+  // since Phase 1, this plan is what first sets its notes). This statement
+  // is what actually makes /admin/record-authority's personnel_roster row
+  // show "Reference data only" instead of "—", on both a fresh seed run
+  // AND a re-run against an already-seeded database (idempotent either
+  // way, via ON CONFLICT DO UPDATE rather than a one-time INSERT).
+  await pool.query(
+    `INSERT INTO record_authority_registry (record_type, authoritative_system, notes)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (record_type) DO UPDATE SET notes = EXCLUDED.notes`,
+    ['personnel_roster', 'HRIS', 'Reference data only'],
+  );
+
   // Phase 6 (06-02, F18): role_landing_config rows for all 5 persona roles
   // (PER-01..PER-05) — the table 01-01's migration created but explicitly
   // left unpopulated, scoped as Phase 6/F18 work (see that migration's own

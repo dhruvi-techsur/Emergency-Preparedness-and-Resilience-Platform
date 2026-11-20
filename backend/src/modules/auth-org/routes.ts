@@ -48,6 +48,15 @@ const ADMIN_NAV_ITEMS = [
   { id: 'api-clients', label: 'API Clients', icon: 'plug', href: '/admin/api-clients' },
   { id: 'record-authority', label: 'Record Authority', icon: 'database', href: '/admin/record-authority' },
   { id: 'federation-grants', label: 'Federation Grants', icon: 'link', href: '/admin/federation-grants' },
+  // F16-roster (Plan 09-04): 'file' chosen over every other free ICON_NAMES
+  // value — none of the OTHER entries in this array use a value that's
+  // actually a member of design-system's ICON_NAMES set ('file-text'/
+  // 'activity'/'gauge'/'plug'/'database'/'link'/'key' above are all NOT in
+  // Icon.tsx's ICON_NAMES; only 'users'/'shield' are real, and both are
+  // already claimed) — a pre-existing mismatch out of this plan's scope to
+  // fix. 'file' is itself a genuinely valid ICON_NAMES member, unclaimed by
+  // this array, and is this plan's own PLAN.md-documented fallback choice.
+  { id: 'personnel-roster', label: 'Personnel roster', icon: 'file', href: '/admin/personnel-roster' },
 ];
 
 async function fetchUserShape(userId: string) {
