@@ -55,7 +55,13 @@ against a real vendor's live uptime, a real API key, or a real third-party netwo
   2. When the weather/hazard adapter stub deterministically simulates an outage (same recognized-vs-unrecognized trigger pattern as the GIS adapter), the retry/backoff background job records the failure rather than hiding it, and the Operating Picture keeps rendering with the affected layer simply marked stale/off — the page never fails to render because of a hazard-feed outage.
   3. A user viewing an incident workspace can see a CAD/911 dispatch-status panel for that incident, sourced from the deterministic CAD adapter stub, showing status plus `Provenance` (source/timestamp) — with no edit action anywhere in the UI, since record authority for dispatch data stays with the CAD/911 system.
   4. Both the weather/hazard and CAD/911 integrations appear in the integration-health view (system, last sync, direction = inbound, record authority, `SyncStatus`), and deterministically flipping either stub between healthy/degraded/outage states changes what the health view displays — provable entirely against the stub's own simulated states, with no real vendor network call involved.
-**Plans:** TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — F12 backend: hazard-feed adapter stub (NOAA/NWS/USGS), hazard_layers migration, GET /operating-picture/layers extended, integration_health wiring
+- [ ] 07-02-PLAN.md — F15 backend: CAD/911 adapter stub (strictly read-only), cad_dispatch_events migration, GET /incidents/:id/dispatch-status, integration_health wiring
+- [ ] 07-03-PLAN.md — F12 frontend: LayerPanel hazard/weather overlay rows on the Operating Picture (depends on 07-01)
+- [ ] 07-04-PLAN.md — F15 frontend: read-only Dispatch status Card on the Incident Workspace + integration-health view confirmation (depends on 07-02)
 
 ### Phase 8: Record-Authority & Sync Integrations
 **Goal**: EOC/logistics and planning staff see WebEOC/Veoci-class EOC COTS data and facility/asset/document-system data integrated into EPMP via deterministic adapter stubs with explicit, visible record-authority declarations — and when a record conflicts between EPMP and the external system, a named person resolves it through an explicit side-by-side "Keep EPMP value" / "Keep [external] value" action — so no sync integration in this milestone ever silently overwrites a record or hides which system actually owns it.
