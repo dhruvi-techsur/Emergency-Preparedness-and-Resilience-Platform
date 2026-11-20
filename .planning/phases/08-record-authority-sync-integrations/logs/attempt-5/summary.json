@@ -1,0 +1,23 @@
+{
+  "duration_secs": 966.0,
+  "token_usage": {
+    "input": 118,
+    "output": 35567,
+    "total": 7840288,
+    "cache_read": 7462675,
+    "cache_write": 341928,
+    "cost": 2.703260999999999
+  },
+  "model": "claude-sonnet-5",
+  "files_changed": [
+    ".pivota/uat-shots/3-operating-picture.png",
+    ".pivota/uat-shots/4-plan-repository.png",
+    ".planning/phases/08-record-authority-sync-integrations/08-UAT.md",
+    ".planning/phases/08-record-authority-sync-integrations/08-UAT.summary.json"
+  ],
+  "verification_status": "passed",
+  "error_message": null,
+  "attempt_number": 5,
+  "created_at": "2026-11-20T19:19:35.409372+00:00",
+  "completed_at": "2026-11-20T19:35:41.412754029+00:00"
+}
