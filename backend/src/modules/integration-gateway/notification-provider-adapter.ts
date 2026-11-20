@@ -519,6 +519,30 @@ export async function notificationProviderRoutes(app: FastifyInstance) {
       return reply.code(200).send({ items: rows });
     },
   );
+
+  // GET /api/v1/_test/notification-retry-sweep — test-only, never
+  // documented in the public OpenAPI schema. Mirrors cad-adapter.ts's
+  // `/api/v1/_test/cad-forced-outage` route exactly (same "explicit,
+  // unguessable-by-accident, HTTP-reachable" shape, invoked SERVER-SIDE
+  // inside this already-running backend process with a real
+  // DATABASE_URL-backed pool — no backend-source import into the
+  // Playwright test runner's own Node process). A real deployment's retry
+  // sweep runs on startNotificationRetryScheduler's 5-minute interval;
+  // Plan 09-03's own Playwright coverage (test 5) needs to drive
+  // retry_count past 3 deterministically within a single test's timeout,
+  // which means calling the sweep function on demand rather than waiting
+  // for the real scheduler tick. Gated on 'notifications'/'view' — the
+  // same permission domain this module's own delivery-status route uses,
+  // not 'admin'/'view', since this exists to support Delivery Tracking's
+  // own e2e coverage of the forced-outage Failed-state path.
+  app.get(
+    '/api/v1/_test/notification-retry-sweep',
+    { preHandler: requirePermission('notifications', 'view') },
+    async (_req, reply) => {
+      const result = await runNotificationRetrySweep();
+      return reply.code(200).send(result);
+    },
+  );
 }
 
 let intervalHandle: NodeJS.Timeout | undefined;
