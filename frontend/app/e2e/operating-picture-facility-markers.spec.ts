@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { Pool } from 'pg';
 import { signInAsIncidentCommander } from './helpers/sign-in';
 
@@ -30,6 +30,51 @@ interface FacilityFixture {
   name: string;
   status: string;
   source: string;
+}
+
+interface LocatedIncident {
+  id: string;
+  name: string;
+}
+
+/** Creates a real incident via the UI and gives it a real location via
+ * direct Postgres access (no API/UI path exists to set that nullable
+ * column — 02-01's documented scope), following
+ * `operating-picture.spec.ts`'s exact pattern for this plan's own
+ * incident-marker-selection test below. */
+async function createLocatedIncidentViaUi(page: Page, namePrefix: string): Promise<LocatedIncident> {
+  await page.goto('/incidents/new');
+  const incidentName = `${namePrefix} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+  await page.getByLabel('Name', { exact: false }).fill(incidentName);
+  await page.getByLabel('Type', { exact: true }).selectOption('Flood');
+  await page.getByLabel('Severity', { exact: true }).selectOption('Critical');
+
+  const jurisdictionInput = page.getByLabel('Jurisdiction', { exact: false });
+  await jurisdictionInput.click();
+  await jurisdictionInput.fill('Default Agency');
+  await page.getByRole('option', { name: 'Default Agency' }).click();
+
+  await page.getByRole('button', { name: 'Create incident' }).click();
+  await page.waitForURL(/\/incidents\/[0-9a-f-]+$/, { timeout: 10_000 });
+
+  const match = page.url().match(/\/incidents\/([0-9a-f-]+)$/);
+  if (!match) throw new Error(`Could not parse incident id from URL: ${page.url()}`);
+  const incidentId = match[1];
+
+  const jitter = () => (Math.random() - 0.5) * 2; // +/- 1 degree
+  await pool.query(
+    `UPDATE incidents SET location = ST_SetSRID(ST_MakePoint($2, $3), 4326) WHERE id = $1`,
+    [incidentId, -77.0 + jitter(), 38.9 + jitter()],
+  );
+
+  return { id: incidentId, name: incidentName };
+}
+
+/** Same exact-name anchoring pattern `operating-picture.spec.ts` documents
+ * for incident markers (diamond shape). */
+function incidentMarkerLocator(page: Page, incident: LocatedIncident) {
+  return page.locator(`.ep-map-marker.ep-map-marker--diamond[aria-label^="${incident.name} \u2014 "]`);
 }
 
 /** Confirms at least one `facilities` row exists before the tests run.
@@ -120,6 +165,14 @@ test.describe.serial('Operating Picture — facility markers (F17)', () => {
     expect(popupText).not.toContain('cost');
     expect(popupText).not.toContain('$');
 
+    // Phase 8 (08-08, UAT gap ref 3 fix): a facility marker has no
+    // incident_id to scope a task list by — the side panel's Tasks Card
+    // must not render at all for this selection (not merely show an
+    // empty TaskList). This is the facility half of this plan's
+    // must_haves truth; the resource half is proven independently in
+    // operating-picture-resource-markers.spec.ts.
+    await expect(page.getByRole('heading', { name: 'Tasks' })).toHaveCount(0);
+
     await popup.getByRole('button', { name: 'Close' }).click();
     await expect(popup).not.toBeVisible();
   });
@@ -163,5 +216,37 @@ test.describe.serial('Operating Picture — facility markers (F17)', () => {
       `.ep-map-marker--square[aria-label^="${facility.name} \u2014 "]`,
     );
     await expect(facilityMarker).toBeVisible({ timeout: 10_000 });
+  });
+
+  test('5. Selecting a genuine incident marker shows the real, working TaskList — not the stale placeholder', async ({
+    page,
+  }) => {
+    await signInAsIncidentCommander(page);
+    const incident = await createLocatedIncidentViaUi(page, 'E2E OpPicture TasksCard');
+
+    await page.goto('/operating-picture');
+    const mapCanvas = page.locator('.ep-map-canvas');
+    await expect(mapCanvas).toBeVisible({ timeout: 10_000 });
+
+    const incidentMarker = incidentMarkerLocator(page, incident);
+    await expect(incidentMarker).toBeVisible({ timeout: 10_000 });
+    await incidentMarker.click();
+
+    // The stale "Tasks ship in a later phase" copy is gone from the page
+    // entirely — Phase 3 shipped real task tracking (F4) over a year of
+    // roadmap time ago, so this must never be rendered for any marker
+    // selection, incident included.
+    await expect(page.getByText(/Tasks ship in a later phase/)).toHaveCount(0);
+
+    // The Tasks Card itself renders (its `h3` title — scoped to this
+    // selector since TaskList's own embedded `PageHeader` ALSO renders an
+    // `h1` reading "Tasks", which would otherwise make a bare
+    // `getByRole('heading', { name: 'Tasks' })` ambiguous here).
+    await expect(page.locator('h3.ep-card__title', { hasText: 'Tasks' })).toBeVisible({
+      timeout: 10_000,
+    });
+    // The REAL TaskList component mounted — proven by its own rendered
+    // chrome ("New task" button), not an empty shell or a placeholder.
+    await expect(page.getByRole('button', { name: 'New task' })).toBeVisible({ timeout: 10_000 });
   });
 });
