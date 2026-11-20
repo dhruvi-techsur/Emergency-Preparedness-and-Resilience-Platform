@@ -133,3 +133,22 @@ per_test:
   missing:
     - "Wrap the Channels checkbox group in a container with vertical stacking (flex-direction: column, gap: var(--space-2)) or add explicit spacing/margin between the checkbox group and the 'Draft with AI' button so IPAWS is visually distinct and easy to locate"
   debug_session: ""
+  redrive: closed (re-driven)
+  redrive_evidence: |
+    Plan 09-05 added a Playwright boundingBox() assertion to
+    notification-provider-cap-delivery.spec.ts test 1 (verticalGap between
+    the IPAWS checkbox and the "Draft with AI" button must exceed 8px). Its
+    commit order (test authored after the fix commit) meant it was never
+    observed red during execution, so execute-phase's gap_redrive step
+    reconstructed that observation directly: temporarily reverted
+    ComposeNotification.tsx to its pre-09-05 state (git show 2c22e18^),
+    confirmed Vite HMR served the reverted (crammed) layout, and re-ran the
+    new assertion — it failed exactly as expected:
+      Expected: > 8
+      Received: -24
+    (a negative gap means the checkbox and button actually overlapped in
+    the pre-fix layout, consistent with the user's "crammed onto one line"
+    report). Restored the fix (working tree returned to a clean git diff),
+    confirmed Vite HMR served the fixed layout again, and re-ran the full
+    spec: 5/5 passed, including the same assertion now green. Gap closed,
+    with a reproduction now proven red-then-green rather than asserted.
