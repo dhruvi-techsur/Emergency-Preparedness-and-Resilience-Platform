@@ -3,14 +3,14 @@ phase: 06
 gate_status: passed
 build_command: "rc=0; (npm run build -w backend) || rc=$?; (npm run build -w frontend/design-system) || rc=$?; (npm run build -w frontend/app) || rc=$?; exit $rc"
 test_command: "rc=0; (npm run test -w backend) || rc=$?; (npm run test -w frontend/design-system) || rc=$?; exit $rc"
-last_updated: 2026-11-19T23:55:27Z
+last_updated: 2026-11-20T00:03:08Z
 tests_disabled_during_fixes: none
 shadowed_sources: 0
 review_blockers_open: 0
 boot_smoke: pass
 browser_suite: pass
-browser_headroom_mb: 4874
-browser_headroom_naive_mb: 1116
+browser_headroom_mb: 4768
+browser_headroom_naive_mb: 868
 waves:
   - wave: 1
     build: pass
@@ -5299,3 +5299,15 @@ __GATE__ build_exit=0 test_exit=0 build_cmd=[npm run build] test_cmd=[npm test] 
 - The two other pre-existing `browser_suite: fail` failures this gap-closure round specifically targeted (06-11's `signal-triage.spec.ts` fixture exhaustion) are now green — the suite re-run above includes `signal-triage.spec.ts`'s full file, 5/5 passing (4 original + 06-13's new viewport test).
 - `admin-users-roles.spec.ts` (the third original `browser_suite: fail` failure, page_size/accumulated-fixture issue, owned by Phase 1, explicitly out of scope per `deferred-items.md`) also passed clean in this run.
 - Verdict recorded: `browser_suite: pass` (pre-existing, out-of-scope flake does not block).
+
+## Gap redrive (--gaps-only execution, execute-phase's gap_redrive step), 2026-11-20
+
+Re-drove the exact evidence that opened each of the 3 gaps this round closed, per `gap_redrive`:
+
+| Gap | Re-drive method | Result |
+|-----|-----------------|--------|
+| gate/browser_suite | Ran `signal-triage.spec.ts` twice in direct succession (the exact exhaustion pattern) | **Initially still-failing** — this session's cumulative Playwright executions (3 parallel executors' self-checks + the phase-level browser_suite_gate full run + this redrive's own first attempt) had drained all 13 UAT-SIGNAL fixtures added by 06-11's two rounds to 0 New-status signals. One bounded fix round applied (commit `a16ec70`): appended a THIRD round of 6 more isolated, collision-free fixture events to `backend/scripts/seed.ts`, exactly per 06-11's own code comment inviting this ("safe to append a third round again later following this exact pattern if the queue is ever drained again"). Re-seeded (6 new signals created), re-drove twice back-to-back → **5/5 passed both times**. Seed idempotency re-confirmed (0 new signals on a third run). Full backend suite 19/19 files, 108/108 tests green. |
+| uat/1 | Ran `persona-dashboards.spec.ts` (includes 06-12's own regression assertions: stale hint strings absent, genuine hint still visible) | **Closed (re-driven)** — 4/4 passed. |
+| uat/8 | Ran `signal-triage.spec.ts` test 2 + 2b (bounding-box geometry at desktop + 390px viewport) + a 28-test regression sample across other Modal+TextField screens (notifications-compose, plans, tasks-resources, admin-platform-sso, app-shell) | **Closed (re-driven)** — all 33 tests (5 signal-triage + 28 regression sample) passed, confirming the `.ep` box-sizing reset introduced no new width-dependent regression anywhere it now applies. |
+
+**Result:** 3/3 gaps closed (re-driven), 0 needs-human, 0 still-failing.
