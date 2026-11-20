@@ -4,14 +4,14 @@ milestone: v2.0
 milestone_name: milestone
 current_plan: 4
 status: executing
-stopped_at: Completed 07-03-PLAN.md
-last_updated: "2026-11-20T10:10:42.723Z"
+stopped_at: Completed 07-04-PLAN.md
+last_updated: "2026-11-20T10:15:52.193Z"
 last_activity: 2026-11-20
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
   percent: 100
 ---
 
@@ -157,6 +157,7 @@ Progress: [██████████] 100%
 | Phase 07 P01 | 25 min | 3 tasks | 7 files |
 | Phase 07 P02 | 22 min | 3 tasks | 6 files |
 | Phase 07 P03 | 18 min | 2 tasks | 2 files |
+| Phase 07 P04 | 28 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -323,6 +324,9 @@ Recent decisions affecting current work:
 - [Phase 07-02]: runCadIngestion re-evaluates incident matching on every tick (no sticky/COALESCE link) -- matches the plan's literal shared-number rule exactly
 - [Phase 07-02]: cad-adapter.ts's job_type='cad_ingestion' kept structurally distinct from Plan 07-01's 'feed_ingestion' via this plan's own background_jobs_job_type_check ALTER, so the two independently-scheduled adapters never clobber the same background_jobs row
 - [Phase 07-03]: ApiLayer/LayersResponse interfaces already matched hazard-<feed> entry shape exactly -- zero type widening needed; MARKER_TYPE_TO_LAYER_ID intentionally has no hazard entry (hazard layers are LayerPanel-only rows, no point marker)
+- [Phase 07-04]: Dispatch status Card placed between Command roles and Map in sidebar (own discretion, no mockup ordering exists for F15)
+- [Phase 07-04]: IntegrationHealth.tsx needed zero structural change — confirmed generic over whatever rows the backend returns; only stale EmptyState copy updated
+- [Phase 07-04]: Playwright spec resolves the CAD-linked incident by live DB query (cad_dispatch_events.linked_incident_id), not by assumed seed name, since 07-02's adapter stub re-links its single event across test runs
 
 ### Pending Todos
 
@@ -334,6 +338,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-20T10:10:42.721Z
-Stopped at: Completed 07-03-PLAN.md
+Last session: 2026-11-20T10:15:52.191Z
+Stopped at: Completed 07-04-PLAN.md
 Resume file: None
