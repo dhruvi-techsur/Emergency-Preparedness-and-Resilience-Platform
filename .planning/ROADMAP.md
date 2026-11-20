@@ -1,204 +1,93 @@
-# Roadmap: EPMP (Emergency Preparedness & Management Platform)
+# Roadmap: EPMP v2.0 — External Integrations
 
-**Deployable**: yes — DEPLOY-01 (Phase 1)
+**Milestone:** v2.0 External Integrations (Phases 7–9; v1.0's Phases 1–6 shipped and are archived in `.planning/milestones/v1.0-ROADMAP.md`)
+
+**Deployable**: yes — DEPLOY-01 shipped in v1.0 Phase 1; this milestone adds no new deployability requirement (no new DEPLOY-01 criteria — the app is already a running, deployed service these phases extend).
 
 ## Overview
 
-EPMP ships as six phases that build outward from a deployable, securely-authenticated
-platform shell toward the full incident-centric MVP. Phase 1 stands up the thing that
-can actually run — SSO, RBAC, audit, the API/event-bus backbone, and the app shell
-itself — as a containerized, healthy service from day one. Phases 2–4 build the
-operational core in dependency order: incident command and the shared operating
-picture first (the demonstration path's starting point), then plans/tasks/resource
-requests (the coordination layer that references incidents), then notifications and
-reporting/learning (which consume incident, task, and resource data to close the
-preparedness loop). Phase 5 adds offline-first mobile field operations once the
-incident and task APIs it syncs against exist. Phase 6 closes the MVP with persona-scoped
-dashboards across every module and governed AI-assisted drafting/signal-triage layered
-onto the incident, notification, and reporting surfaces already built — the two
-capabilities that reach across (rather than own) the rest of the platform.
+v2.0 closes out the six external integrations deferred from v1.0 (F12–F17), every one of
+them built as a deterministic, documented adapter stub — no live vendor credentials,
+simulated success/timeout/degraded paths, mandatory graceful fallback, `Provenance`
+enforced at every boundary — following the exact precedent v1.0 Phase 2 established for
+F11's GIS adapter. Per an explicit 2026-11-20 user decision, the six requirements are
+grouped into three phases by domain pairing (not one phase per feature, not six
+single-feature phases): Operating-Picture read overlays, record-authority/sync
+integrations, and alerting/identity integrations. The phase sequencing below (which
+pairing ships as Phase 7 vs 8 vs 9) is the roadmapper's technical-dependency judgment, per
+that same decision, which left ordering unconstrained by any demo/sales priority.
+
+**Why this order:** Phase 7 (weather + CAD/911) is the lowest-complexity, most
+precedent-aligned extension — both are pure read-only overlays reusing F11's exact
+LayerPanel/Provenance/SyncStatus adapter shape with no new UI pattern required, so it
+ships first to re-prove the stub pattern at minimum risk. Phase 8 (EOC COTS + asset/
+facility/document) introduces the one genuinely new UI pattern this milestone needs —
+side-by-side conflict resolution ("Keep EPMP value" / "Keep [external] value") plus
+per-system record-authority declaration — and is sequenced second so that new pattern is
+established before the milestone closes. Phase 9 (public alerting + HR/IAM roster) ships
+last because it is the lightest net-new backend surface of the three: F14 extends F5's
+already-fully-built notification domain (Phase 4) with an outbound stub, and F16-roster
+extends F16-SSO's already-fully-built IAM integration (Phase 1) with a read sync — both
+layer onto mature v1.0 foundations rather than building new domain logic.
+
+**Hard constraint carried through every phase below:** every success criterion is testable
+against the stub's own simulated states (healthy/degraded/outage, success/timeout) — never
+against a real vendor's live uptime, a real API key, or a real third-party network call.
 
 ## Phases
 
 **Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+- Integer phases (7, 8, 9): Planned milestone work, continuing from v1.0's final Phase 6
+- Decimal phases (7.1, 7.2): Urgent insertions (marked with INSERTED)
 
-- [x] **Phase 1: Platform Foundation & Deployable Shell** - SSO/RBAC/audit, the API/event-bus backbone, and the application shell, running as a real deployed service (completed 2026-11-16)
-- [x] **Phase 2: Incident Command & Operating Picture** - Incident/ICS activation and command, backed by a shared, GIS-grounded operating picture (completed 2026-11-17)
-- [x] **Phase 3: Plans, Tasks & Resource Requests** - Versioned plan/SOP repository linked to a full task and resource-request lifecycle (completed 2026-11-18)
-- [x] **Phase 4: Notifications & Reporting/Learning** - Accountable, approval-gated notifications and ICS/SITREP/AAR reporting that closes the preparedness loop (completed 2026-11-18)
-- [x] **Phase 5: Mobile Field Operations** - Offline-first, installable field-mobile app with queued submissions and reconciliation (completed 2026-11-19)
-- [x] **Phase 6: Persona Dashboards & AI Assistance** - Role-scoped dashboards for every persona plus governed, human-approved AI drafting and signal triage (completed 2026-11-20)
+- [ ] **Phase 7: Operating-Picture Read Overlays (Weather & Dispatch)** - Weather/hazard and CAD/911 dispatch data appear as read-only, provenance-tagged overlays on the Operating Picture and incident workspace, via deterministic adapter stubs following F11's exact pattern
+- [ ] **Phase 8: Record-Authority & Sync Integrations** - EOC COTS and asset/facility/document data integrate with explicit record-authority declarations and human-resolved conflict surfacing — never a silent overwrite
+- [ ] **Phase 9: Alerting & Identity Integrations** - Approved notifications route through a simulated public-alerting provider under F5's existing approval rule, and HR/IAM roster data syncs read-only into command-role and resource-request matching
 
 ## Phase Details
 
-### Phase 1: Platform Foundation & Deployable Shell
-**Goal**: Every persona can sign in once via agency SSO into a single, themeable application shell with role-based access and a full audit trail, and the repository runs as a real, deployable, Postgres-backed service from the first commit.
-**Status**: Complete (2026-11-16)
-**Last Updated**: 2026-11-16T12:09:09Z
-**Depends on**: Nothing (first phase)
-**Requirements**: F0, F8, F10, F16-SSO, DEPLOY-01
+### Phase 7: Operating-Picture Read Overlays (Weather & Dispatch)
+**Goal**: EOC and incident-command staff see weather/hazard and CAD/911 dispatch data as additional, clearly-sourced read-only layers on the Operating Picture and incident workspace — simulated via deterministic adapter stubs that behave exactly like F11's GIS adapter (default degraded/fallback path, provenance-tagged, no live vendor credentials) — so an unverified feed is never treated as operational fact and a stub outage never breaks the page.
+**Depends on**: Phase 2 (Operating Picture, F11's GIS adapter pattern), Phase 1 (integration-health view)
+**Requirements**: F12, F15
 **Success Criteria** (what must be TRUE):
-  1. A user can sign in via SAML2/OIDC SSO against a configured identity provider and land in a role-scoped app shell (`SideNav`, header strip, theme) rather than a generic landing page.
-  2. An admin can manage users, roles, and granular RBAC permissions from the Admin Console, and every security-relevant action (login, permission change, record access) is written to an append-only audit log that cannot be updated or deleted.
-  3. Every list/table/panel in the shell renders loading (`Skeleton`), empty (`EmptyState`), and error (`Alert` + retry) states, and a user can switch between light/dark/contrast themes instantly with no loss of WCAG contrast compliance.
-  4. A versioned OpenAPI REST surface is reachable (e.g. `GET /api/v1/me`), protected by OAuth2/OIDC bearer tokens, with at least one event published through the event bus and consumable by a registered webhook subscriber.
-  5. `docker build .` succeeds at the repository root, and the image runs as a numeric non-root `USER`.
-  6. Started with only `PORT` set, the app answers `GET /healthz` with 200, without authentication, within 30 seconds, and `GET /` shows its main page (or redirects to it).
-  7. `pivota-deploy.yaml` at the root reads `port: 8080`, `healthPath: /healthz`, `size: small`, `database: postgres`, the app migrates its schema at start, and the dev-server preview still starts as before.
-**Plans:** 15 plans
+  1. A user can open `LayerPanel` on the Operating Picture and toggle weather/hazard overlay layers sourced from the stub NOAA/NWS/USGS adapter; each layer shows source and as-of age via `Provenance`, and any layer the stub marks unverified stays off by default and keeps the dashed "Unverified" treatment even once toggled on.
+  2. When the weather/hazard adapter stub deterministically simulates an outage (same recognized-vs-unrecognized trigger pattern as the GIS adapter), the retry/backoff background job records the failure rather than hiding it, and the Operating Picture keeps rendering with the affected layer simply marked stale/off — the page never fails to render because of a hazard-feed outage.
+  3. A user viewing an incident workspace can see a CAD/911 dispatch-status panel for that incident, sourced from the deterministic CAD adapter stub, showing status plus `Provenance` (source/timestamp) — with no edit action anywhere in the UI, since record authority for dispatch data stays with the CAD/911 system.
+  4. Both the weather/hazard and CAD/911 integrations appear in the integration-health view (system, last sync, direction = inbound, record authority, `SyncStatus`), and deterministically flipping either stub between healthy/degraded/outage states changes what the health view displays — provable entirely against the stub's own simulated states, with no real vendor network call involved.
+**Plans:** TBD
 
-Plans:
-- [ ] 01-01-PLAN.md — Dev infrastructure: docker-compose (Postgres+PostGIS, NATS, OPA, Keycloak), exact auth-org schema migration, idempotent seed, OPA policy, Keycloak realm import
-- [ ] 01-02-PLAN.md — Design system: token system + build pipeline, Icon/Button/IconButton, Skeleton/Badge/Alert/EmptyState/Toast
-- [ ] 01-03-PLAN.md — Backend auth-org core: server bootstrap, OPA client, session JWT, AuditService, RBAC middleware, SSO callback, session/theme/nav routes
-- [ ] 01-04-PLAN.md — Design system: Card, Avatar, PageHeader, Breadcrumbs, SideNav
-- [ ] 01-05-PLAN.md — Design system: TextField, Select, Checkbox, Switch, Combobox, DatePicker
-- [ ] 01-06-PLAN.md — Design system: Table, Timeline, Stat, Tabs, Modal
-- [ ] 01-07-PLAN.md — Backend F8 admin API: Users, Roles & Permissions, SSO config (test-before-activate), Audit Log
-- [ ] 01-08-PLAN.md — Backend F10 registry: API Clients (one-time secret), Record Authority Registry, Federation Grants (immediate revocation)
-- [ ] 01-09-PLAN.md — Backend F10 event bus: NATS JetStream, webhook delivery worker (idempotent), OpenAPI document, platform/integration health
-- [ ] 01-10-PLAN.md — Frontend app shell: Vite SPA, OIDC auth flow, AppShell, ThemeSwitcher, typed API client, Playwright e2e
-- [ ] 01-11-PLAN.md — Frontend admin console: Users list/detail, Roles & Permissions, Audit Log view, Playwright e2e
-- [ ] 01-12-PLAN.md — Frontend admin console: SSO Config form, Platform Monitoring, Integration Health, API Clients, Federation Grants, Playwright e2e
-- [ ] 01-13-PLAN.md — Deployability: /healthz, static serving, baseline role migration, Dockerfile, pivota-deploy.yaml, .env.example, deploy-check verification
-- [ ] 01-14-PLAN.md — Gap closure (UAT ref 3): dev-mode port banner + README documentation of the 5173 (sign-in UI) vs 8080 (backend-only) split
-- [ ] 01-15-PLAN.md — Gap closure (UAT ref 4): automated WCAG contrast audit (axe-core, all 3 themes) + fix real light/dark ink-disabled contrast defect
-
-### Phase 2: Incident Command & Operating Picture
-**Goal**: Command staff can intake and activate an incident, assign named command roles, and see a shared, time-stamped operating picture that never fails to render — even when the live GIS feed is unavailable.
-**Status**: Complete (2026-11-17)
-**Last Updated**: 2026-11-17T13:23:08Z
-**Depends on**: Phase 1
-**Requirements**: F1, F2, F11
+### Phase 8: Record-Authority & Sync Integrations
+**Goal**: EOC/logistics and planning staff see WebEOC/Veoci-class EOC COTS data and facility/asset/document-system data integrated into EPMP via deterministic adapter stubs with explicit, visible record-authority declarations — and when a record conflicts between EPMP and the external system, a named person resolves it through an explicit side-by-side "Keep EPMP value" / "Keep [external] value" action — so no sync integration in this milestone ever silently overwrites a record or hides which system actually owns it.
+**Depends on**: Phase 7 (integration-health view pattern extended for the first time), Phase 3 (Plans & Playbooks, F2 Operating Picture)
+**Requirements**: F13, F17
 **Success Criteria** (what must be TRUE):
-  1. A user can create and classify an incident (type, severity, jurisdiction), and the system opens an incident workspace with a severity badge, pinned command-role panel, and Timeline/Tasks/Resources/Reports tabs.
-  2. A user can assign command roles (Incident Commander and supporting ICS roles) to named people, and every assignment, status change, and decision writes exactly one entry to the incident's append-only Timeline with actor and source.
-  3. Changing the activation level (Monitoring/Partial/Full) requires a modal confirmation stating the specific operational consequence before the change takes effect, and at least one Incident Commander must be assigned before activating above Monitoring.
-  4. The operating picture renders incidents, facilities, and resources as status-coded, shape-distinguished markers on a real GIS-sourced base map, with a status bar showing data age and base-layer source.
-  5. When the GIS feed is unavailable, the operating picture falls back to a schematic base map clearly labeled "Schematic base map, offline" and continues rendering EPMP markers — the page never fails to render.
-**Plans:** 8 plans
+  1. A user can view an integration-health `Table` row for the simulated EOC COTS system declaring exactly which record types (incidents/boards/resource requests/status/activity logs) it is authoritative for versus EPMP, with last-sync/direction/`SyncStatus` — testable entirely against the stub's own simulated healthy/degraded/outage states.
+  2. When the EOC COTS adapter stub simulates the same record differing between EPMP and the external system, the conflict screen shows both values side by side with "Keep EPMP value" / "Keep [external] value" actions, and the conflict is resolved only by the person's explicit click on one of them — never automatically, and never silently overwritten on a subsequent sync cycle.
+  3. A user can see facility/asset status and location markers on the Operating Picture, sourced from the deterministic asset/facility adapter stub, each carrying `Provenance` (source/as-of); no inventory, maintenance, or cost field from that feed is ever displayed or persisted anywhere in EPMP.
+  4. A user with document-system permission can browse, import, or live-link an EOP/SOP/annex/evidence document from the simulated SharePoint-class adapter into the Plan Repository; a user the stub says lacks permission to a given document cannot see it in the browse/import list at all — enforced server-side, not merely hidden client-side.
+  5. When "Link live" mode's background sync detects a simulated source-document change, the linked plan shows a flagged "source changed, review" state rather than silently auto-applying the external edit.
+**Plans:** TBD
 
-Plans:
-- [ ] 02-01-PLAN.md — Backend incident-ops foundation: incidents/command-roles/timeline schema, TimelineService transaction helper, incident CRUD
-- [ ] 02-02-PLAN.md — Backend incident-ops state machine: command-role assignment, activation-level change (server-side commander+confirmation gates), closure
-- [ ] 02-03-PLAN.md — Backend GIS adapter (F11) + operating-picture markers/layers endpoint with mandatory schematic fallback
-- [ ] 02-04-PLAN.md — Design system: MapCanvas, MapControls, MapLegend, MapPopup, LayerPanel, Provenance
-- [ ] 02-05-PLAN.md — Frontend: Incident List + Create Incident (non-blocking duplicate warning)
-- [ ] 02-06-PLAN.md — Frontend: Incident Workspace + Command Role Modal + Activation Level Modal
-- [ ] 02-07-PLAN.md — Frontend: Operating Picture map page with degraded-mode rendering
-- [ ] 02-08-PLAN.md — Gap closure (UAT ref 2, blocker): same-origin OIDC authority + Keycloak forwarded-header trust + relative redirect allow-list, so login is reachable through Pivota's preview proxy
-
-### Phase 3: Plans, Tasks & Resource Requests
-**Goal**: Planning staff can maintain a versioned, approved plan/SOP repository linked to generated tasks, and command/logistics staff can run tasks and resource requests through to closure — replacing manual spreadsheets and phone-based tracking.
-**Status**: Complete (2026-11-18)
-**Last Updated**: 2026-11-18T05:22:18Z
-**Depends on**: Phase 2
-**Requirements**: F3, F4
+### Phase 9: Alerting & Identity Integrations
+**Goal**: Communications staff can route approved notifications through a deterministic Everbridge/AtHoc-class provider stub (with CAP-formatted public-alert representation) under the exact same named-person-approval rule F5 already enforces, and personnel roster/qualification data syncs read-only from a deterministic HR/IAM adapter stub into resource-request matching and command-role assignment — so no public alert and no roster-sourced assignment can ever happen without a human decision, and no stub provider outage silently drops a message.
+**Depends on**: Phase 4 (F5 Notifications Integration domain), Phase 1 (F16-SSO's existing IAM integration)
+**Requirements**: F14, F16-roster
 **Success Criteria** (what must be TRUE):
-  1. A user can author a plan/SOP and move it through Draft → Review → Approved with immutable version history and no self-approval (a different named reviewer must approve).
-  2. A user can link a plan section to a task template, and when an incident references that plan, the linked template is offered for one-click task creation rather than writing the task from scratch.
-  3. A user can create, assign (to a named person or role), approve, track, and close a task, and a task left open past its due time automatically flips to Overdue without any manual status update.
-  4. A user can create a resource request linked to an incident or task and move it through Draft → Awaiting approval → Approved → Fulfilled (or Declined with a required reason), with its current status visible on both the operating picture and in reporting without a page reload.
-**Plans:** 10 plans
-
-Plans:
-- [ ] 03-01-PLAN.md — Backend tasks schema + CRUD + state-machine-enforced status transitions
-- [ ] 03-02-PLAN.md — Backend time-based Overdue sweep + background_jobs job_type fix + closure-cascade per-task audit fix
-- [ ] 03-03-PLAN.md — Backend plans module: Draft→Review→Approved workflow, no-self-approval, task-template linkage + materialization
-- [ ] 03-04-PLAN.md — Backend resource-request lifecycle (create/approve/decline/fulfill) with event-bus publish
-- [ ] 03-05-PLAN.md — Frontend: Plan Repository, Detail/Reading View, Editor, Link Tasks Modal, Approval Workflow Modal
-- [ ] 03-06-PLAN.md — Frontend: Task List/Create/Detail, Resource Request List/Create/Detail
-- [ ] 03-07-PLAN.md — Seed role-permission grants for plans/tasks/resource_requests features
-- [ ] 03-08-PLAN.md — Integration: wire Tasks/Resources tabs into Incident Workspace, end-to-end plan-to-task materialization proof
-- [ ] 03-09-PLAN.md — Operating-picture resource-request markers (triangle), completing success criterion 4's map-visibility clause
-- [ ] 03-10-PLAN.md — Gap closure (UAT ref 1, major): "Materialize tasks" button + modal on Plan Detail, the missing one-click UI trigger for success criterion 2's plan-section→task-template flow
-
-### Phase 4: Notifications & Reporting/Learning
-**Goal**: Communications staff can send accountable, approval-gated notifications with tracked delivery and acknowledgment, and planning staff can turn incident activity into ICS output, SITREPs, and after-action reports — closing the preparedness loop so every incident leaves a reusable evidence trail.
-**Status**: Complete (2026-11-18)
-**Last Updated**: 2026-11-18T14:20:22Z
-**Depends on**: Phase 2, Phase 3
-**Requirements**: F5, F7
-**Success Criteria** (what must be TRUE):
-  1. A user can compose a notification through the mandatory 4-step flow (audience → message → review → approve & send), including geotargeted audience selection drawn on the operating-picture map.
-  2. No notification can reach an external recipient without a named-person approval step recorded against it — the send action is never automatic, even when AI drafted the message body.
-  3. A user can view a per-recipient delivery and acknowledgment tracking table showing current status for any sent notification.
-  4. A user can generate ICS-standard output/SITREPs and an initial after-action report (timeline export, decisions log, resource-request history, findings/corrective-action list) directly from an incident's existing data, without manually re-entering it.
-  5. A user can view an append-only, exportable evidence/audit log and an analytics/reporting dashboard summarizing incident, task, and resource-request activity.
-**Plans:** 9 plans
-
-Plans:
-- [ ] 04-01-PLAN.md — Backend comms-reporting module: recipient-groups/message-templates CRUD, compose→send lifecycle, delivery-status tracking, shared assertAiOriginApproved AI-governance guard
-- [ ] 04-02-PLAN.md — Backend comms-reporting module: SITREP/AAR auto-assembly from Timeline/task/resource data, finding-ownership + finalize-immutability, evidence-log aggregation, analytics KPI endpoint
-- [ ] 04-03-PLAN.md — Design system: Progress, LineChart, BarChart, DonutChart
-- [ ] 04-04-PLAN.md — Seed role-permission grants for notifications/reporting features (PER-02 PIO-merge approval split)
-- [ ] 04-05-PLAN.md — Frontend: Recipient Groups, Message Templates, Compose Notification (4-step), Delivery & Acknowledgment Tracking
-- [ ] 04-06-PLAN.md — Frontend: SITREP Generator, AAR Generator, Evidence & Audit Log View, Analytics & Reporting Dashboard
-- [ ] 04-07-PLAN.md — Integration: wire Reports tab + Compose-notification action into Incident Workspace, end-to-end cross-phase Timeline/evidence-trail proof
-- [ ] 04-08-PLAN.md — Gap closure (UAT refs 2/3/5): Notifications landing page + SideNav repoint (Compose's missing non-incident reach-path), OIDC deep-link return-path, disabled "Generate AAR" explanation
-- [ ] 04-09-PLAN.md — Gap closure (UAT ref 4, cosmetic): distinct PERMISSION_DENIED error for a resolved role missing one specific action, vs ROLE_UNRESOLVED's genuine no-role case
-
-### Phase 5: Mobile Field Operations
-**Goal**: Field responders can submit structured observations and task updates from an installable mobile web app that keeps working fully offline and reconciles safely when connectivity returns — so field-to-EOC reporting never silently loses or overwrites data.
-**Status**: Complete (2026-11-19)
-**Last Updated**: 2026-11-19T12:04:13Z
-**Depends on**: Phase 2, Phase 3
-**Requirements**: F6
-**Success Criteria** (what must be TRUE):
-  1. A field responder can install the mobile web app and complete structured forms with one-tap photo and location capture, using 44px touch targets and no hover-only or gesture-only interactions.
-  2. Every edit remains possible while offline; a queued submission shows "Queued" via `SyncStatus` pinned at the top of every mobile screen rather than appearing to fail or disappear.
-  3. On reconnect, queued field data syncs to the EOC automatically and appends a Timeline entry noting the sync, with no manual "upload" step required from the responder.
-  4. When the same record was changed both offline and at the EOC, the conflict is surfaced to a named person for resolution — the system never silently keeps one value and discards the other.
-**Plans:** 6 plans
-Plans:
-- [ ] 05-01-PLAN.md — Field-operations schema (field_reports, field_report_photos, sync_conflicts) + idempotent submit/sync-batch/photo-upload/resolve API
-- [ ] 05-02-PLAN.md — SyncStatus design-system component + IndexedDB-backed offline queue + PWA manifest/service-worker scaffolding
-- [ ] 05-03-PLAN.md — Field Home, My Tasks (field view), Report Observation screens + shared FieldMobileShell
-- [ ] 05-04-PLAN.md — Queued Submissions, Sync Conflict Resolution, Field Map screens + route-tree/bottom-nav wiring
-- [ ] 05-05-PLAN.md — field_reports seed/RBAC grants + real Keycloak field-responder identity + end-to-end permission proof
-- [ ] 05-06-PLAN.md — Gap closure (UAT refs 8/1): nav_groups[].id stable group identifier + Field-group-specific mobile bottom-bar selection + "Profile"→"Field home" desktop relabel (F-05-01 security finding independently confirmed already fixed, no code change needed)
-
-### Phase 6: Persona Dashboards & AI Assistance
-**Goal**: Every named persona lands on a dashboard scoped to their job the moment they sign in, and planning/communications staff get governed AI drafting and signal-triage assistance that accelerates their work without ever bypassing human accountability.
-**Status**: Complete (2026-11-20)
-**Last Updated**: 2026-11-20T01:15:44Z
-**Depends on**: Phase 1, Phase 2, Phase 4, Phase 5
-**Requirements**: F9, F18
-**Success Criteria** (what must be TRUE):
-  1. Each of the 5 consolidated personas (PER-01–PER-05) lands on a distinct default dashboard with role-based navigation and action visibility driven by the RBAC model — a user never sees `SideNav` groups or actions their role doesn't permit.
-  2. The executive-briefing dashboard variant shows 1–3 `display`-scale headline KPIs with no other decoration, each with a visible definition/period/source.
-  3. A user can request AI-assisted drafting of an ICS form field or incident/SITREP narrative, and the result renders only inside the `AIDraft` component with `Provenance` source chips — it never appears pre-inserted into the record.
-  4. AI-drafted content cannot become part of an official record without a named-person approval, recorded with reviewer identity and timestamp in the incident Timeline; a write carrying `ai_origin: true` without `approved_by` is rejected at the API, not just hidden in the UI.
-  5. Signal triage surfaces candidate events clustered from hazard feeds in a queue for human validation but never auto-promotes a signal directly into an active incident.
-**Plans:** 13 plans
-
-Plans:
-- [ ] 06-01-PLAN.md — Backend F9 governance substrate: ics_forms/ai_drafts/signals/signal_source_events/hazard_feed_* schema, shared assertAiOriginApproved guard, ICS forms API, dashboard/summary API
-- [ ] 06-02-PLAN.md — Backend F18 landing config: role_landing_config seed rows for all 5 personas, GET /api/v1/me/landing-config with ROLE_VIEW_UNMAPPED fallback
-- [ ] 06-03-PLAN.md — Backend AI-drafts request/approve/discard lifecycle (model-neutral gateway stub) + ai_assist permission seed
-- [ ] 06-04-PLAN.md — Backend signal triage: deterministic hazard-feed clustering + GET/promote(pre-fill-only)/dismiss(reason-required) API
-- [ ] 06-05-PLAN.md — Design system: AIDraft component (the sole AI-output UI surface) + Provenance integration
-- [ ] 06-06-PLAN.md — Frontend: EOC Dashboard (PER-01) + My Work Dashboard (PER-03), RouteGuard landing-config redirect, Signals nav item
-- [ ] 06-07-PLAN.md — Frontend: Field Home (PER-04, bottom-bar-only) + Executive Dashboard (PER-05 facet, 1-3 display-scale KPIs) + FacetToggle
-- [ ] 06-08-PLAN.md — Frontend: ICS Form Editor with embedded AIDraft+Provenance, wired into Incident Workspace's Reports tab
-- [ ] 06-09-PLAN.md — Frontend: Signal Triage Queue + Signal Detail, Promote-to-incident pre-fill navigation (never auto-creates)
-- [ ] 06-10-PLAN.md — Integration: cross-persona landing/nav-visibility sweep across all 5 personas, closing the PER-02 redirect-mechanism gap
-- [ ] 06-11-PLAN.md — Gap closure (gate ref browser_suite, blocker): replenish signal-triage.spec.ts's hazard-feed fixture pool so it survives repeated full-suite re-runs
-- [ ] 06-12-PLAN.md — Gap closure (UAT ref 1, major): remove stale "ships in a later phase" hint text from EOC Dashboard's now-real Open tasks/Pending resource requests tiles
-- [ ] 06-13-PLAN.md — Gap closure (UAT ref 8, cosmetic): apply missing `.ep` box-sizing:border-box reset class to AppShell's root, fixing the Dismiss Modal's Reason textarea overflow systemically
+  1. A user can route an approved, already-composed F5 notification through the simulated external provider stub and see delivery-status/acknowledgment callbacks feed into F5's existing delivery-tracking table; the external send still requires the exact same named-person approval F5 already enforces — a direct API bypass attempting to send without a matching approver is rejected, not just hidden in the UI.
+  2. A message routed through the simulated IPAWS/CAP-compatible channel is representable in OASIS CAP-formatted structure (verifiable from the stub's captured outbound payload), distinct from a normal provider send.
+  3. When the notification-provider stub simulates an outage, the queued message is retried and any resulting delivery failure is surfaced visibly in the delivery-tracking UI — never silently dropped, discarded, or shown as successfully sent.
+  4. A user can view a personnel roster list (name, role, qualification, contact) sourced read-only from the HR/IAM adapter stub, each entry showing source/as-of via `Provenance`, with HR declared as the authoritative system for personnel records in the integration-health view.
+  5. Roster/qualification data populates as selectable reference options in Command Role Assignment (F1) and Resource Request matching (F4), but a person's role/qualification value can only change by resyncing from the HR stub (never a direct in-EPMP edit), and an unmatched roster record shows no matched user rather than being force-matched or guessed.
+**Plans:** TBD
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
+Phases execute in numeric order: 7 → 8 → 9 (continuing from v1.0's completed Phase 6)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Platform Foundation & Deployable Shell | 0/TBD | Complete | 2026-11-16 |
-| 2. Incident Command & Operating Picture | 7/7 | Complete | 2026-11-17 |
-| 3. Plans, Tasks & Resource Requests | 9/9 | Complete | 2026-11-18 |
-| 4. Notifications & Reporting/Learning | 7/7 | Complete | 2026-11-18 |
-| 5. Mobile Field Operations | 0/TBD | Complete | 2026-11-19 |
-| 6. Persona Dashboards & AI Assistance | 10/10 | Complete | 2026-11-20 |
+| 7. Operating-Picture Read Overlays (Weather & Dispatch) | 0/TBD | Not started | - |
+| 8. Record-Authority & Sync Integrations | 0/TBD | Not started | - |
+| 9. Alerting & Identity Integrations | 0/TBD | Not started | - |

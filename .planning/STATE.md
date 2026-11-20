@@ -1,17 +1,17 @@
 ---
 pivota_spec_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: Milestone v2.0 requirements being scoped; roadmap not yet created.
-stopped_at: Completed 06-13-PLAN.md
-last_updated: "2026-11-20T02:55:28.372Z"
-last_activity: 2026-11-19 -- Plan 06-13 complete (see 06-13-SUMMARY.md for full detail). All Phase 6 gap-closure plans (06-11, 06-12, 06-13) are now done.
+milestone: v2.0
+milestone_name: External Integrations
+status: Roadmap created for v2.0 (Phases 7-9); no plans written yet.
+stopped_at: Roadmap created (ROADMAP.md, Phases 7-9)
+last_updated: "2026-11-20T03:30:00.000Z"
+last_activity: 2026-11-20 -- v2.0 ROADMAP.md created: 3 phases (7-9) covering F12-F17, 100% requirement coverage. Next step is /pivota_spec-plan-phase 7.
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 61
-  completed_plans: 61
-  percent: 100
+  total_phases: 3
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-20)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Milestone v2.0 External Integrations — defining requirements for F12–F17 (the six integrations deferred from v1.0: weather/hazard feeds, CAD/911, EOC COTS interoperability, public-alerting providers, HR/IAM roster sync, asset/facility/document systems). v1.0 MVP (Phases 1–6, F0–F11/F16-SSO/F18/DEPLOY-01) shipped complete on 2026-11-20 and is not yet formally archived via `/pivota_spec-complete-milestone` — phase numbering for v2.0 continues from Phase 7.
+**Current focus:** Milestone v2.0 External Integrations — roadmap created (Phases 7-9) for F12–F17 (the six integrations deferred from v1.0: weather/hazard feeds, CAD/911, EOC COTS interoperability, public-alerting providers, HR/IAM roster sync, asset/facility/document systems), every one built as a deterministic adapter stub following v1.0 Phase 2's F11 GIS-adapter precedent. v1.0 MVP (Phases 1–6, F0–F11/F16-SSO/F18/DEPLOY-01) shipped complete on 2026-11-20 and is not yet formally archived via `/pivota_spec-complete-milestone` — phase numbering for v2.0 continues from Phase 7.
 
 ## Current Position
 
-Phase: Not started (defining requirements for v2.0)
+Phase: Phase 7 (Operating-Picture Read Overlays) — not yet planned
 Plan: —
-Status: Milestone v2.0 requirements being scoped; roadmap not yet created.
+Status: v2.0 ROADMAP.md created (3 phases, 6/6 requirements mapped, 100% coverage). Next: `/pivota_spec-plan-phase 7`.
 
 ## v1.0 Summary (for reference, not yet archived to MILESTONES.md)
 

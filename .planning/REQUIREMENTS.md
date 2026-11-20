@@ -48,18 +48,18 @@ Populated during roadmap creation by the roadmapper agent.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| F12 | TBD | Pending |
-| F15 | TBD | Pending |
-| F13 | TBD | Pending |
-| F17 | TBD | Pending |
-| F14 | TBD | Pending |
-| F16-roster | TBD | Pending |
+| F12 | Phase 7 | Pending |
+| F15 | Phase 7 | Pending |
+| F13 | Phase 8 | Pending |
+| F17 | Phase 8 | Pending |
+| F14 | Phase 9 | Pending |
+| F16-roster | Phase 9 | Pending |
 
 **Coverage:**
 - v2 requirements: 6 total (F12, F13, F14, F15, F16-roster, F17)
-- Mapped to phases: 0
-- Unmapped: 6 (pending roadmap creation)
+- Mapped to phases: 6
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-11-20*
-*Last updated: 2026-11-20 after milestone v2.0 requirements definition*
+*Last updated: 2026-11-20 after v2.0 ROADMAP.md creation (Phases 7-9, 100% coverage)*
