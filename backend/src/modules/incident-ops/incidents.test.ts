@@ -312,6 +312,39 @@ describe('incident-ops incidents routes', () => {
 // grep-based <verify> step. Cross-adapter job_type isolation (vs Plan
 // 07-01's 'feed_ingestion') is proven directly against background_jobs.
 describe('07-02: F15 CAD/911 dispatch-status (read-only contract)', () => {
+  afterAll(async () => {
+    // Shared-fixture cleanup: the "after runCadIngestion() links..." test
+    // below deliberately exercises runCadIngestion()'s REAL "shared
+    // number" matching end-to-end against its own throwaway
+    // `CAD-UAT-001 Matchable Incident ...` fixture (created in
+    // testJurisdictionId, not the seed's 'Default Agency' jurisdiction).
+    // Because the stub adapter always emits the SAME single
+    // external_event_id ('UAT-CAD-001') and matching re-evaluates on every
+    // tick (ORDER BY opened_at DESC, no sticky behavior — see
+    // cad-adapter.ts's own docstring), every runCadIngestion() call in
+    // this describe block (including the online/offline flip test) ends
+    // up re-linking that ONE shared cad_dispatch_events row away from
+    // backend/scripts/seed.ts's intended demo incident
+    // ('UAT-ESCALATE-READY Default Agency Wildfire') onto this file's own
+    // test fixtures — which live in a jurisdiction the e2e suite's
+    // commander@epmp.local identity cannot see. Restore the shared row
+    // back to the seed's incident here so every OTHER consumer of this
+    // database (the Playwright e2e suite, manual demo use) sees the
+    // seed-intended link after this test file finishes, regardless of run
+    // order. Scoped to this describe block only — no other shared fixture
+    // is touched.
+    const seedIncident = await query<{ id: string }>(
+      `SELECT id FROM incidents WHERE name = $1 ORDER BY opened_at DESC LIMIT 1`,
+      ['UAT-ESCALATE-READY Default Agency Wildfire'],
+    );
+    if (seedIncident[0]) {
+      await query(`UPDATE cad_dispatch_events SET linked_incident_id = $1 WHERE external_event_id = $2`, [
+        seedIncident[0].id,
+        'UAT-CAD-001',
+      ]);
+    }
+  });
+
   it('GET /api/v1/incidents/:id/dispatch-status returns {linked:false} for an incident with no linked CAD event', async () => {
     const token = await mintSessionToken({
       id: testUserId,
