@@ -2,17 +2,17 @@
 pivota_spec_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
-current_plan: 6
-status: verifying
-stopped_at: "Completed 08-07-PLAN.md (gap-closure: independent re-verification of F-08-01, already fixed by prior audit round)"
-last_updated: "2026-11-20T17:38:33.632Z"
+current_plan: 8 (gap-closure)
+status: executing
+stopped_at: "Completed 08-08-PLAN.md (gap-closure: Operating Picture Tasks Card UAT gap ref 3 fix)"
+last_updated: "2026-11-20T17:51:30.028Z"
 last_activity: 2026-11-20
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 14
-  completed_plans: 11
-  percent: 100
+  completed_plans: 12
+  percent: 33
 ---
 
 # Project State
@@ -27,10 +27,12 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: Phase 8 (Record Authority & Sync Integrations)
-Current Plan: 7 (gap-closure)
-Total Plans in Phase: 7 (6 original + 1 gap-closure)
-Status: Ready for verification (gap-closure plan 08-07 complete; F-08-01 independently re-verified closed)
+Current Plan: 8 (gap-closure)
+Total Plans in Phase: 10 (6 original + 4 gap-closure: 08-07/08-08/08-09/08-10)
+Status: In progress — 08-09/08-10 (gap-closure, F17 import-flow) remain unexecuted
 Last Activity: 2026-11-20
+
+Plan 08-08 (this phase, gap-closure): see 08-08-SUMMARY.md for full detail. Closed UAT gap ref 3 (major): OperatingPicture.tsx's side-panel Tasks Card had rendered a stale "Tasks ship in a later phase — Task tracking (F4) is built in Phase 3" placeholder unconditionally for every marker selection since Phase 2, including Phase 8's own new facility markers — despite Phase 3 having shipped real task tracking over a year of roadmap time ago. Replaced it with the real, incident-scoped `<TaskList incidentId={selectedId} />`, mirroring 03-08's identical fix for IncidentWorkspace.tsx's equivalent placeholder exactly. Also fixed the secondary structural finding UAT's root-cause analysis flagged: the Tasks Card is now gated behind the same `!selectedIsResource && !selectedIsFacility` condition the file's own incident-detail queries already use, so it renders for NO selection that lacks an incident_id to scope by (not merely an empty list). New/extended Playwright coverage proves both halves end-to-end: `operating-picture-facility-markers.spec.ts` (5/5, 1 extended + 1 new test) and `operating-picture-resource-markers.spec.ts` (3/3, 1 extended test) — the resource half of this gate had zero prior test coverage before this plan. Zero regression on `operating-picture.spec.ts` (5/5); `tsc --noEmit` and `npm run build` (frontend/app) both clean. Two trivial self-caught Rule-1 deviations (both documented in 08-08-SUMMARY.md): a doc-comment that initially self-collided with the plan's own stale-string verification grep, and a Playwright strict-mode locator ambiguity between the Tasks Card's own heading and TaskList's internally-rendered PageHeader heading, both also reading "Tasks".
 
 Plan 08-07 (this phase, gap-closure): see 08-07-SUMMARY.md for full detail. Independently re-verified F-08-01 (CONFIRMED HIGH IDOR — `linkDocument()`'s `plan_id` parameter bypassing jurisdiction-scope enforcement) closed. A prior, standalone security-audit-fix round (commits `a5230d4`, `9820718`) had already shipped the fix and its full test coverage before this plan ran — this plan's own execution produced zero new code, instead independently re-running every `<verify>`/`<verification>` command the plan itself specifies against a clean working tree: `tsc --noEmit` clean, the targeted `facility-document-adapter.test.ts` 14/14 passing (10 pre-existing + 4 new F-08-01 cases, numbered 9-12), full backend suite 22 files/148 tests zero regression, `npm run build` clean, `npm run seed` re-confirmed idempotent. No deviations — the plan's own spec was already fully satisfied.
 
@@ -88,15 +90,15 @@ Plan 05-02 (prior): shipped the client-side half of F6 — SyncStatus design-sys
 
 Plan 05-01 (prior, backend): shipped the F6 backend data layer and API surface — field_reports/field_report_photos/sync_conflicts tables plus idempotent-submit/ordered-batch-sync/photo-upload/conflict-resolve endpoints, every incident-touching write wrapped in the shared withTimelineTransaction invariant. Integration test (4 cases) + full backend suite (15 files, 74 tests) green with zero regression; tsc --noEmit and backend build both clean.
 
-Progress: [██████████] 100%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 40
+- Total plans completed: 41
 - Average duration: 24 min
-- Total execution time: 14.6 hours
+- Total execution time: 15.0 hours
 
 **By Phase:**
 
@@ -181,6 +183,7 @@ Progress: [██████████] 100%
 | Phase 08 P03 | 10 min | 3 tasks | 6 files |
 | Phase 08 P06 | 25 min | 3 tasks | 7 files |
 | Phase 08-record-authority-sync-integrations P07 | 12 min | 2 tasks | 1 files |
+| Phase 08-record-authority-sync-integrations P08 | 25 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -361,6 +364,8 @@ Recent decisions affecting current work:
 - [Phase 08-06]: Migration renumbered 1700000000014->1700000000016 (both 1700000000014/1700000000015 already claimed by this phase's own 08-01/08-02 by execution time) — same cross-plan collision precedent every prior phase has resolved identically
 - [Phase 08-06]: runDocumentLinkSync()'s idempotency guard phrased as content_status <> 'changed' rather than = 'current' — functionally identical on the two-state CHECK-constrained enum, rewritten specifically so this file's own text never collides with this plan's structural grep verifying only plans.ts's acknowledge route clears the flag
 - [Phase 08-record-authority-sync-integrations]: [Phase 08-07]: Plan treated as fully satisfied by independent re-verification (not re-implementation) since a prior standalone security-audit-fix round (commits a5230d4, 9820718) had already shipped F-08-01's fix and full test coverage before this plan executed
+- [Phase 08-08]: Reworded the fix's explanatory doc comment to avoid literally embedding the stale placeholder string the plan's own verify step greps the file for — the identical self-collision class 08-06 documented for its idempotency-guard wording
+- [Phase 08-08]: Scoped the new Playwright "Tasks" heading locator to h3.ep-card__title specifically, since TaskList's own embedded PageHeader independently renders an h1 also reading "Tasks" — a bare name-only heading locator is ambiguous once the real component (not a placeholder) is mounted
 
 ### Pending Todos
 
@@ -372,6 +377,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-20T17:38:33.630Z
-Stopped at: Completed 08-07-PLAN.md (gap-closure: independent re-verification of F-08-01, already fixed by prior audit round)
+Last session: 2026-11-20T17:44:42.419Z
+Stopped at: Completed 08-08-PLAN.md (gap-closure: Operating Picture Tasks Card UAT gap ref 3 fix)
 Resume file: None
