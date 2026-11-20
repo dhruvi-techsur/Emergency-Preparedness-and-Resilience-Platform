@@ -283,17 +283,38 @@ export async function runEocCotsSync(): Promise<{ synced: number; conflicts: num
           // path wires in above. Any OTHER external_id for an
           // EPMP-authoritative type never conflicts in this stub.
           if (record.external_id === KNOWN_CONFLICT_EXTERNAL_ID) {
-            await query(
-              `INSERT INTO eoc_cots_conflicts (config_id, record_type, epmp_record_id, epmp_value, external_value)
-               VALUES ($1, $2, gen_random_uuid(), $3, $4)`,
-              [
-                configId,
-                type,
-                JSON.stringify({ status: 'Monitoring', severity: 'Elevated', source: 'EPMP' }),
-                JSON.stringify(record.payload),
-              ],
+            // Dedup guard (fixes a brand-new duplicate conflict row being
+            // inserted on every 5-minute tick for the same external
+            // record): skip the INSERT entirely if a conflict row already
+            // exists for this (config_id, record_type) with this exact
+            // external_value — whether that row is still unresolved (a
+            // prior tick already raised it, admin hasn't acted yet) OR
+            // already resolved for this same external state (admin
+            // already decided; this stub's deterministic fetch returning
+            // the identical value again must not relitigate a settled
+            // decision). A genuinely NEW/changed external_value for this
+            // record_type still inserts a fresh conflict row, same as
+            // before.
+            const externalValueJson = JSON.stringify(record.payload);
+            const existingConflict = await query<{ id: string }>(
+              `SELECT id FROM eoc_cots_conflicts
+               WHERE config_id = $1 AND record_type = $2 AND external_value = $3::jsonb
+               LIMIT 1`,
+              [configId, type, externalValueJson],
             );
-            conflicts += 1;
+            if (!existingConflict[0]) {
+              await query(
+                `INSERT INTO eoc_cots_conflicts (config_id, record_type, epmp_record_id, epmp_value, external_value)
+                 VALUES ($1, $2, gen_random_uuid(), $3, $4)`,
+                [
+                  configId,
+                  type,
+                  JSON.stringify({ status: 'Monitoring', severity: 'Elevated', source: 'EPMP' }),
+                  externalValueJson,
+                ],
+              );
+              conflicts += 1;
+            }
           } else {
             await query(
               `INSERT INTO eoc_cots_sync_log (config_id, record_type, external_id, direction, sync_status)
