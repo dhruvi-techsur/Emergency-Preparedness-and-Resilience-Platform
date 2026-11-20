@@ -2408,6 +2408,82 @@ async function main() {
       source: 'USGS',
       issued_at: hazardFeedEventHoursAgoIso(12),
     },
+    // Third round of UAT data-doctor fixtures (execute-phase's own gap_redrive
+    // step on gap-closure plan 06-11: the exact same fixture-exhaustion
+    // pattern recurred ONE run after 06-11's second round landed — this
+    // session's cumulative Playwright executions across three parallel
+    // executors' self-verification runs, the phase-level browser_suite_gate
+    // full-suite pass, and the gap-closure redrive itself collectively
+    // Promoted/Dismissed all 13 prior UAT-SIGNAL fixtures before this
+    // redrive's own re-run of signal-triage.spec.ts — exactly the scenario
+    // 06-11's own code comment above anticipated: "safe to append a third
+    // round again later following this exact pattern if the queue is ever
+    // drained again." 6 more isolated, mutually-distinct events (new
+    // `external_event_id`s so findOrInsert's natural-key match never
+    // collides with any of the 13 originals, distinct types not reused by
+    // any prior round, geometry far from every existing entry) give
+    // clusterHazardFeedEvents() 6 more fresh Medium-confidence 'New' signals
+    // every time `npm run seed` runs.
+    {
+      feed_name: 'NOAA',
+      external_event_id: 'UAT-SIGNAL-NOAA-011',
+      type: 'Coastal Flood Watch',
+      severity: 'Watch',
+      lng: -80.19,
+      lat: 25.76,
+      source: 'NOAA',
+      issued_at: hazardFeedEventHoursAgoIso(13),
+    },
+    {
+      feed_name: 'NWS',
+      external_event_id: 'UAT-SIGNAL-NWS-012',
+      type: 'High Wind Warning',
+      severity: 'Elevated',
+      lng: -104.80,
+      lat: 41.14,
+      source: 'NWS',
+      issued_at: hazardFeedEventHoursAgoIso(14),
+    },
+    {
+      feed_name: 'USGS',
+      external_event_id: 'UAT-SIGNAL-USGS-013',
+      type: 'Earthquake Advisory',
+      severity: 'Elevated',
+      lng: -118.24,
+      lat: 34.05,
+      source: 'USGS',
+      issued_at: hazardFeedEventHoursAgoIso(15),
+    },
+    {
+      feed_name: 'NOAA',
+      external_event_id: 'UAT-SIGNAL-NOAA-014',
+      type: 'Flood',
+      severity: 'Watch',
+      lng: -90.07,
+      lat: 29.95,
+      source: 'NOAA',
+      issued_at: hazardFeedEventHoursAgoIso(16),
+    },
+    {
+      feed_name: 'NWS',
+      external_event_id: 'UAT-SIGNAL-NWS-015',
+      type: 'Wildfire',
+      severity: 'Elevated',
+      lng: -116.97,
+      lat: 33.73,
+      source: 'NWS',
+      issued_at: hazardFeedEventHoursAgoIso(17),
+    },
+    {
+      feed_name: 'USGS',
+      external_event_id: 'UAT-SIGNAL-USGS-016',
+      type: 'Damage assessment',
+      severity: 'Watch',
+      lng: -149.90,
+      lat: 61.22,
+      source: 'USGS',
+      issued_at: hazardFeedEventHoursAgoIso(18),
+    },
   ] as const;
 
   for (const e of hazardFeedEventDefs) {
