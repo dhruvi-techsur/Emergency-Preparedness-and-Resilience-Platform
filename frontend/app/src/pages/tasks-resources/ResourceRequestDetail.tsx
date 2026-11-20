@@ -10,10 +10,12 @@ import {
   Alert,
   Modal,
   TextField,
+  Combobox,
   Timeline,
   EmptyState,
   type BadgeTone,
   type TimelineItem,
+  type ComboboxOption,
 } from '@epmp/design-system';
 import { apiGet, apiPost, ApiRequestError } from '../../lib/api-client';
 
@@ -24,6 +26,16 @@ interface ResourceRequestStatusHistoryEntry {
   from_status: ResourceRequestStatus | null;
   to_status: ResourceRequestStatus;
   changed_at: string;
+}
+
+interface RosterRow {
+  id: string;
+  name: string;
+  qualifications: string[] | null;
+}
+
+interface RosterResponse {
+  items: RosterRow[];
 }
 
 interface ResourceRequestDetailResponse {
@@ -107,6 +119,23 @@ export function ResourceRequestDetail(): JSX.Element {
     queryFn: () => apiGet<ResourceRequestDetailResponse>(`/api/v1/resource-requests/${id}`),
     enabled: Boolean(id),
   });
+
+  // F16-roster (Plan 09-04): roster-sourced quick-pick options for the
+  // Assign modal below. `assigned_to` is VARCHAR(200) with NO FK (per
+  // TechArch), so BOTH matched and unmatched roster rows are legitimate
+  // names to offer here — unlike Command Role Assignment's FK-constrained
+  // person_id, an unmatched roster entry is still assignable work.
+  const rosterQuery = useQuery({
+    queryKey: ['hris-personnel-for-resource-assign'],
+    queryFn: () => apiGet<RosterResponse>('/api/v1/integrations/hris/personnel'),
+    enabled: assignModalOpen,
+  });
+
+  const rosterOptions: ComboboxOption[] = (rosterQuery.data?.items ?? []).map((row) => ({
+    value: row.name,
+    label: row.name,
+    hint: (row.qualifications ?? []).join(', ') || undefined,
+  }));
 
   const handleApprove = async () => {
     if (!id) return;
@@ -388,6 +417,26 @@ export function ResourceRequestDetail(): JSX.Element {
             {assignError}
           </Alert>
         ) : null}
+        {/* F16-roster (Plan 09-04): Combobox.tsx is a committed-value-from-
+            the-list selector (selecting an option sets a value; typing
+            alone reverts on blur, per its own closeDropdown(true) revert
+            behavior) — it has no "accept arbitrary typed text as the final
+            value" mode. Since assigned_to must stay usable for a person
+            NOT YET in the roster (free text), this Combobox is a
+            SEPARATE, additive quick-pick above the existing, unchanged
+            TextField: selecting a roster option populates the SAME
+            assignedToInput state the TextField binds to, via
+            setAssignedToInput — not a replacement of the TextField. */}
+        <Combobox
+          label="Or pick from roster"
+          options={rosterOptions}
+          onChange={(_value, option) => {
+            if (option) setAssignedToInput(option.label);
+          }}
+          loading={rosterQuery.isLoading}
+          placeholder="Search the personnel roster"
+          clearable
+        />
         <TextField
           label="Assigned to"
           required
