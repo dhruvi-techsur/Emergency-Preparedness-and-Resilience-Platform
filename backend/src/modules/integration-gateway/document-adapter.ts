@@ -56,6 +56,29 @@ function resolveUserAccessSet(userId: string): string[] {
 }
 
 /**
+ * Test-only, deterministic trigger for a simulated permission downgrade at
+ * the source — mirrors every other adapter's `simulateFailure`-style
+ * test-injection shape (gis-adapter.ts/cad-adapter.ts/facility-adapter.ts),
+ * adapted to this adapter's per-user access-SET shape rather than a
+ * per-call flag: this stub has no natural per-call "vendor" param to
+ * recognize a trigger against (access is keyed by userId, not by a single
+ * call's arguments), so the deterministic trigger is this explicit
+ * function instead, which removes `externalDocId` from `userId`'s
+ * lazily-seeded simulated access set — exactly what a real delegated-
+ * credential adapter observing a source-side permission downgrade would
+ * reflect. Without this, `checkAndPersistPermission`'s `stillGranted ===
+ * false` branch (the entire 'revoked' detection/UI path) has no reachable
+ * trigger anywhere in this codebase.
+ */
+export function simulateDocumentAccessRevocation(userId: string, externalDocId: string): void {
+  const accessSet = resolveUserAccessSet(userId);
+  const index = accessSet.indexOf(externalDocId);
+  if (index !== -1) {
+    accessSet.splice(index, 1);
+  }
+}
+
+/**
  * Browse the document catalog, filtered server-side to ONLY documents
  * (a) in the requesting user's own delegated access set AND (b) whose name
  * matches `searchQuery` (case-insensitive substring, empty query matches

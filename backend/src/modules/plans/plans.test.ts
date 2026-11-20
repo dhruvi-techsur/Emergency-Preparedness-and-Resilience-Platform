@@ -4,6 +4,7 @@ import { app } from '../../server.js';
 import { pool, query } from '../../db/client.js';
 import { mintSessionToken } from '../auth-org/session.js';
 import { syncRolePermissionsToOpa } from '../auth-org/opa-client.js';
+import { simulateDocumentAccessRevocation } from '../integration-gateway/document-adapter.js';
 
 // Integration test against the real compose stack (Postgres + OPA) — same
 // pattern as 03-01's tasks.test.ts / 03-04's resource-requests.test.ts.
@@ -355,6 +356,69 @@ describe('plans module — Draft -> Review -> Approved workflow, self-approval g
         .send();
       expect(secondAckRes.status).toBe(409);
       expect(secondAckRes.body.error_code).toBe('DOCUMENT_LINK_NOT_FLAGGED');
+    });
+  });
+
+  // REVIEW.md W1 fix: document-adapter.ts's simulateDocumentAccessRevocation
+  // is the deterministic, test-reachable trigger for a source-side
+  // permission downgrade — this test drives the REAL detection path (GET
+  // /api/v1/plans/{id} -> fetchPlanDocumentLinks -> per-request
+  // revalidateDocumentLinkPermission -> checkAndPersistPermission's
+  // `stillGranted === false` branch), proving permission_status: 'revoked'
+  // is genuinely reachable end-to-end, not dead code.
+  describe('document_links permission revocation (F17)', () => {
+    it("a link_live row whose importing user's access to the document is revoked shows permission_status: 'revoked' on the next GET", async () => {
+      const createRes = await request(app.server)
+        .post('/api/v1/plans')
+        .set('Authorization', `Bearer ${authorToken}`)
+        .send({
+          name: `Permission Revocation Test ${Date.now()}`,
+          type: 'SOP',
+          jurisdiction_id: testJurisdictionId,
+          content_sections: [{ heading: 'Section A', body: 'Body text' }],
+        });
+      expect(createRes.status).toBe(201);
+      const planId = createRes.body.id;
+
+      // Link DOC-EOP-001 as the author via the REAL link route — this
+      // lazily seeds authorId's simulated access set with the fixed
+      // GRANTED_DOCUMENT_IDS split (same seeding trigger browseDocuments/
+      // importDocument use).
+      const linkRes = await request(app.server)
+        .post('/api/v1/integrations/documents/DOC-EOP-001/link')
+        .set('Authorization', `Bearer ${authorToken}`)
+        .send({ plan_id: planId });
+      expect(linkRes.status).toBe(201);
+      const linkId = linkRes.body.id;
+
+      // Sanity: before revocation, the row reads as 'valid'.
+      const getBeforeRes = await request(app.server)
+        .get(`/api/v1/plans/${planId}`)
+        .set('Authorization', `Bearer ${authorToken}`);
+      const linkRowBefore = getBeforeRes.body.document_links.find(
+        (d: { id: string }) => d.id === linkId,
+      );
+      expect(linkRowBefore.permission_status).toBe('valid');
+
+      // Simulate the source-side permission downgrade.
+      simulateDocumentAccessRevocation(authorId, 'DOC-EOP-001');
+
+      // The next GET re-validates synchronously (F17's "at minimum, before
+      // each render" rule) and must now show 'revoked'.
+      const getAfterRes = await request(app.server)
+        .get(`/api/v1/plans/${planId}`)
+        .set('Authorization', `Bearer ${authorToken}`);
+      expect(getAfterRes.status).toBe(200);
+      const linkRowAfter = getAfterRes.body.document_links.find(
+        (d: { id: string }) => d.id === linkId,
+      );
+      expect(linkRowAfter.permission_status).toBe('revoked');
+
+      const persistedRows = await query<{ permission_status: string }>(
+        `SELECT permission_status FROM document_links WHERE id = $1`,
+        [linkId],
+      );
+      expect(persistedRows[0].permission_status).toBe('revoked');
     });
   });
 });
