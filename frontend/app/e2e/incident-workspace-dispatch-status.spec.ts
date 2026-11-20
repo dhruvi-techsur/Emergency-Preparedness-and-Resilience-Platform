@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { Pool } from 'pg';
 import { signInAsIncidentCommander, signInThroughKeycloak } from './helpers/sign-in';
-import { fetchCadDispatchEvents } from '../../../backend/src/modules/integration-gateway/cad-adapter';
 
 /**
  * F15 (Plan 07-04) — frontend half of the read-only CAD/911 dispatch-status
@@ -114,15 +113,31 @@ test.describe('Incident Workspace — Dispatch status (F15)', () => {
   });
 
   test('4. Dispatch status Card shows last-known data (not an error) after a forced CAD outage', async ({ page }) => {
-    // Force the deterministic CAD adapter outage path directly against the
-    // raw adapter function (same pattern operating-picture.spec.ts
-    // establishes for the GIS adapter's own forced-failure proof) — this
-    // only exercises fetchCadDispatchEvents's own failure branch, it never
-    // calls runCadIngestion(), so the seed-populated cad_dispatch_events
-    // row for UAT-ESCALATE-READY is untouched by this call.
-    await expect(fetchCadDispatchEvents(undefined, true)).rejects.toThrow(/CAD_FEED_UNREACHABLE/);
-
     await signInAsIncidentCommander(page);
+
+    // Force the deterministic CAD adapter outage path via the backend's own
+    // dedicated test-injection route (GET /api/v1/_test/cad-forced-outage),
+    // which calls fetchCadDispatchEvents(undefined, true) SERVER-SIDE inside
+    // the already-running backend process — never by importing backend
+    // source into this Playwright test runner's own Node process (which has
+    // no DATABASE_URL set, unlike the real backend server). Same
+    // fetch-through-the-page + sessionStorage-token pattern every other e2e
+    // spec in this suite uses for direct API calls (see
+    // operating-picture-resource-markers.spec.ts's apiGetViaPage). This only
+    // exercises fetchCadDispatchEvents's own failure branch, it never calls
+    // runCadIngestion(), so the seed-populated cad_dispatch_events row for
+    // UAT-ESCALATE-READY is untouched by this call.
+    const outageResult = await page.evaluate(async () => {
+      const token = window.sessionStorage.getItem('epmp_session_token');
+      const res = await fetch('/api/v1/_test/cad-forced-outage', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      return { status: res.status, body: await res.json() };
+    });
+    expect(outageResult.status).toBe(200);
+    expect(outageResult.body.forced).toBe(true);
+    expect(outageResult.body.message).toMatch(/CAD_FEED_UNREACHABLE/);
+
     const incidentId = await findCadLinkedIncidentId();
     await page.goto(`/incidents/${incidentId}`);
 
