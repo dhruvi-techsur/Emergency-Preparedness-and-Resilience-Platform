@@ -43,4 +43,8 @@ export default async function integrationGatewayRoutes(app: FastifyInstance) {
   // callback/health routes — appended per this file's existing
   // append-only registration convention.
   await app.register(notificationProviderRoutes);
+  // F16-roster (Plan 09-02): HR/IAM personnel-roster read-sync routes —
+  // strictly read-only (personnel-list, health), appended per this file's
+  // existing append-only registration convention.
+  await app.register(hrisRosterRoutes);
 }
