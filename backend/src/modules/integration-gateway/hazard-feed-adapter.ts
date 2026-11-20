@@ -254,6 +254,18 @@ export async function hazardFeedRoutes(app: FastifyInstance) {
         });
       }
 
+      // Existence guard — same fetchIncidentForMutation-style convention as
+      // incidents.ts: confirm the row exists before mutating, so a
+      // mistyped/stale/already-deleted id doesn't silently 204 with no row
+      // actually changed.
+      const existing = await query<{ id: string }>(`SELECT id FROM hazard_layers WHERE id = $1`, [id]);
+      if (existing.length === 0) {
+        return reply.code(404).send({
+          error_code: 'HAZARD_LAYER_NOT_FOUND',
+          message: 'This hazard layer no longer exists.',
+        });
+      }
+
       await query(
         `UPDATE hazard_layers SET verified = true, verified_by = $1, verified_at = now() WHERE id = $2`,
         [verified_by, id],
