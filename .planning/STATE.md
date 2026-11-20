@@ -2,15 +2,16 @@
 pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-last_updated: "2026-11-19T12:04:29.185Z"
-last_activity: "2026-11-19 — Phase 5 complete"
+status: Phase 6 complete — all 13 plans shipped, ready for re-verification
+stopped_at: Completed 06-13-PLAN.md
+last_updated: "2026-11-19T23:38:53.521Z"
+last_activity: 2026-11-19 -- Plan 06-13 complete (see 06-13-SUMMARY.md for full detail). All Phase 6 gap-closure plans (06-11, 06-12, 06-13) are now done.
 progress:
   total_phases: 6
-  completed_phases: 5
-  total_plans: 58
-  completed_plans: 48
-  percent: 83
+  completed_phases: 6
+  total_plans: 61
+  completed_plans: 61
+  percent: 100
 ---
 
 # Project State
@@ -20,15 +21,40 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 5 — Mobile Field Operations — COMPLETE (all 6 plans shipped, incl. gap-closure plan 05-06). Every F6 screen is built, routed, and reachable via a role-driven bottom-nav; all 4 phase success criteria verified end-to-end against the real backend; both UAT gaps from Phase 5's review round (ref 8 blocker, ref 1 major) are closed. Ready for Phase 6.
+**Current focus:** Phase 6 — Persona Dashboards & AI Assistance — core 10 plans shipped; all 3 gap-closure plans added post-UAT/GATE (06-11, 06-12, 06-13 all now done). Phase 6 is ready to re-enter verification. Plan 06-01 shipped the F9 AI-governance substrate (schema + shared assertAiOriginApproved guard) and its first real governed consumer (ICS Form Editor draft/approve); Plan 06-05 shipped the AIDraft design-system component; Plan 06-02 populated role_landing_config and shipped GET /api/v1/me/landing-config; Plan 06-03 shipped the AI-drafts request/approve/discard backend lifecycle; Plan 06-04 shipped the Signal Triage Queue backend (real clustering + promote/dismiss); Plan 06-06 shipped PER-01's EOC Dashboard and PER-03's My Work Dashboard, plus RouteGuard's reusable landing-config redirect mechanism; Plan 06-07 shipped PER-04's bottom-bar-only AppShell override and PER-05's dual-facet (Admin/Executive) experience, completing F18's all-5-personas success criterion; Plan 06-08 shipped the ICS Form Editor, the first real reachable consumer of 06-01's ics_forms backend wired to 06-05's AIDraft component, proving F9's governance cascade end-to-end via Playwright including a direct-API-bypass rejection proof; Plan 06-09 shipped the Signal Triage Queue/Detail screens, the frontend consumer of 06-04's signal-clustering backend, proving success criterion 5's user-facing half (Promote only ever navigates to the pre-filled Create Incident form); Plan 06-10 (the phase's terminal integration-proof plan, mirroring 03-08/04-07) shipped one Playwright suite proving all 5 personas end-to-end in a single run, closed the PER-02 landing-config redirect gap no individual plan re-tested, and proved the incidents:approve RBAC gate rejects a non-holder's direct API bypass with 403. Plan 06-11 (gap closure) extended seed.ts's hazard-feed fixture pool so signal-triage.spec.ts survives repeated full-suite re-runs, closing 06-GATE.md's browser_suite failure #3. Phase 5 (Mobile Field Operations) is COMPLETE (all 6 plans shipped, incl. gap-closure plan 05-06). 06-12 and 06-13 gap-closure plans remain before Phase 6/the milestone can re-enter verification.
 
 ## Current Position
 
-Phase: 5 of 6 (Mobile Field Operations) — COMPLETE
+Phase: 6 of 6 (Persona Dashboards & AI Assistance) — all 13 plans complete, ready for verification
 
-Plan: 6 of 6 complete in current phase (05-01, 05-02, 05-05, 05-03, 05-04, 05-06 all done)
-Status: Phase 5 (Mobile Field Operations) complete — gap closure plan 05-06 shipped, both UAT gaps (ref 8 blocker, ref 1 major) closed. Ready for Phase 6.
-Last activity: 2026-11-19 — Plan 05-06 complete (see 05-06-SUMMARY.md for full detail), a gap-closure plan for Phase 5's UAT round. Closed UAT-8 (blocker): AppShell.tsx's mobile bottom-bar now selects the Field nav group specifically by a new stable nav_groups[].id (backend, routes.ts), not by flattening+slicing the whole nav array — a field_responder's broad Phase 1-4 view-only grants no longer push the wrong 4 items into the bottom bar. Closed UAT-1 (major): the Field group's 4th SideNav item relabeled 'Profile' -> 'Field home', making the combined tasks+Report-button landing screen discoverable. F-05-01 security finding re-confirmed fixed (16/16 tests), untouched by this plan. Full backend suite (87/87), design-system suite, and all 3 project builds (backend/frontend-app/design-system) green; this plan's own new Playwright spec (2/2) plus app-shell.spec.ts (4/4) and field-mobile-report.spec.ts (1/1) regression-pass. One pre-existing, unrelated test-isolation flake in field-mobile-sync-conflict.spec.ts (jurisdiction-ordering drift from other phases' accumulated test fixtures) logged to deferred-items.md, confirmed unrelated to this plan's changes.
+Plan: 13 of 13 complete in current phase (06-01 through 06-13 all done)
+Status: Plan 06-13 (gap closure, wave 1, depends_on none) closed UAT gap ref 8 (06-UAT.md, cosmetic): the Signal Triage Queue's Dismiss confirmation Modal's multiline Reason TextField visually overflowed the Modal's own right edge. Direct measurement during UAT diagnosis found the true root cause was NOT specific to this one Modal — it was a systemic, app-wide CSS integration gap: `tokens.css`'s `box-sizing: border-box` reset is scoped exclusively to descendants of an element carrying the literal class `.ep` (`.ep, .ep * { box-sizing: border-box }`), and the design system's own test harnesses always wrap fixtures in `<div className="ep">` to activate it — but `AppShell.tsx`'s root (the single outermost element wrapping every page in the app) only ever carried the unrelated `ep-shell` layout class, never `.ep` itself. Fixed with a single-class addition (`className="ep ep-shell"`), activating the reset app-wide with zero changes to `Modal.css`/`TextField.css` or any other design-system stylesheet — resolving not just the one reported overflow but the entire systemic class of Modal+multiline-TextField width miscalculations the gap's own diagnosis identified across the codebase (RecipientGroups, MessageTemplates, ComposeNotification, SignalDetail, ResourceRequestDetail, ReviewPlanModal, RecordAuthority). Added a Playwright `boundingBox()` geometry regression guard to `signal-triage.spec.ts`'s existing Dismiss Modal test plus a new standalone test 2b at a 390px mobile viewport (5/5 passing). Regression sample of 4 other Modal+multiline-TextField spec files (24 tests) and the app-shell suite (4 tests) all pass unaffected. `tsc --noEmit` and `npm run build` both clean. Zero deviations from plan. All three gap-closure plans (06-11, 06-12, 06-13) for this phase are now complete — Phase 6 (and the v1.0 milestone's final phase) is ready to re-enter verification.
+Last activity: 2026-11-19 -- Plan 06-13 complete (see 06-13-SUMMARY.md for full detail). All Phase 6 gap-closure plans (06-11, 06-12, 06-13) are now done.
+
+Plan 06-12 (prior, this phase): see 06-12-SUMMARY.md for full detail. Gap-closure plan: closed UAT gap ref 1 (major) by removing the stale, self-contradictory "ships in a later phase" hint from EocDashboard.tsx's Open tasks/Pending resource requests Stat tiles, which were already rendering real jurisdiction-scoped nonzero counts from dashboard.ts's genuine COUNT(*) queries. New regression guard added to persona-dashboards.spec.ts.
+
+Plan 06-10 (prior, this phase): see 06-10-SUMMARY.md for full detail. The phase's terminal integration-proof plan (Wave 9, depends_on 06-01+06-06+06-07+06-08+06-09) shipped persona-dashboards-integration.spec.ts (8 tests), a single Playwright suite signing in as all 5 personas in sequence — mirroring Phase 3's 03-08 and Phase 4's 04-07 precedent exactly. Proves PER-01 through PER-05 each land on their own distinct route with SideNav/bottom-bar matching a fresh server-side nav-config fetch; explicitly closes the one gap no individual Phase 6 plan re-tested (PER-02/incident_commander's Phase-2-era landing page now flows through the SAME landing-config mechanism 06-06/06-07 built for the other 4 personas); sanity-rechecks 06-08/06-09's AI-governance screens remain reachable; and proves the incidents:approve RBAC gate rejects planning_logistics_chief's direct API bypass attempt with a real 403, not merely a hidden button. One genuine, pre-existing, non-blocking finding surfaced and documented (not fixed, per this plan's own zero-new-code scope and threat-model transfer rule): PER-01/PER-02 render byte-identical SideNav label sets because GET /api/v1/me/nav-config derives nav items from feature-level permission presence, never per-action — the test's cross-persona uniqueness check was adjusted to assert distinct dashboard IDENTITY (route+nav combined) instead, with the known overlap asserted directly rather than masked. One Rule-1 test-only fix: switching Keycloak identities within a single test requires clearing both sessionStorage's epmp_session_token AND Keycloak's own SSO cookie. Full backend suite (19 files, 108 tests) green with zero regression; tsc --noEmit (backend + frontend/app) and both builds (backend + frontend/app) clean; persona-dashboards.spec.ts (4/4), persona-dashboards-per04-per05.spec.ts (5/5), and app-shell.spec.ts (4/4) regression-pass unaffected.
+
+Plan 06-09 (prior, this phase): see 06-09-SUMMARY.md for full detail. Shipped the Signal Triage Queue (SignalTriageQueue.tsx, /signals) and Signal Detail (SignalDetail.tsx, /signals/:id) — the frontend consumer of 06-04's signal-clustering backend. Confidence renders as qualitative `${label} — ${reason}` text only, never a numeric/percentage indicator. Promote calls only the signals-triage /promote endpoint (which itself writes no incidents row) then navigates to the existing Create Incident form with the backend's pre-fill payload as router state. Dismiss opens a Modal whose confirm button is disabled until a non-empty reason is typed. Signal Detail renders one real Provenance chip per clustered source event via a new additive source_events field on GET /api/v1/signals. One Rule-1 bugfix: 06-04's promote endpoint derives free-text hazard vocabulary that isn't a member of incidents.type's own CHECK constraint — CreateIncident.tsx now defensively maps any unrecognized pre-fill type to 'Other'. New signal-triage.spec.ts (4/4).
+
+Plan 06-08 (prior, this phase): see 06-08-SUMMARY.md for full detail. Shipped the ICS Form Editor (ICS-201), the frontend half of 06-01's ics_forms backend, embedding 06-05's AIDraft component exactly per the mockup: "Draft with AI" never touches the narrative field's own state, the AIDraft panel renders as a separate sibling directly below the field, and a single AIDraft "Approve" click cascades through 06-03's ai-drafts approve, an ics_forms create, and 06-01's ics-forms-level approve (the Timeline write) — all in that one user action. New ics-form-aidraft.spec.ts proves the full flow end-to-end, including a direct-API-bypass rejection proof.
+
+Plan 06-07 (prior, this phase): see 06-07-SUMMARY.md for full detail. Shipped PER-04's AppShell-level bottom-bar-only override (field_responder never renders the desktop SideNav rail, at any viewport width) and PER-05's explicit FacetToggle (Admin/Executive, defaults fresh to 'admin' on every mount, never persisted across reload) plus the new ExecutiveDashboard.tsx at /executive (exactly 3 hardcoded display-scale KPIs, zero charts). Completed F18's all-5-personas and executive-briefing success criteria across this phase's plans. New persona-dashboards-per04-per05.spec.ts (5 tests).
+
+Plan 06-06 (prior, this phase): see 06-06-SUMMARY.md for full detail. New EocDashboard.tsx (PER-01, /dashboard) and MyWorkDashboard.tsx (PER-03, /my-work) -- the phase's two genuinely new persona landing pages at that point. RouteGuard's new one-time landing-config redirect is the general mechanism 06-07 reused. nav-config's Monitor group gained a RBAC-gated Signals item. Reused Phase 3's existing eoc_director/planning_logistics_chief Keycloak identities rather than seeding duplicates (Rule-1 fix against a stale plan assumption). New persona-dashboards.spec.ts (4/4 passing) proves both landings end-to-end. Full backend suite (108/108), both tsc --noEmit checks, and both builds (backend + frontend/app) all green with zero regression.
+
+Plan 06-04 (prior, this phase): see 06-04-SUMMARY.md for full detail. Shipped the Signal Triage Queue backend: clusterHazardFeedEvents() groups unclustered hazard_feed_events by a real (type, 0.5-degree grid cell) rule via one SQL GROUP BY query -- not a 1:1 passthrough -- producing qualitative High/Medium confidence labels with stated reasons; GET /api/v1/signals (status/confidence-filtered list); POST .../promote returns SignalPromotePrefill only, with the route file containing zero incidents-table write statements anywhere (a structural, not just runtime, guarantee it can never create an incident); POST .../dismiss (422 on empty/missing reason). seed.ts extended with sample NOAA/NWS/USGS hazard-feed events and a clusterHazardFeedEvents() call in main(), verified idempotent.
+
+Plan 06-03 (prior, this phase): see 06-03-SUMMARY.md for full detail. Shipped the F9 [Draft with AI] request/approve/discard lifecycle: POST /api/v1/ai-drafts (content-aware stub), POST .../approve (named-approver-only), POST .../discard (soft UPDATE) -- all gated on a new ai_assist permission seeded for PER-01/02/03 only. Resolved a real cross-phase route collision with Phase 4's 04-01 by relocating, not duplicating, the implementation.
+
+Plan 06-02 (prior, this phase): see 06-02-SUMMARY.md for full detail. backend/scripts/seed.ts extended with 5 idempotent role_landing_config rows (PER-01..PER-05), re-asserted via UPDATE on every run. New backend/src/modules/auth-org/landing-config.ts resolves GET /api/v1/me/landing-config by role_id only (no param accepted, closing the cross-role-read threat structurally). One Rule-1 bugfix: JSON.stringify(null) writes a JSONB scalar null (not SQL NULL), which broke PER-05's chk_bottom_bar_max CHECK — fixed by binding the real JS null for the nullable mobile_bottom_bar_items column. New landing-config.test.ts (4 it blocks) proves all 5 personas resolve distinct routes, PER-04's 4-item bottom-bar cap, PER-05's admin-only nav_groups, and the unmapped-role fallback end-to-end. Full backend suite (17 files, 98 tests) green with zero regression; tsc --noEmit and npm run build both clean.
+
+Plan 06-01 (prior, this phase): see 06-01-SUMMARY.md for full detail. Migration renumbered 1700000000010 -> 1700000000011 (Phase 5's 05-01 has since claimed 1700000000010 — free when 06-01-PLAN.md was authored, not free at execution time). ai_drafts intentionally NOT re-created — confirmed via direct inspection that Phase 4's 04-01 had already landed the identical table and guard, exactly the cross-phase collision this plan's own PLAN.md predicted and instructed resolving via reuse. dashboard.ts computes REAL open_tasks/pending_resource_requests queries (Phase 3's tables genuinely exist, contradicting the plan's stale hardcoded-zero assumption); notifications_pending_ack stays a documented zero (no per-recipient user_id column in this schema). Full backend suite (16 files, 94 tests) green with zero regression; tsc --noEmit and npm run build both clean.
+
+Plan 06-05 (prior, this phase): see 06-05-SUMMARY.md. Built AIDraft.tsx (persistent "Not issued" Badge, Provenance-chip rendering, 3-action Discard/Edit/Approve footer) + AIDraft.css + public index.ts export; extended the existing product-patterns.test.tsx with a new AIDraft describe block (5 tests) alongside its pre-existing SyncStatus coverage (8 tests), zero regression. Design-system full suite (65/65), tsc --noEmit (design-system + frontend/app), and design-system's vite build all green.
+
+Prior (Phase 5, complete): gap closure plan 05-06 shipped, both UAT gaps (ref 8 blocker, ref 1 major) are closed.
+Prior activity: 2026-11-19 — Plan 05-06 complete (see 05-06-SUMMARY.md for full detail), a gap-closure plan for Phase 5's UAT round. Closed UAT-8 (blocker): AppShell.tsx's mobile bottom-bar now selects the Field nav group specifically by a new stable nav_groups[].id (backend, routes.ts), not by flattening+slicing the whole nav array — a field_responder's broad Phase 1-4 view-only grants no longer push the wrong 4 items into the bottom bar. Closed UAT-1 (major): the Field group's 4th SideNav item relabeled 'Profile' -> 'Field home', making the combined tasks+Report-button landing screen discoverable. F-05-01 security finding re-confirmed fixed (16/16 tests), untouched by this plan. Full backend suite (87/87), design-system suite, and all 3 project builds (backend/frontend-app/design-system) green; this plan's own new Playwright spec (2/2) plus app-shell.spec.ts (4/4) and field-mobile-report.spec.ts (1/1) regression-pass. One pre-existing, unrelated test-isolation flake in field-mobile-sync-conflict.spec.ts (jurisdiction-ordering drift from other phases' accumulated test fixtures) logged to deferred-items.md, confirmed unrelated to this plan's changes.
 
 Plan 05-04 (prior): closed out the phase's original scope, wiring all 6 field-mobile routes + a role-driven bottom-nav and proving sync-conflict resolution end-to-end. Shipped Queued Submissions View (/field/queued), Sync Conflict Resolution (/field/conflicts/:id), and Field Map (/field/map); wired all 6 field-mobile routes into main.tsx and a new role-driven 4-item bottom-nav group into GET /api/v1/me/nav-config. A new Playwright spec seeds a real conflict via the production sync-batch endpoint and proves the full detect-surface-resolve-commit chain with no default button selection, resolution committed server-side.
 
@@ -40,15 +66,15 @@ Plan 05-02 (prior): shipped the client-side half of F6 — SyncStatus design-sys
 
 Plan 05-01 (prior, backend): shipped the F6 backend data layer and API surface — field_reports/field_report_photos/sync_conflicts tables plus idempotent-submit/ordered-batch-sync/photo-upload/conflict-resolve endpoints, every incident-touching write wrapped in the shared withTimelineTransaction invariant. Integration test (4 cases) + full backend suite (15 files, 74 tests) green with zero regression; tsc --noEmit and backend build both clean.
 
-Progress: [████████░░] 84%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 37
+- Total plans completed: 40
 - Average duration: 24 min
-- Total execution time: 13.9 hours
+- Total execution time: 14.6 hours
 
 **By Phase:**
 
@@ -109,6 +135,19 @@ Progress: [████████░░] 84%
 | Phase 05 P03 | 35 min | 3 tasks | 12 files |
 | Phase 05 P04 | 55 min | 3 tasks | 11 files |
 | Phase 05 P06 | 12 min | 3 tasks | 6 files |
+| Phase 06 P05 | 6 min | 2 tasks | 4 files |
+| Phase 06 P01 | 25 min | 3 tasks | 7 files |
+| Phase 06 P02 | 18 min | 3 tasks | 4 files |
+| Phase 06 P03 | 28 min | 3 tasks | 7 files |
+| Phase 06 P04 | 25 min | 3 tasks | 5 files |
+| Phase 06 P06 | 35 min | 3 tasks | 8 files |
+| Phase 06 P07 | 55 min | 3 tasks | 8 files |
+| Phase 06 P08 | 8 min | 3 tasks | 5 files |
+| Phase 06 P09 | 9 min | 3 tasks | 7 files |
+| Phase 06 P10 | 35 min | 1 tasks | 1 files |
+| Phase 06 P11 | 12 min | 1 tasks | 1 files |
+| Phase 06 P12 | 12 min | 2 tasks | 2 files |
+| Phase 06 P13 | 10 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -240,6 +279,37 @@ Recent decisions affecting current work:
 - [Phase 05-04]: AppShell.tsx required no code change — confirmed (not assumed) its isBelowBpMd branch already derives mobileBottomBarItems generically via navGroups.flatMap(g => g.items)
 - [Phase 05-06]: nav_groups[].id selects the mobile bottom-bar's source group — not array position or label text — so a field_responder's broad Phase 1-4 view-only grants (which populate 5 groups before Field's own items) can no longer push the wrong 4 items into the bottom bar regardless of future emission-order or label-wording changes (closes UAT-8, reverses 05-04's own flatMap-based derivation which was the actual root cause)
 - [Phase 05-06]: Field group's 4th item relabeled 'Profile' -> 'Field home' (not renamed id/href) — closes UAT-1's discoverability gap with zero blast radius to anything keying off the existing id/href
+- [Phase 06-05]: AIDraft has NO onChange-into-target-field prop — onApprove(finalText)/onEdit/onDiscard are the complete callback surface, and onApprove hands text back to the CALLER rather than writing anywhere itself, making "never appears pre-inserted into the record" true by construction rather than by caller convention
+- [Phase 06-05]: Extended the existing product-patterns.test.tsx (already holding SyncStatus coverage) with a new AIDraft describe block rather than overwriting the file, preserving 8 pre-existing passing tests with zero regression
+- [Phase 06-01]: ai-assist/governance.ts re-exports the EXISTING assertAiOriginApproved/AiOriginNotApprovedError from comms-reporting/notifications.ts rather than redefining it — Phase 4's 04-01 had already landed both the ai_drafts table and the guard, the exact cross-phase collision this plan's own PLAN.md predicted and instructed resolving via reuse
+- [Phase 06-01]: Migration renumbered 1700000000010 -> 1700000000011 (Phase 5's 05-01 has since claimed 1700000000010, which was free when 06-01-PLAN.md was authored) — same renumbering precedent 04-01/04-02/05-01 each independently established
+- [Phase 06-01]: dashboard.ts's open_tasks/pending_resource_requests compute REAL COUNT(*) queries rather than the plan's suggested hardcoded zeros — Phase 3's tasks/resource_requests tables genuinely exist in this codebase; notifications_pending_ack stays a documented zero (no per-recipient user_id column to count against)
+- [Phase 06-03]: Relocated (not duplicated) ai-drafts request/approve/discard routes out of comms-reporting/notifications.ts into the new ai-assist/ai-drafts.ts module — Phase 4's 04-01 had already registered the identical three /api/v1/ai-drafts* paths inline, and registering a second copy would throw FST_ERR_DUPLICATE_ROUTE at Fastify boot; extends the same "later phase detects and reuses" precedent 06-01 established for the ai_drafts table/guard to the route layer
+- [Phase 06-03]: POST /api/v1/ai-drafts success status corrected from 04-01's 201 to 200, matching TechArch 03c-api-comms-reporting.md's literal AiDraftResponse row ("200 AIDRAFT_NO_SOURCE (flagged)") — the no-source case rides inside a 200 body, never a distinct HTTP status
+- [Phase 06-03]: ai_assist feature-permission seeded ONLY for incident_commander/eoc_director/planning_logistics_chief (PER-02/01/03) — field_responder/secops_admin deliberately excluded (no AIDraft touchpoint in scope / platform-admin role, not content-drafting)
+- [Phase 06-01]: seed.ts's incidentsFullAccessRoles grant now includes 'approve' for incident_commander/eoc_director, with an idempotent re-assert UPDATE (findOrInsert alone never widens an already-seeded row) — the first approve-gated incidents action in this codebase
+- [Phase 06-02]: PER-05 (secops_admin)'s role_landing_config row models ONLY the admin (default) facet's nav_groups — role_id is UNIQUE per the table's own constraint, so S18.5's distinct executive-facet SideNav has no row to live in; 06-07's ExecutiveDashboard hardcodes it client-side as a documented, budget-scoped simplification
+- [Phase 06-02]: PER-02's default_landing_route is /incidents (the list), not a resolved "currently active incident" id, per S18.2's own "Incident List if none is active" wording — 06-05's frontend wraps the active-incident-redirect logic client-side using data it already fetches
+- [Phase 06-02]: GET /api/v1/me/landing-config accepts no parameters and resolves exclusively off req.epmpUser.role_id — structurally impossible for a caller to request another role's landing config, closing T-06-04 by construction rather than by convention
+- [Phase 06-02]: Fixed a real bug discovered in this plan's own seed additions: JSON.stringify(null) writes a JSONB scalar null (not SQL NULL) for a nullable JSONB column, breaking chk_bottom_bar_max's IS NULL branch — the fix binds the actual JS null as the query parameter instead, a pattern any future nullable-JSONB seed write in this file should follow
+- [Phase 06-04]: clusterHazardFeedEvents() hosted in ai-assist (not comms-reporting, TechArch's literal module assignment) since comms-reporting has zero executed code in this codebase — documented inline as a relocatable, contract-preserving placement
+- [Phase 06-04]: Signal triage routes reuse 06-03's ai_assist feature-permission rather than inventing a new permission string — signal triage and AIDraft are both F9 sub-features with no documented narrower split
+- [Phase 06-06]: Reused 03-05's existing eocdirector@epmp.local/planner@epmp.local Keycloak identities instead of seeding new ones (plan's instruction was based on a stale assumption that no such identities existed)
+- [Phase 06-06]: RouteGuard's landing-config redirect re-checks a live pathname ref at async resolution time (not just at effect-start) to avoid overriding a user's own in-flight navigation
+- [Phase 06-07]: AppShell forcedBottomBar override: PER-04 renders the bottom-bar SideNav variant at every viewport width via a persona_id check layered onto the existing viewport-driven branch, not a replacement of it
+- [Phase 06-07]: secops_admin granted view-only incidents role_permissions -- the only role reaching the new ExecutiveDashboard needed it to avoid a 403 on its own landing view
+- [Phase 06-07]: Did not build a second FieldHome.tsx at a new path -- Phase 5's own field-mobile/FieldHome.tsx already satisfies S18.4's exact contract at the same /field route
+- [Phase 06-08]: ics_forms has no PATCH endpoint (06-01's own scope) -- each narrative edit after the first create re-POSTs a new ics_forms row rather than updating in place, a documented Phase-6 simplification
+- [Phase 06-08]: "Approve form" button covers only the manual-no-draft path -- a single click of AIDraft's own Approve already completes the full ai-drafts+ics-forms cascade, so this is never a required second click
+- [Phase 06-08]: A fresh page visit never auto-creates an ics_forms row -- POST only fires on first explicit save (AIDraft's Approve cascade or the manual "Save draft" button), avoiding empty draft rows from mere navigation
+- [Phase 06-09]: Extended GET /api/v1/signals with a new additive source_events field (per-event source+occurred_at) rather than adding a dedicated single-id signal route -- the prior source_feeds aggregate can't distinguish individual clustered events sharing a feed name, which Signal Detail's one-Provenance-chip-per-event requirement needs
+- [Phase 06-09]: Signal Detail fetches the full signals list and filters client-side by id -- 06-04 documented no single-id GET route as in scope, and this plan's own fallback note covers exactly this case
+- [Phase 06-09]: Provenance verified/confidence per source-event chip is a documented derived heuristic (Low confidence + exactly 1 contributing source -> unverified), not a literal column read -- signal_source_events has no verified boolean of its own
+- [Phase 06-09]: CreateIncident.tsx's pre-fill type_suggestion is defensively mapped through resolveTypeSuggestion() to the form's existing IncidentType enum (falling back to 'Other') -- 06-04's promote endpoint derives free-text hazard vocabulary (e.g. "Earthquake Advisory") that is not itself a member of incidents.type's own CHECK constraint, and submitting it unedited would 500 on the DB constraint
+- [Phase 06-10]: Step 6's cross-persona uniqueness check asserts distinct dashboard identity (route + nav combined), not nav-label uniqueness alone -- PER-01/PER-02 render byte-identical SideNav label sets by a real, pre-existing, cross-phase nav-config design (feature-presence derivation, never per-action), documented as a transferred finding rather than fixed in this zero-new-code integration plan — Changing routes.ts nav-config derivation to be action-aware would touch a route 5+ phases of passing tests depend on; this plan's own threat model (T-06-20) marks such findings as transfer-ownership to the responsible earlier plan
+- [Phase 06-10]: Switching Keycloak-SSO identities within a single test requires clearing BOTH sessionStorage's epmp_session_token AND context().clearCookies() -- every other multi-identity spec in this codebase switches across separate test() calls with a fresh context instead, so this exact sequence had never been needed before this plan's single-test two-identity RBAC proof
+- [Phase 06-13]: Fixed the systemic missing-.ep-class root cause on AppShell.tsx's shell root rather than patching individual Modal.css/TextField.css stylesheets — The design system's own test harnesses already wrap fixtures in .ep to activate tokens.css's box-sizing:border-box reset; the real app's shell root never did. A one-class fix at this integration boundary resolves the entire systemic class of Modal+multiline-TextField overflow defects, not just the one reported instance.
+- [Phase 06-12]: Stat tiles carry a hint prop ONLY when the value is a genuine, documented structural limitation -- never alongside a real, correct count — EocDashboard.tsx's Open tasks/Pending resource requests tiles were showing real nonzero jurisdiction-scoped values alongside a false 'ships in a later phase' hint, directly contradicting F0's data-provenance rule; removed to match the file's own already-correct active_incidents precedent
 
 ### Pending Todos
 
@@ -251,6 +321,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-19T10:58:36.000Z
-Stopped at: Completed 05-06-PLAN.md
+Last session: 2026-11-19T23:34:25Z
+Stopped at: Completed 06-13-PLAN.md
 Resume file: None

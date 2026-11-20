@@ -1,0 +1,46 @@
+/*
+ * AIDraft (PRODUCT PATTERNS) — token-only styling.
+ *
+ * Visually distinguishes the AI-draft panel from the surrounding form —
+ * per the mockup's "below the field, never inside it" placement — via a
+ * subtle background fill rather than relying on the "Not issued" Badge
+ * alone to carry that distinction.
+ */
+
+.ep-ai-draft {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: var(--border-1) solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+}
+
+.ep-ai-draft__header {
+  display: flex;
+  align-items: center;
+}
+
+.ep-ai-draft__body {
+  display: flex;
+  flex-direction: column;
+}
+
+.ep-ai-draft__text {
+  margin: 0;
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+
+.ep-ai-draft__sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.ep-ai-draft__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}

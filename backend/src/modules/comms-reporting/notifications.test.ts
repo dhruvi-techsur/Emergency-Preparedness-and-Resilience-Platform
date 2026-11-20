@@ -66,6 +66,15 @@ beforeAll(async () => {
   const grants: Array<[string, string, string[]]> = [
     [testRoleId, 'incidents', ['view', 'create', 'edit']],
     [testRoleId, 'notifications', ['view', 'create', 'approve']],
+    // 06-03: this suite's own "AI-governance gate" test below calls
+    // POST /api/v1/ai-drafts + .../approve, which 06-03 relocated out of
+    // this module into ai-assist/ai-drafts.ts, gated on the NEW
+    // ai_assist feature-permission (not notifications) — this test-local
+    // grant is what keeps that pre-existing test passing against the
+    // relocated route's real permission gate, mirroring the real
+    // ai_assist grant 06-03's seed.ts Task 2 gives incident_commander
+    // (this suite's testRoleId persona, PER-02) in production.
+    [testRoleId, 'ai_assist', ['view', 'create', 'approve', 'discard']],
     [noApproveRoleId, 'notifications', ['view', 'create']],
   ];
   for (const [roleId, feature, actions] of grants) {
@@ -228,7 +237,11 @@ describe('notifications module — audience gate, approver gate, AI-governance g
     expect(groupRes.status).toBe(201);
     const groupId = groupRes.body.id;
 
-    // Create an AI draft (stub endpoint) — NOT yet approved.
+    // Create an AI draft (stub endpoint) — NOT yet approved. 06-03
+    // relocated this route to ai-assist/ai-drafts.ts and changed its
+    // success status to 200 (TechArch 03c's literal AiDraftResponse row
+    // documents 200, not 201 — the "200 (flagged)"/sourced cases share
+    // one success status).
     const draftRes = await request(app.server)
       .post('/api/v1/ai-drafts')
       .set('Authorization', `Bearer ${approverToken}`)
@@ -238,7 +251,7 @@ describe('notifications module — audience gate, approver gate, AI-governance g
         context: 'River gauge exceeding flood stage near downtown.',
         requesting_user_id: approverId,
       });
-    expect(draftRes.status).toBe(201);
+    expect(draftRes.status).toBe(200);
     const draftId = draftRes.body.id;
 
     const composeRes = await request(app.server)

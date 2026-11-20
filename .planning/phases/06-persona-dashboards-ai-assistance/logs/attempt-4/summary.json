@@ -1,0 +1,20 @@
+{
+  "duration_secs": 3085.0,
+  "token_usage": {
+    "input": 70,
+    "output": 14065,
+    "total": 3664210,
+    "cache_read": 3302177,
+    "cache_write": 347898,
+    "cost": 1.6709703999999999
+  },
+  "model": "claude-sonnet-5",
+  "files_changed": [
+    ".planning/phases/06-persona-dashboards-ai-assistance/06-UAT.md"
+  ],
+  "verification_status": "passed",
+  "error_message": null,
+  "attempt_number": 4,
+  "created_at": "2026-11-20T00:22:53.969340+00:00",
+  "completed_at": "2026-11-20T01:14:19.728841717+00:00"
+}

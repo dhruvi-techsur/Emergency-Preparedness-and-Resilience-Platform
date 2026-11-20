@@ -1,0 +1,39 @@
+{
+  "duration_secs": 5294.0,
+  "token_usage": {
+    "input": 1110,
+    "output": 472828,
+    "total": 92334495,
+    "cache_read": 89159265,
+    "cache_write": 2701292,
+    "cost": 29.315583000000004
+  },
+  "model": "claude-sonnet-5",
+  "files_changed": [
+    ".planning/ROADMAP.md",
+    ".planning/STATE.md",
+    ".planning/phases/06-persona-dashboards-ai-assistance/06-11-PLAN.md",
+    ".planning/phases/06-persona-dashboards-ai-assistance/06-11-SUMMARY.md",
+    ".planning/phases/06-persona-dashboards-ai-assistance/06-12-PLAN.md",
+    ".planning/phases/06-persona-dashboards-ai-assistance/06-12-SUMMARY.md",
+    ".planning/phases/06-persona-dashboards-ai-assistance/06-13-PLAN.md",
+    ".planning/phases/06-persona-dashboards-ai-assistance/06-13-SUMMARY.md",
+    ".planning/phases/06-persona-dashboards-ai-assistance/06-GATE.md",
+    ".planning/phases/06-persona-dashboards-ai-assistance/06-REVIEW.md",
+    ".planning/phases/06-persona-dashboards-ai-assistance/06-SECURITY.md",
+    ".planning/phases/06-persona-dashboards-ai-assistance/06-VERIFICATION.md",
+    ".planning/phases/06-persona-dashboards-ai-assistance/logs/attempt-3/execution.md",
+    ".planning/phases/06-persona-dashboards-ai-assistance/logs/attempt-3/summary.json",
+    ".planning/phases/06-persona-dashboards-ai-assistance/logs/attempt-3/verification.md",
+    "backend/scripts/seed.ts",
+    "frontend/app/e2e/persona-dashboards.spec.ts",
+    "frontend/app/e2e/signal-triage.spec.ts",
+    "frontend/app/src/app-shell/AppShell.tsx",
+    "frontend/app/src/pages/dashboard/EocDashboard.tsx"
+  ],
+  "verification_status": "passed",
+  "error_message": null,
+  "attempt_number": 3,
+  "created_at": "2026-11-19T22:42:11.568360+00:00",
+  "completed_at": "2026-11-20T00:10:25.622521568+00:00"
+}

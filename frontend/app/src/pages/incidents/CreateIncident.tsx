@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   PageHeader,
@@ -69,13 +69,64 @@ interface FieldError {
  * on `GET /api/v1/jurisdictions`, added in this plan's incidents.ts module
  * (see that file's own doc comment) since every incident-creation flow
  * needs it and no earlier plan owns it.
+ *
+ * Phase 6 (06-09) addition — ADDITIVE ONLY: an optional pre-fill read from
+ * router state (`navigate('/incidents/new', { state: { prefill } })`,
+ * 06-09's Signal Triage Queue/Detail's Promote action). Router state is a
+ * purely client-side, same-origin navigation mechanism — it cannot be
+ * injected from an external URL or a different origin, and the pre-filled
+ * values are only ever USED as `useState` lazy-initializer defaults for
+ * fields the user can freely edit before submitting; they carry no
+ * elevated trust and bypass none of this form's own existing validation.
+ * A user arriving at `/incidents/new` with NO router state (the normal
+ * Phase-2 flow) behaves EXACTLY as before — this is the ONLY change to
+ * this Phase-2 file, non-breaking to Phase 2's own existing
+ * incident-list-create.spec.ts Playwright suite.
  */
+/** [Rule 1 - Bug] 06-04's signal-triage promote endpoint derives
+ * `type_suggestion` from free-text hazard-feed vocabulary (e.g.
+ * "Earthquake Advisory", "Hurricane Watch", "High Wind Warning") via
+ * `deriveTypeSuggestion()` — values that are NOT members of this form's
+ * own `incidents.type` CHECK constraint enum. Submitting one of those
+ * unrecognized strings straight through would violate the DB constraint
+ * and 500 on submit (reproduced: POST /api/v1/incidents with
+ * type="Earthquake Advisory" fails the CHECK). This guard maps any
+ * pre-fill suggestion not already a known IncidentType to the form's
+ * existing 'Other' catch-all — the same bucket a human would pick
+ * manually for an unlisted hazard type — rather than letting an invalid
+ * value reach the submit call at all. */
+const KNOWN_INCIDENT_TYPES: readonly IncidentType[] = [
+  'Flood',
+  'Wildfire',
+  'Severe Weather',
+  'HazMat',
+  'Public Health',
+  'Other',
+];
+
+function resolveTypeSuggestion(suggestion: string | undefined): IncidentType {
+  if (suggestion && (KNOWN_INCIDENT_TYPES as readonly string[]).includes(suggestion)) {
+    return suggestion as IncidentType;
+  }
+  return suggestion ? 'Other' : 'Flood';
+}
+
 export function CreateIncident(): JSX.Element {
   const navigate = useNavigate();
+  const location = useLocation();
+  const prefill = (
+    location.state as {
+      prefill?: { name_suggestion: string; type_suggestion: string; severity_suggestion: string };
+    } | null
+  )?.prefill;
 
-  const [name, setName] = React.useState('');
-  const [type, setType] = React.useState<IncidentType>('Flood');
-  const [severity, setSeverity] = React.useState<Severity>('Normal');
+  const [name, setName] = React.useState(() => prefill?.name_suggestion ?? '');
+  const [type, setType] = React.useState<IncidentType>(() =>
+    resolveTypeSuggestion(prefill?.type_suggestion),
+  );
+  const [severity, setSeverity] = React.useState<Severity>(
+    () => (prefill?.severity_suggestion as Severity) ?? 'Normal',
+  );
   const [jurisdictionId, setJurisdictionId] = React.useState('');
   const [description, setDescription] = React.useState('');
   const [openedAt, setOpenedAt] = React.useState(() => defaultOpenedAt());

@@ -35,6 +35,7 @@ import { RecordAuthority } from './pages/admin/RecordAuthority';
 import { IncidentList } from './pages/incidents/IncidentList';
 import { CreateIncident } from './pages/incidents/CreateIncident';
 import { IncidentWorkspace } from './pages/incidents/IncidentWorkspace';
+import { IcsFormEditor } from './pages/incidents/IcsFormEditor';
 import { OperatingPicture } from './pages/operating-picture/OperatingPicture';
 import { PlanRepository } from './pages/plans/PlanRepository';
 import { PlanDetail } from './pages/plans/PlanDetail';
@@ -60,6 +61,11 @@ import { ReportObservation } from './pages/field-mobile/ReportObservation';
 import { QueuedSubmissions } from './pages/field-mobile/QueuedSubmissions';
 import { SyncConflictResolution } from './pages/field-mobile/SyncConflictResolution';
 import { FieldMap } from './pages/field-mobile/FieldMap';
+import { EocDashboard } from './pages/dashboard/EocDashboard';
+import { MyWorkDashboard } from './pages/dashboard/MyWorkDashboard';
+import { ExecutiveDashboard } from './pages/executive/ExecutiveDashboard';
+import { SignalTriageQueue } from './pages/signals/SignalTriageQueue';
+import { SignalDetail } from './pages/signals/SignalDetail';
 
 const queryClient = new QueryClient();
 
@@ -179,6 +185,46 @@ root.render(
               <Route path="field/queued" element={<QueuedSubmissions />} />
               <Route path="field/conflicts/:id" element={<SyncConflictResolution />} />
               <Route path="field/map" element={<FieldMap />} />
+              {/* F18 (06-06) — PER-01's EOC Dashboard and PER-03's My Work
+                  Dashboard, the two genuinely NEW persona landing pages
+                  this plan builds (PER-02's landing, /incidents, already
+                  exists from Phase 2). This plan is always the FIRST to
+                  append routes in this phase (06-07, wave 6, carries an
+                  explicit depends_on this plan specifically because both
+                  plans touch this file) — 06-07's own routes append AFTER
+                  these two, following the SAME append-not-overwrite
+                  discipline every other multi-plan shared-file edit in
+                  this route tree already established. */}
+              <Route path="dashboard" element={<EocDashboard />} />
+              <Route path="my-work" element={<MyWorkDashboard />} />
+              {/* F18 (06-07) — PER-05's executive facet, reached only via
+                  AppShell's explicit FacetToggle (never a sign-in
+                  default). Appended AFTER 06-06's own two routes above,
+                  following the SAME append-not-overwrite discipline this
+                  plan's own sequencing note documents — 06-06 (wave 5)
+                  runs strictly before this plan (wave 6), with an
+                  explicit depends_on edge for exactly this file. */}
+              <Route path="executive" element={<ExecutiveDashboard />} />
+              {/* F9 (06-08) — the ICS Form Editor, S9.3's "Draft with AI"
+                  embedded in a real official-record target. Wave 7,
+                  strictly after 06-07's /field and /executive routes
+                  above (explicit depends_on edge for this exact file) —
+                  appended last, following the SAME append-not-overwrite
+                  discipline every other multi-plan shared-file edit in
+                  this route tree already established. 06-09 (next plan)
+                  depends_on this one and appends its own routes after
+                  this line. */}
+              <Route path="incidents/:incidentId/forms/:formId" element={<IcsFormEditor />} />
+              {/* F9 (06-09) — the Signal Triage Queue + Signal Detail
+                  screens, the frontend consumer of 06-04's signal-
+                  clustering backend. Wave 8, strictly after 06-08's
+                  /incidents/:incidentId/forms/:formId route above
+                  (explicit depends_on edge for this exact file) —
+                  appended last, following the SAME append-not-overwrite
+                  discipline every other multi-plan shared-file edit in
+                  this route tree already established. */}
+              <Route path="signals" element={<SignalTriageQueue />} />
+              <Route path="signals/:id" element={<SignalDetail />} />
             </Route>
           </Routes>
         </RouteGuard>

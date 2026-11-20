@@ -1,0 +1,16 @@
+/*
+ * S9.2/Screen-07 — ICS Form / Checklist Editor layout. Matches the
+ * mockup's Progress-row-adjacent layout minus the actual multi-step
+ * Progress component (out of scope for this single-form-type plan).
+ * Token-only spacing throughout.
+ */
+
+.ep-ics-form-editor > * + * {
+  margin-top: var(--space-4);
+}
+
+.ep-ics-form-editor__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
