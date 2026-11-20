@@ -369,7 +369,20 @@ export default async function plansRoutes(app: FastifyInstance) {
         targetPlanId = plan_id;
 
         try {
-          await linkDocument(req.epmpUser!.id, source_document_ref, targetPlanId, req.epmpUser!.jurisdiction_scope);
+          // Branch on `mode` exactly as the new-plan branch below already
+          // does (REVIEW B1, 08-REVIEW.md iteration 1): the caller's
+          // explicit "Import copy" vs. "Link live sync" choice must be
+          // honored here too, not just on the new-plan path — otherwise
+          // selecting "Import copy" against an existing plan silently
+          // wrote a `link_live` row instead. importDocument() now accepts
+          // an optional `planId` (document-adapter.ts) so its
+          // `document_links` row lands attached to targetPlanId directly,
+          // mirroring linkDocument()'s own optional planId parameter.
+          if (mode === 'import_copy') {
+            await importDocument(req.epmpUser!.id, source_document_ref, targetPlanId);
+          } else {
+            await linkDocument(req.epmpUser!.id, source_document_ref, targetPlanId, req.epmpUser!.jurisdiction_scope);
+          }
         } catch (err) {
           if (err instanceof Error && err.message === 'IMPORT_PERMISSION_DENIED') {
             return reply.code(403).send({
