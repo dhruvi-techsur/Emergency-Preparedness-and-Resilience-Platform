@@ -48,7 +48,7 @@ let cachedConfigId: string | undefined;
  * cache idiom cad-adapter.ts's findOrCreateCadConfig uses for its own
  * cad_config row.
  */
-async function findOrCreateEocCotsConfig(): Promise<string> {
+export async function findOrCreateEocCotsConfig(): Promise<string> {
   if (cachedConfigId) return cachedConfigId;
 
   const existing = await query<{ id: string }>(
