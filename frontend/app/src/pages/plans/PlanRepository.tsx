@@ -263,7 +263,7 @@ export function PlanRepository(): JSX.Element {
       <ImportDocumentModal
         open={importModalOpen}
         onClose={() => setImportModalOpen(false)}
-        onImported={() => void refetch()}
+        onImported={(planId) => navigate(`/plans/${planId}`)}
       />
     </div>
   );
