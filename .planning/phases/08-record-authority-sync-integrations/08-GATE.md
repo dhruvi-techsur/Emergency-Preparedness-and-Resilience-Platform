@@ -1855,3 +1855,15 @@ __GATE__ build_exit=0 test_exit=0 build_cmd=[npm run build] test_cmd=[npm test] 
 - This exact flake was already documented in STATE.md's Phase-5 gap-closure history (plan 05-06): "a pre-existing, unrelated test-isolation flake in field-mobile-sync-conflict.spec.ts (jurisdiction-ordering drift from other phases' accumulated test fixtures)" — the shared compose-stack Postgres has accumulated fixture data across every phase's repeated test runs, and this spec's own jurisdiction-ordering assumption is what drifts.
 - Re-ran the spec file in isolation (not just as part of the full suite): same failure, same locator, same timeout — ruling out suite-level worker/ordering interference as a confound; this is the spec's own known instability, not flakiness introduced by running it alongside this phase's new specs.
 - No fix attempted: out of this run's scope (not a file any of 08-07/08-08/08-09/08-10 touched), and the gate's own scope rule is to record `pre_existing` and not chase an unrelated pre-existing defect.
+
+## Gap redrive (--gaps-only execution)
+
+Both UAT gaps and the security finding this run closed were re-driven against their own original evidence/reproduction (not merely re-tested against a freshly-authored assertion):
+
+| Gap/Finding | Ref | Redrive method | Result |
+|---|---|---|---|
+| Stale "Tasks ship in a later phase" placeholder | UAT ref 3 | `grep` for the exact stale strings (absent), `grep` for `<TaskList incidentId={selectedId} />` wiring (present), full re-run of `operating-picture-facility-markers.spec.ts` (5/5) + `operating-picture-resource-markers.spec.ts` (3/3) | **closed (re-driven)** |
+| Import/Link-live visible no-op | UAT ref 4 | Re-ran `plan-document-import-link.spec.ts` (5/5) — test 2 and test 5 directly re-drive the user's own reported symptom ("Import copy... doesn't take me anywhere"); re-ran `plan-live-link-flagged-review.spec.ts` (3/3) to confirm Plan 08-06's "Source changed, review" Alert remains reachable through real product usage, not just the data-doctor seed bypass the gap's root_cause flagged | **closed (re-driven)** |
+| F-08-01 jurisdiction-scope IDOR | security | Re-ran `facility-document-adapter.test.ts` (14/14) — includes the cross-jurisdiction-rejection, nonexistent-plan-rejection, and legitimate-in-scope-success cases that prove the exploit path closed; re-ran `plans.test.ts` (10/10) to confirm 08-09's own import route doesn't reopen the IDOR via a second code path | **closed (re-driven)** |
+
+One transient facility/resource-marker spec failure on an earlier full-suite pass (OIDC sign-in redirect `page.goto: Protocol error`, both specs failing identically mid-dev-server-hot-reload window) was isolated by re-running each spec file alone — both passed clean (8/8 combined). Not recorded as a gate failure: it did not recur on isolated re-run and the dev server's own log shows a `tsx` hot-restart in that exact window, consistent with a transient navigation race against a file-watcher restart rather than an application defect.
