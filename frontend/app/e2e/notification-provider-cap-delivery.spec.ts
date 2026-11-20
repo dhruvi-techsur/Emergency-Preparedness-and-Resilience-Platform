@@ -119,6 +119,23 @@ test.describe.serial('Notification Provider & Public-Alerting Integration (F14 f
     await page.getByRole('button', { name: 'Continue' }).click();
     await expect(page.getByText('Step 2 of 4: Message')).toBeVisible({ timeout: 10_000 });
 
+    // UAT gap closure (ref 1, minor): the 3 Channels checkboxes and the
+    // "Draft with AI" button must render with a measurable visual gap
+    // between them — not collapsed onto one undifferentiated line where
+    // IPAWS reads as decoration beside the button rather than a selectable
+    // option. Compare the IPAWS checkbox's bounding box against the
+    // "Draft with AI" button's bounding box: either a nonzero vertical gap
+    // between them (stacked layout) or, at minimum, the checkbox and
+    // button must not visually overlap/touch.
+    const ipawsCheckboxBox = await page.getByLabel('IPAWS', { exact: true }).boundingBox();
+    const draftWithAiButtonBox = await page.getByRole('button', { name: 'Draft with AI' }).boundingBox();
+    expect(ipawsCheckboxBox).toBeTruthy();
+    expect(draftWithAiButtonBox).toBeTruthy();
+    if (ipawsCheckboxBox && draftWithAiButtonBox) {
+      const verticalGap = draftWithAiButtonBox.y - (ipawsCheckboxBox.y + ipawsCheckboxBox.height);
+      expect(verticalGap).toBeGreaterThan(8); // at least 8px separation — proves they are not crammed onto one line
+    }
+
     // CAP fields Card is NOT visible before IPAWS is selected.
     await expect(page.getByText('CAP public-alert fields')).toHaveCount(0);
 
