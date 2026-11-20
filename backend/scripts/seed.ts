@@ -1331,7 +1331,9 @@ async function main() {
   );
 
   if (existingUatLiveLinkRow.rows.length === 0) {
-    const linked = await linkDocument(plannerUser.id, 'DOC-SOP-002', uatUnlinkedPlan.id);
+    const linked = await linkDocument(plannerUser.id, 'DOC-SOP-002', uatUnlinkedPlan.id, [
+      jurisdiction.id,
+    ]);
     record('document_links', { id: linked.id, inserted: true });
   } else {
     record('document_links', { id: existingUatLiveLinkRow.rows[0].id, inserted: false });

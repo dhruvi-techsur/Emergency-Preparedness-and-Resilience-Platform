@@ -144,18 +144,53 @@ export async function importDocument(
 }
 
 /**
+ * Minimal existence+scope check for a plan_id supplied to linkDocument()
+ * below — mirrors plans.ts's own fetchPlanRow(..., jurisdictionScope)
+ * scoping clause (`jurisdiction_id = ANY($2)`) exactly, but deliberately
+ * narrower: linkDocument() only needs a boolean "is this plan id real AND
+ * in the caller's jurisdiction scope," not the full joined plan row
+ * fetchPlanRow returns. Implemented as a private helper IN THIS FILE
+ * (rather than importing fetchPlanRow from plans.ts) because plans.ts
+ * already imports revalidateDocumentLinkPermission from this file — a
+ * reverse import here would create a two-file import cycle this codebase
+ * has nowhere else.
+ */
+async function planIsInScope(planId: string, jurisdictionScope: string[]): Promise<boolean> {
+  const rows = await query<{ id: string }>(
+    `SELECT id FROM plans WHERE id = $1 AND jurisdiction_id = ANY($2)`,
+    [planId, jurisdictionScope],
+  );
+  return rows.length > 0;
+}
+
+/**
  * Same permission re-check as importDocument; on success establishes a
  * 'link_live' document_links row, optionally associated with `planId` if
- * known at link time.
+ * known at link time. When `planId` is provided, it is validated against
+ * the caller's `jurisdictionScope` via planIsInScope() above BEFORE the
+ * INSERT — mirroring every other plans-mutating route's
+ * fetchPlanRow(..., jurisdiction_scope) convention (plans.ts:360,448,
+ * 525,628,683) — and throws PLAN_NOT_FOUND (mapped to the route's 404) if
+ * the plan doesn't exist or isn't in scope. This closes F-08-01: without
+ * this check, any plans:edit holder could attach a document link to ANY
+ * plan UUID system-wide, regardless of jurisdiction.
  */
 export async function linkDocument(
   userId: string,
   externalDocId: string,
   planId?: string,
+  jurisdictionScope?: string[],
 ): Promise<{ id: string }> {
   const accessSet = resolveUserAccessSet(userId);
   if (!accessSet.includes(externalDocId)) {
     throw new Error('IMPORT_PERMISSION_DENIED');
+  }
+
+  if (planId) {
+    const inScope = jurisdictionScope ? await planIsInScope(planId, jurisdictionScope) : false;
+    if (!inScope) {
+      throw new Error('PLAN_NOT_FOUND');
+    }
   }
 
   const doc = DOCUMENT_CATALOG.find((d) => d.external_document_id === externalDocId);
@@ -434,13 +469,28 @@ export async function documentRoutes(app: FastifyInstance) {
     { preHandler: requirePermission('plans', 'edit') },
     async (req, reply) => {
       try {
-        const result = await linkDocument(req.epmpUser!.id, req.params.id, req.body?.plan_id);
+        const result = await linkDocument(
+          req.epmpUser!.id,
+          req.params.id,
+          req.body?.plan_id,
+          req.epmpUser!.jurisdiction_scope,
+        );
         return reply.code(201).send(result);
       } catch (err) {
         if (err instanceof Error && err.message === 'IMPORT_PERMISSION_DENIED') {
           return reply.code(403).send({
             error_code: 'IMPORT_PERMISSION_DENIED',
             message: "You don't have access to this document in the source system.",
+          });
+        }
+        if (err instanceof Error && err.message === 'PLAN_NOT_FOUND') {
+          // Literal values duplicated from plans.ts's own PLAN_NOT_FOUND
+          // export (must match it exactly) — not imported directly to
+          // avoid a reverse document-adapter.ts -> plans.ts module
+          // dependency (plans.ts already imports from this file).
+          return reply.code(404).send({
+            error_code: 'PLAN_NOT_FOUND',
+            message: 'This plan no longer exists or you have access.',
           });
         }
         throw err;
