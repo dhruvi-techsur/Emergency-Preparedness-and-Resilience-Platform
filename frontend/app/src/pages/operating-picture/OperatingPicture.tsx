@@ -21,6 +21,7 @@ import {
   type TimelineItem,
 } from '@epmp/design-system';
 import { apiGet } from '../../lib/api-client';
+import { TaskList } from '../tasks-resources/TaskList';
 import './OperatingPicture.css';
 
 type Severity = 'Critical' | 'Elevated' | 'Watch' | 'Normal';
@@ -638,11 +639,27 @@ export function OperatingPicture(): JSX.Element {
                   <EmptyState title="No activity yet" />
                 )}
               </Card>
-              <Card title="Tasks">
-                <EmptyState title="Tasks ship in a later phase">
-                  Task tracking (F4) is built in Phase 3.
-                </EmptyState>
-              </Card>
+              {/* Phase 8 (08-08, UAT gap ref 3 fix): replaces the prior
+                  "built in a future phase" placeholder — Phase 3 shipped
+                  real task tracking (F4) a year of roadmap time ago, and
+                  IncidentWorkspace.tsx's identical placeholder was already
+                  fixed the same way in 03-08. Mirrors that exact fix
+                  pattern: the real, incident-scoped `TaskList`
+                  (its own prop type is `incidentId?: string`, matching
+                  `selectedId: string | undefined` exactly — no cast or
+                  fallback needed). Gated behind the SAME
+                  `!selectedIsResource && !selectedIsFacility` condition
+                  already used above for `selectedIncidentQuery`/
+                  `selectedTimelineQuery` — a resource or facility marker
+                  has no incident_id to scope a task list by, so this Card
+                  must not render at all for either selection (not merely
+                  show an empty TaskList), closing the secondary structural
+                  finding this gap's UAT root-cause analysis also flagged. */}
+              {!selectedIsResource && !selectedIsFacility ? (
+                <Card title="Tasks">
+                  <TaskList incidentId={selectedId} />
+                </Card>
+              ) : null}
             </>
           ) : (
             <EmptyState title="Select an incident">
