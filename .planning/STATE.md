@@ -2,16 +2,16 @@
 pivota_spec_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
-current_plan: 3
+current_plan: 4
 status: executing
-stopped_at: Completed 08-02-PLAN.md
-last_updated: "2026-11-20T12:23:53.386Z"
+stopped_at: Completed 08-05-PLAN.md
+last_updated: "2026-11-20T12:29:39.632Z"
 last_activity: 2026-11-20
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 10
-  completed_plans: 6
+  completed_plans: 7
   percent: 100
 ---
 
@@ -27,10 +27,12 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: Phase 8 (Record Authority & Sync Integrations)
-Current Plan: 3
+Current Plan: 4
 Total Plans in Phase: 6
 Status: Executing
 Last Activity: 2026-11-20
+
+Plan 08-05 (this phase): see 08-05-SUMMARY.md for full detail. Shipped F17's Plan Repository frontend half — new `ImportDocumentModal.tsx` (TextField search + `Table` results, Import copy/Link live footer buttons) consuming Plan 08-02's permission-aware document adapter, with `PlanRepository.tsx`'s "Import plan" action changed from Phase 3's documented disabled placeholder to a real, enabled entry point. The results list renders exactly what `GET /api/v1/integrations/documents/browse` returns with zero client-side re-filtering — the server-side filter in 08-02's `browseDocuments()` is the sole enforcement mechanism, proven by a new `plan-document-import-link.spec.ts` (4/4) asserting the withheld third document (`DOC-ANNEX-003`) has `toHaveCount(0)` in the modal's DOM, plus a direct `page.evaluate`+`fetch` bypass of the browse UI proving the import route still rejects it with a real 403 `IMPORT_PERMISSION_DENIED`. Reused the existing `signInAsPlanningChief` identity (no new seed needed). Zero deviations; `tsc --noEmit`/`npm run build` clean, backend suite (21 files, 138 tests) and `plans.spec.ts` (4/4) regression both green.
 
 Plan 08-02 (this phase): see 08-02-SUMMARY.md for full detail. Shipped F17's two backend adapter halves — facility_feed_config/facilities/document_system_config schema (migration renumbered 1700000000013->1700000000015, both 1700000000013/1700000000014 already claimed by 07-02 and this phase's own 08-01 by execution time), a deterministic agency_erp facility/asset-status adapter stub whose fetchFacilityStatus() discards inventory_count/maintenance_due_at/annual_cost at the normalization boundary via an explicit allow-list object-literal copy (proven via a structural Object.keys() test assertion, not just documented intent), and a permission-aware SharePoint-class document adapter stub whose browseDocuments/importDocument/linkDocument all re-check a lazily-seeded per-user simulated delegated-permission set server-side on every call (2-of-3 documents granted deterministically, the third withheld — proven both at the function level and via a real HTTP 403 IMPORT_PERMISSION_DENIED). New GET /api/v1/operating-picture/facilities route feeds Plan 08-04; GET/POST /api/v1/integrations/documents/* feeds Plan 08-05. One Rule-1 fix: restored 08-01's eocCotsRoutes registration in routes.ts, which this plan's own edit had silently clobbered due to a read/edit race against 08-01's parallel commit to the same file (caught by the full-suite re-run, not left undiscovered). Full backend suite (21 files, 138 tests) green with zero regression; npm run build and npm run seed both clean.
 
@@ -166,6 +168,7 @@ Progress: [██████████] 100%
 | Phase 07 P04 | 28 min | 2 tasks | 3 files |
 | Phase 08 P01 | 20 min | 2 tasks | 6 files |
 | Phase 08 P02 | 25 min | 2 tasks | 7 files |
+| Phase 08 P05 | 18 min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -339,6 +342,8 @@ Recent decisions affecting current work:
 - [Phase 08-02]: Migration renumbered 1700000000013 -> 1700000000015 (1700000000013 claimed by 07-02's cad-dispatch-schema.js, 1700000000014 claimed by this phase's own 08-01 eoc-cots-schema.js by execution time)
 - [Phase 08-02]: facility_sync added as a new background_jobs.job_type CHECK-constraint value via this migration's ALTER, kept structurally distinct from cad_ingestion/feed_ingestion/sync_reconciliation per the established per-adapter job_type-isolation convention
 - [Phase 08-02]: document_links.plan_id left NULL on importDocument (standalone import, no plan association yet); linkDocument accepts an optional planId parameter for when it's already known at link time
+- [Phase 08-05]: ImportDocumentModal uses TextField+Table (not Combobox) for browse/select-a-row-to-act-on, reserving Combobox for single-value form fields
+- [Phase 08-05]: Reused existing signInAsPlanningChief Playwright identity for F17 document import/link e2e coverage rather than seeding a new identity
 
 ### Pending Todos
 
@@ -350,6 +355,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-20T12:23:53.384Z
-Stopped at: Completed 08-02-PLAN.md
+Last session: 2026-11-20T12:29:34.446Z
+Stopped at: Completed 08-05-PLAN.md
 Resume file: None
