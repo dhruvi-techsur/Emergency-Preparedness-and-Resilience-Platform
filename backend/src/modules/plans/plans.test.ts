@@ -4,6 +4,7 @@ import { app } from '../../server.js';
 import { pool, query } from '../../db/client.js';
 import { mintSessionToken } from '../auth-org/session.js';
 import { syncRolePermissionsToOpa } from '../auth-org/opa-client.js';
+import { simulateDocumentAccessRevocation } from '../integration-gateway/document-adapter.js';
 
 // Integration test against the real compose stack (Postgres + OPA) — same
 // pattern as 03-01's tasks.test.ts / 03-04's resource-requests.test.ts.
@@ -282,5 +283,343 @@ describe('plans module — Draft -> Review -> Approved workflow, self-approval g
       .send();
     expect(submitRes.status).toBe(422);
     expect(submitRes.body.error_code).toBe('PLAN_EMPTY');
+  });
+
+  // 08-06 (F17 final hard requirement): a "Link live" document's flagged
+  // "source changed" state is visible in GET /api/v1/plans/{id}'s new
+  // document_links array, and can ONLY be cleared via the dedicated
+  // acknowledge PATCH route — never automatically.
+  describe('document_links flagged-state surface + acknowledge route', () => {
+    it('GET /api/v1/plans/{id} includes a document_links row with content_status=changed, and the acknowledge route clears it exactly once', async () => {
+      const createRes = await request(app.server)
+        .post('/api/v1/plans')
+        .set('Authorization', `Bearer ${authorToken}`)
+        .send({
+          name: `Live-Link Flag Test ${Date.now()}`,
+          type: 'SOP',
+          jurisdiction_id: testJurisdictionId,
+          content_sections: [{ heading: 'Section A', body: 'Body text' }],
+        });
+      expect(createRes.status).toBe(201);
+      const planId = createRes.body.id;
+
+      // Directly insert a document_links row with content_status already
+      // 'changed', simulating what runDocumentLinkSync() would have
+      // produced on a real detection tick — this test proves the READ
+      // surface and the acknowledge route, not the scheduled job itself
+      // (that's document-adapter's own structural grep verification).
+      const linkInserted = await query<{ id: string }>(
+        `INSERT INTO document_links (plan_id, external_document_id, source_system, mode, imported_by, content_status, content_flagged_at)
+         VALUES ($1, 'DOC-SOP-002', 'SharePoint', 'link_live', $2, 'changed', now())
+         RETURNING id`,
+        [planId, authorId],
+      );
+      const linkId = linkInserted[0].id;
+
+      // 1. GET includes the row with content_status: 'changed'.
+      const getRes = await request(app.server)
+        .get(`/api/v1/plans/${planId}`)
+        .set('Authorization', `Bearer ${authorToken}`);
+      expect(getRes.status).toBe(200);
+      const linkRow = getRes.body.document_links.find((d: { id: string }) => d.id === linkId);
+      expect(linkRow).toBeTruthy();
+      expect(linkRow.content_status).toBe('changed');
+
+      // 2. Acknowledge as the author (holding plans:edit) returns 200, and
+      // a follow-up GET shows content_status: 'current'.
+      const ackRes = await request(app.server)
+        .patch(`/api/v1/plans/${planId}/document-links/${linkId}/acknowledge`)
+        .set('Authorization', `Bearer ${authorToken}`)
+        .send();
+      expect(ackRes.status).toBe(200);
+
+      const getAfterAckRes = await request(app.server)
+        .get(`/api/v1/plans/${planId}`)
+        .set('Authorization', `Bearer ${authorToken}`);
+      expect(getAfterAckRes.status).toBe(200);
+      const linkRowAfterAck = getAfterAckRes.body.document_links.find(
+        (d: { id: string }) => d.id === linkId,
+      );
+      expect(linkRowAfterAck.content_status).toBe('current');
+
+      const ackedRows = await query<{ acknowledged_by: string | null }>(
+        `SELECT acknowledged_by FROM document_links WHERE id = $1`,
+        [linkId],
+      );
+      expect(ackedRows[0].acknowledged_by).toBe(authorId);
+
+      // 3. A second acknowledge attempt on the SAME (already-acknowledged)
+      // link returns 409 DOCUMENT_LINK_NOT_FLAGGED.
+      const secondAckRes = await request(app.server)
+        .patch(`/api/v1/plans/${planId}/document-links/${linkId}/acknowledge`)
+        .set('Authorization', `Bearer ${authorToken}`)
+        .send();
+      expect(secondAckRes.status).toBe(409);
+      expect(secondAckRes.body.error_code).toBe('DOCUMENT_LINK_NOT_FLAGGED');
+    });
+  });
+
+  // REVIEW.md W1 fix: document-adapter.ts's simulateDocumentAccessRevocation
+  // is the deterministic, test-reachable trigger for a source-side
+  // permission downgrade — this test drives the REAL detection path (GET
+  // /api/v1/plans/{id} -> fetchPlanDocumentLinks -> per-request
+  // revalidateDocumentLinkPermission -> checkAndPersistPermission's
+  // `stillGranted === false` branch), proving permission_status: 'revoked'
+  // is genuinely reachable end-to-end, not dead code.
+  describe('document_links permission revocation (F17)', () => {
+    it("a link_live row whose importing user's access to the document is revoked shows permission_status: 'revoked' on the next GET", async () => {
+      const createRes = await request(app.server)
+        .post('/api/v1/plans')
+        .set('Authorization', `Bearer ${authorToken}`)
+        .send({
+          name: `Permission Revocation Test ${Date.now()}`,
+          type: 'SOP',
+          jurisdiction_id: testJurisdictionId,
+          content_sections: [{ heading: 'Section A', body: 'Body text' }],
+        });
+      expect(createRes.status).toBe(201);
+      const planId = createRes.body.id;
+
+      // Link DOC-EOP-001 as the author via the REAL link route — this
+      // lazily seeds authorId's simulated access set with the fixed
+      // GRANTED_DOCUMENT_IDS split (same seeding trigger browseDocuments/
+      // importDocument use).
+      const linkRes = await request(app.server)
+        .post('/api/v1/integrations/documents/DOC-EOP-001/link')
+        .set('Authorization', `Bearer ${authorToken}`)
+        .send({ plan_id: planId });
+      expect(linkRes.status).toBe(201);
+      const linkId = linkRes.body.id;
+
+      // Sanity: before revocation, the row reads as 'valid'.
+      const getBeforeRes = await request(app.server)
+        .get(`/api/v1/plans/${planId}`)
+        .set('Authorization', `Bearer ${authorToken}`);
+      const linkRowBefore = getBeforeRes.body.document_links.find(
+        (d: { id: string }) => d.id === linkId,
+      );
+      expect(linkRowBefore.permission_status).toBe('valid');
+
+      // Simulate the source-side permission downgrade.
+      simulateDocumentAccessRevocation(authorId, 'DOC-EOP-001');
+
+      // The next GET re-validates synchronously (F17's "at minimum, before
+      // each render" rule) and must now show 'revoked'.
+      const getAfterRes = await request(app.server)
+        .get(`/api/v1/plans/${planId}`)
+        .set('Authorization', `Bearer ${authorToken}`);
+      expect(getAfterRes.status).toBe(200);
+      const linkRowAfter = getAfterRes.body.document_links.find(
+        (d: { id: string }) => d.id === linkId,
+      );
+      expect(linkRowAfter.permission_status).toBe('revoked');
+
+      const persistedRows = await query<{ permission_status: string }>(
+        `SELECT permission_status FROM document_links WHERE id = $1`,
+        [linkId],
+      );
+      expect(persistedRows[0].permission_status).toBe('revoked');
+    });
+  });
+
+  // 08-09 (gap closure, UAT ref 4): POST /api/v1/plans/import finally
+  // "lands" an imported/linked document as a real Plan — closing the gap
+  // where document_links rows were written with plan_id=NULL and no Plan
+  // was ever created/attached.
+  //
+  // Deviation [Rule 1 - Bug, test-only]: uses a DEDICATED fixture user
+  // (importTestToken/importTestId), not the file's shared authorToken/
+  // authorId. document-adapter.ts's SIMULATED_USER_DOCUMENT_ACCESS map is
+  // module-level, in-memory, and keyed by userId — the preceding
+  // "document_links permission revocation" describe block above calls
+  // simulateDocumentAccessRevocation(authorId, 'DOC-EOP-001'), which runs
+  // earlier in this same file/process and would permanently revoke
+  // authorId's DOC-EOP-001 access for the remainder of the suite,
+  // producing a false-negative 403 on this describe block's own
+  // DOC-EOP-001 import_copy test if it reused authorToken. A fresh user
+  // gets its own lazily-seeded, unrevoked 2-of-3 access set.
+  describe('POST /api/v1/plans/import — F17 gap closure (UAT ref 4)', () => {
+    let importTestId: string;
+    let importTestToken: string;
+
+    beforeAll(async () => {
+      const importTestEmail = `plans-import-test-${Date.now()}@epmp.local`;
+      const importTestInserted = await query<{ id: string }>(
+        `INSERT INTO users (email, name, role_id, jurisdiction_scope, status) VALUES ($1, $2, $3, $4, 'Active') RETURNING id`,
+        [importTestEmail, 'Plans Import Test User', testRoleId, [testJurisdictionId]],
+      );
+      importTestId = importTestInserted[0].id;
+      importTestToken = await mintSessionToken({
+        id: importTestId,
+        role_id: testRoleId,
+        jurisdiction_scope: [testJurisdictionId],
+      });
+    });
+
+    it('import_copy with no plan_id creates a new, GET-reachable Draft plan with source_document_ref persisted', async () => {
+      const planName = `Imported EOP Test ${Date.now()}`;
+      const importRes = await request(app.server)
+        .post('/api/v1/plans/import')
+        .set('Authorization', `Bearer ${importTestToken}`)
+        .send({
+          source_document_ref: 'DOC-EOP-001',
+          mode: 'import_copy',
+          name: planName,
+          type: 'EOP',
+          jurisdiction_id: testJurisdictionId,
+        });
+      expect(importRes.status).toBe(201);
+      expect(importRes.body.status).toBe('Draft');
+      expect(importRes.body.version).toBe(1);
+      const planId = importRes.body.id;
+
+      const getRes = await request(app.server)
+        .get(`/api/v1/plans/${planId}`)
+        .set('Authorization', `Bearer ${importTestToken}`);
+      expect(getRes.status).toBe(200);
+
+      const persistedRows = await query<{ source_document_ref: string | null }>(
+        `SELECT source_document_ref FROM plans WHERE id = $1`,
+        [planId],
+      );
+      expect(persistedRows[0].source_document_ref).toBe('DOC-EOP-001');
+    });
+
+    it('link_live with an existing plan_id attaches to THAT plan, not a new one', async () => {
+      const createRes = await request(app.server)
+        .post('/api/v1/plans')
+        .set('Authorization', `Bearer ${importTestToken}`)
+        .send({
+          name: `Pre-existing Plan For Link ${Date.now()}`,
+          type: 'SOP',
+          jurisdiction_id: testJurisdictionId,
+        });
+      expect(createRes.status).toBe(201);
+      const existingPlanId = createRes.body.id;
+
+      const importRes = await request(app.server)
+        .post('/api/v1/plans/import')
+        .set('Authorization', `Bearer ${importTestToken}`)
+        .send({
+          source_document_ref: 'DOC-SOP-002',
+          mode: 'link_live',
+          plan_id: existingPlanId,
+          name: 'unused',
+          type: 'SOP',
+          jurisdiction_id: testJurisdictionId,
+        });
+      expect(importRes.status).toBe(201);
+      expect(importRes.body.id).toBe(existingPlanId);
+
+      const linkRows = await query<{ id: string; plan_id: string; mode: string }>(
+        `SELECT id, plan_id, mode FROM document_links WHERE plan_id = $1 AND mode = 'link_live'`,
+        [existingPlanId],
+      );
+      expect(linkRows.length).toBeGreaterThan(0);
+    });
+
+    // REVIEW B1 (08-REVIEW.md iteration 1): the existing-plan-attach
+    // branch previously ignored `mode` entirely and always called
+    // linkDocument(), silently writing a 'link_live' row even when the
+    // caller explicitly chose "Import copy." This is the previously-
+    // untested combination (DOC-EOP-001 vs. the prior test's
+    // DOC-SOP-002 avoids any cross-test access-set interference within
+    // this same describe block's shared importTestId).
+    it('import_copy with an existing plan_id attaches a import_copy row to THAT plan, not a new one', async () => {
+      const createRes = await request(app.server)
+        .post('/api/v1/plans')
+        .set('Authorization', `Bearer ${importTestToken}`)
+        .send({
+          name: `Pre-existing Plan For Import Copy ${Date.now()}`,
+          type: 'SOP',
+          jurisdiction_id: testJurisdictionId,
+        });
+      expect(createRes.status).toBe(201);
+      const existingPlanId = createRes.body.id;
+
+      const importRes = await request(app.server)
+        .post('/api/v1/plans/import')
+        .set('Authorization', `Bearer ${importTestToken}`)
+        .send({
+          source_document_ref: 'DOC-EOP-001',
+          mode: 'import_copy',
+          plan_id: existingPlanId,
+          name: 'unused',
+          type: 'SOP',
+          jurisdiction_id: testJurisdictionId,
+        });
+      expect(importRes.status).toBe(201);
+      expect(importRes.body.id).toBe(existingPlanId);
+
+      const linkRows = await query<{ id: string; plan_id: string; mode: string }>(
+        `SELECT id, plan_id, mode FROM document_links WHERE plan_id = $1`,
+        [existingPlanId],
+      );
+      expect(linkRows.length).toBeGreaterThan(0);
+      expect(linkRows.every((row) => row.mode === 'import_copy')).toBe(true);
+    });
+
+    it('plan_id outside the caller jurisdiction_scope is rejected 404 PLAN_NOT_FOUND', async () => {
+      const otherJurisdictionId = await findOrCreateJurisdiction('Plans Test Other Jurisdiction (08-09)');
+      const outOfScopePlanInserted = await query<{ id: string }>(
+        `INSERT INTO plans (name, type, jurisdiction_id, owner_id) VALUES ($1, $2, $3, $4) RETURNING id`,
+        [`Out Of Scope Plan ${Date.now()}`, 'SOP', otherJurisdictionId, importTestId],
+      );
+      const outOfScopePlanId = outOfScopePlanInserted[0].id;
+
+      const importRes = await request(app.server)
+        .post('/api/v1/plans/import')
+        .set('Authorization', `Bearer ${importTestToken}`)
+        .send({
+          source_document_ref: 'DOC-EOP-001',
+          mode: 'link_live',
+          plan_id: outOfScopePlanId,
+          name: 'unused',
+          type: 'SOP',
+          jurisdiction_id: testJurisdictionId,
+        });
+      expect(importRes.status).toBe(404);
+      expect(importRes.body.error_code).toBe('PLAN_NOT_FOUND');
+    });
+
+    it('an out-of-permission document is rejected 403 with NO orphaned plan created (both import_copy and link_live new-plan sub-paths)', async () => {
+      const importCopyName = `Orphan Check Import Copy ${Date.now()}`;
+      const importCopyRes = await request(app.server)
+        .post('/api/v1/plans/import')
+        .set('Authorization', `Bearer ${importTestToken}`)
+        .send({
+          source_document_ref: 'DOC-ANNEX-003',
+          mode: 'import_copy',
+          name: importCopyName,
+          type: 'Annex',
+          jurisdiction_id: testJurisdictionId,
+        });
+      expect(importCopyRes.status).toBe(403);
+      expect(importCopyRes.body.error_code).toBe('IMPORT_PERMISSION_DENIED');
+
+      const importCopyOrphanRows = await query<{ id: string }>(`SELECT id FROM plans WHERE name = $1`, [
+        importCopyName,
+      ]);
+      expect(importCopyOrphanRows).toHaveLength(0);
+
+      const linkLiveName = `Orphan Check Link Live ${Date.now()}`;
+      const linkLiveRes = await request(app.server)
+        .post('/api/v1/plans/import')
+        .set('Authorization', `Bearer ${importTestToken}`)
+        .send({
+          source_document_ref: 'DOC-ANNEX-003',
+          mode: 'link_live',
+          name: linkLiveName,
+          type: 'Annex',
+          jurisdiction_id: testJurisdictionId,
+        });
+      expect(linkLiveRes.status).toBe(403);
+      expect(linkLiveRes.body.error_code).toBe('IMPORT_PERMISSION_DENIED');
+
+      const linkLiveOrphanRows = await query<{ id: string }>(`SELECT id FROM plans WHERE name = $1`, [
+        linkLiveName,
+      ]);
+      expect(linkLiveOrphanRows).toHaveLength(0);
+    });
   });
 });

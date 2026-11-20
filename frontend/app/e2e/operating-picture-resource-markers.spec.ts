@@ -274,6 +274,14 @@ test.describe.serial('Operating Picture — resource-request markers', () => {
     await expect(popup.getByText('Quantity: 3')).toBeVisible();
     await expect(popup.locator('.ep-badge', { hasText: 'Awaiting approval' })).toBeVisible();
 
+    // Phase 8 (08-08, UAT gap ref 3 fix): a resource marker has no
+    // incident_id to scope a task list by — the side panel's Tasks Card
+    // must not render at all for this selection (not merely show an
+    // empty TaskList). This is the resource half of this plan's
+    // must_haves truth (previously untested); the facility half is proven
+    // independently in operating-picture-facility-markers.spec.ts.
+    await expect(page.getByRole('heading', { name: 'Tasks' })).toHaveCount(0);
+
     await popup.getByRole('button', { name: 'Open request' }).click();
     await expect(page).toHaveURL(new RegExp(`/resource-requests/${requestId}$`), {
       timeout: 10_000,

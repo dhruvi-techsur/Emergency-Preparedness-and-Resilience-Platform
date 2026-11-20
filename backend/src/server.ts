@@ -17,6 +17,9 @@ import { startWebhookDeliveryWorker } from './modules/integration-gateway/webhoo
 import { startOverdueSweepScheduler } from './modules/incident-ops/overdue-sweep.js';
 import { startHazardFeedIngestionScheduler } from './modules/integration-gateway/hazard-feed-adapter.js';
 import { startCadIngestionScheduler } from './modules/integration-gateway/cad-adapter.js';
+import { startFacilitySyncScheduler } from './modules/integration-gateway/facility-adapter.js';
+import { startEocCotsSyncScheduler } from './modules/integration-gateway/eoc-cots-adapter.js';
+import { startDocumentLinkSyncScheduler } from './modules/integration-gateway/document-adapter.js';
 import { syncRolePermissionsToOpa, type RolePermissionRow } from './modules/auth-org/opa-client.js';
 import { query } from './db/client.js';
 
@@ -135,6 +138,28 @@ async function start() {
     startCadIngestionScheduler();
   } catch (err) {
     app.log.warn(err, 'CAD ingestion scheduler failed to start — scheduled polling disabled');
+  }
+
+  // Plan 08-02 (F17) — same graceful-degradation posture as the schedulers
+  // above: a scheduler-start failure must never crash the server.
+  try {
+    startFacilitySyncScheduler();
+  } catch (err) {
+    app.log.warn(err, 'Facility sync scheduler failed to start — scheduled polling disabled');
+  }
+
+  try {
+    startEocCotsSyncScheduler();
+  } catch (err) {
+    app.log.warn(err, 'EOC COTS sync scheduler failed to start — scheduled polling disabled');
+  }
+
+  // Plan 08-06 (F17) — same graceful-degradation posture as the schedulers
+  // above: a scheduler-start failure must never crash the server.
+  try {
+    startDocumentLinkSyncScheduler();
+  } catch (err) {
+    app.log.warn(err, 'Document-link sync scheduler failed to start — scheduled polling disabled');
   }
 
   try {

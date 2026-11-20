@@ -2,16 +2,17 @@
 pivota_spec_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
-current_plan: 4
-status: completed
-last_updated: "2026-11-20T12:10:56.707Z"
-last_activity: "2026-11-20 — Phase 7 complete"
+current_plan: 10
+status: planning
+stopped_at: "Completed 08-10-PLAN.md (gap-closure: ImportDocumentModal/PlanRepository frontend half, F17 UAT gap ref 4 CLOSED — Phase 8 fully complete, 10/10 plans)"
+last_updated: "2026-11-20T18:13:13.374Z"
+last_activity: 2026-11-20
 progress:
   total_phases: 3
-  completed_phases: 7
-  total_plans: 71
-  completed_plans: 65
-  percent: 100
+  completed_phases: 2
+  total_plans: 14
+  completed_plans: 14
+  percent: 67
 ---
 
 # Project State
@@ -25,11 +26,33 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 
 ## Current Position
 
-Phase: Phase 7 (Operating-Picture Read Overlays, Weather & Dispatch)
-Current Plan: 4
-Total Plans in Phase: 4
-Status: Ready to execute
+Phase: Phase 8 (Record Authority & Sync Integrations) — COMPLETE
+Current Plan: 10
+Total Plans in Phase: 10 (6 original + 4 gap-closure: 08-07/08-08/08-09/08-10)
+Status: Phase 8 fully complete — all 10 plans shipped (6 original + 4 gap-closure). Ready for Phase 9 planning or milestone completion.
 Last Activity: 2026-11-20
+
+Plan 08-10 (this phase, FINAL gap-closure plan): see 08-10-SUMMARY.md for full detail. Closed the frontend half of UAT gap ref 4 (major), completing what 08-09's backend route started. `ImportDocumentModal.tsx` now offers a "Create a new plan" (default)/"Attach to an existing plan" `Select` once a document is selected — new-plan fields (name pre-filled+editable, type, jurisdiction Combobox) or an existing-plan Combobox sourced from `GET /api/v1/plans?page_size=100`, each gated via React Query `enabled` on the chosen mode — and `handleSubmit` now calls the real `POST /api/v1/plans/import` with the backend's literal `mode` enum values (`import_copy`/`link_live`), returning the resulting plan id via `onImported(planId)`. `PlanRepository.tsx`'s `onImported` changed from `() => void refetch()` to `navigate(`/plans/${planId}`)`, mirroring `CreateTask.tsx`/`CreateResourceRequest.tsx`'s own navigate-to-new-resource convention. Extended `plan-document-import-link.spec.ts` to 5/5 tests: test 2 drives the new default "create a new plan" path end-to-end (asserts real navigation + a `Draft` status Badge), test 4 switches to "attach to an existing plan" and confirms via direct Postgres query that a real `link_live` `document_links` row landed on that same plan, and new test 5 proves the imported plan is immediately visible in the Plans & playbooks list — directly closing the "doesn't take me anywhere... list is unchanged" user report. Two test-only Rule-1 deviations (both confined to the new spec file, no production code affected): a `.inputValue()` read raced the pre-fill `useEffect` (fixed with an explicit `toHaveValue()` wait), and the pre-filled plan name needed to be made unique per run to avoid colliding with prior suite runs' identically-named fixture plans on the shared compose DB. `tsc --noEmit` and `npm run build` (frontend/app) both clean; full backend suite (22 files, 152 tests, unaffected — zero backend changes this plan) and regression specs (`plans.spec.ts` 4/4, `plan-live-link-flagged-review.spec.ts` 3/3) all green. Plan 08-06's "Source changed, review" Alert is now reachable through genuine product usage for the first time. Phase 8 is now FULLY complete: all 10 plans (6 original + 4 gap-closure) shipped.
+
+Plan 08-09 (this phase, gap-closure): see 08-09-SUMMARY.md for full detail. Closed the backend half of UAT gap ref 4 (major): clicking "Import copy"/"Link live" in the Plan Repository's Import modal wrote a real `document_links` row but never created/attached a Plan and never wrote `plans.source_document_ref` — a silent no-op from the user's perspective. New `POST /api/v1/plans/import` route either creates a brand-new Draft/v1 plan with `source_document_ref` set (no `plan_id` supplied, the FRD's literal default) or attaches to an existing in-scope plan the caller names, delegating ALL document-permission enforcement to the already-shipped `importDocument`/`linkDocument` functions so the permission boundary stays in exactly one place. A small additive `hasDocumentAccess()` export on `document-adapter.ts` lets the new-plan path pre-flight the access-set check BEFORE the plans-table INSERT — the plan's own preferred approach over a delete-after-the-fact rollback — guaranteeing zero orphaned Draft plans survive a rejected import on either `import_copy` or `link_live`. New tests (4 cases) prove new-plan creation + GET-reachability + DB-level `source_document_ref` write, existing-plan attachment, 404 on out-of-jurisdiction-scope `plan_id` (closing a second potential F-08-01-style IDOR code path before it could open), and no-orphan on rejection for both new-plan sub-paths. One test-only Rule-1 deviation: a dedicated fixture user was needed for the new tests to avoid a cross-describe-block collision with the file's pre-existing permission-revocation test's module-level `simulateDocumentAccessRevocation` call. Full backend suite (22 files, 152 tests) zero regression; `tsc --noEmit` and `npm run build` both clean; `npm run seed` re-confirmed idempotent.
+
+Plan 08-08 (this phase, gap-closure): see 08-08-SUMMARY.md for full detail. Closed UAT gap ref 3 (major): OperatingPicture.tsx's side-panel Tasks Card had rendered a stale "Tasks ship in a later phase — Task tracking (F4) is built in Phase 3" placeholder unconditionally for every marker selection since Phase 2, including Phase 8's own new facility markers — despite Phase 3 having shipped real task tracking over a year of roadmap time ago. Replaced it with the real, incident-scoped `<TaskList incidentId={selectedId} />`, mirroring 03-08's identical fix for IncidentWorkspace.tsx's equivalent placeholder exactly. Also fixed the secondary structural finding UAT's root-cause analysis flagged: the Tasks Card is now gated behind the same `!selectedIsResource && !selectedIsFacility` condition the file's own incident-detail queries already use, so it renders for NO selection that lacks an incident_id to scope by (not merely an empty list). New/extended Playwright coverage proves both halves end-to-end: `operating-picture-facility-markers.spec.ts` (5/5, 1 extended + 1 new test) and `operating-picture-resource-markers.spec.ts` (3/3, 1 extended test) — the resource half of this gate had zero prior test coverage before this plan. Zero regression on `operating-picture.spec.ts` (5/5); `tsc --noEmit` and `npm run build` (frontend/app) both clean. Two trivial self-caught Rule-1 deviations (both documented in 08-08-SUMMARY.md): a doc-comment that initially self-collided with the plan's own stale-string verification grep, and a Playwright strict-mode locator ambiguity between the Tasks Card's own heading and TaskList's internally-rendered PageHeader heading, both also reading "Tasks".
+
+Plan 08-07 (this phase, gap-closure): see 08-07-SUMMARY.md for full detail. Independently re-verified F-08-01 (CONFIRMED HIGH IDOR — `linkDocument()`'s `plan_id` parameter bypassing jurisdiction-scope enforcement) closed. A prior, standalone security-audit-fix round (commits `a5230d4`, `9820718`) had already shipped the fix and its full test coverage before this plan ran — this plan's own execution produced zero new code, instead independently re-running every `<verify>`/`<verification>` command the plan itself specifies against a clean working tree: `tsc --noEmit` clean, the targeted `facility-document-adapter.test.ts` 14/14 passing (10 pre-existing + 4 new F-08-01 cases, numbered 9-12), full backend suite 22 files/148 tests zero regression, `npm run build` clean, `npm run seed` re-confirmed idempotent. No deviations — the plan's own spec was already fully satisfied.
+
+Plan 08-06 (this phase, FINAL original-scope plan): see 08-06-SUMMARY.md for full detail. Shipped F17's final hard requirement and this phase's success criterion 5 — a background sync job for "Link live" documents that detects a simulated source-document change and flags it (`document_links.content_status='changed'`, new migration-ALTER columns, new isolated `document_link_sync` job_type), surfaced as a persistent "Source changed, review" Alert in `PlanDetail.tsx`'s reading view, with a grep-verified structural guarantee of zero write path from the sync job to `plans`/`plan_sections`/`plan_versions`. `revalidateDocumentLinkPermission()` is called synchronously by `GET /api/v1/plans/{id}` for every `link_live` row on every request — satisfying F17's literal "at minimum, before each render" cadence, not just the 5-minute scheduled tick. New `PATCH .../document-links/{linkId}/acknowledge` is the ONLY code path clearing the flag (409 on double-acknowledge, audited). New `plan-live-link-flagged-review.spec.ts` (3/3) drives the REAL detection trigger (a genuine `link_live` row + the actual idempotent UPDATE the sync job itself issues) rather than a hand-set fixture, proving plan content stays byte-identical across the full flagged/acknowledged lifecycle. One self-correction: reworded the idempotency guard from `content_status = 'current'` to the logically equivalent `<> 'changed'` to avoid a literal-string collision with this plan's own structural grep. Full backend suite (22 files, 143 tests) zero regression; both builds + `tsc --noEmit` clean; `npm run seed` re-confirmed idempotent. Phase 8 is now fully complete (all 6 plans shipped).
+
+Plan 08-05 (this phase): see 08-05-SUMMARY.md for full detail. Shipped F17's Plan Repository frontend half — new `ImportDocumentModal.tsx` (TextField search + `Table` results, Import copy/Link live footer buttons) consuming Plan 08-02's permission-aware document adapter, with `PlanRepository.tsx`'s "Import plan" action changed from Phase 3's documented disabled placeholder to a real, enabled entry point. The results list renders exactly what `GET /api/v1/integrations/documents/browse` returns with zero client-side re-filtering — the server-side filter in 08-02's `browseDocuments()` is the sole enforcement mechanism, proven by a new `plan-document-import-link.spec.ts` (4/4) asserting the withheld third document (`DOC-ANNEX-003`) has `toHaveCount(0)` in the modal's DOM, plus a direct `page.evaluate`+`fetch` bypass of the browse UI proving the import route still rejects it with a real 403 `IMPORT_PERMISSION_DENIED`. Reused the existing `signInAsPlanningChief` identity (no new seed needed). Zero deviations; `tsc --noEmit`/`npm run build` clean, backend suite (21 files, 138 tests) and `plans.spec.ts` (4/4) regression both green.
+
+Plan 08-03 (this phase): see 08-03-SUMMARY.md for full detail. Shipped F13's conflict-resolution half — new `eoc-cots-conflicts.ts`, the sole code path permitted to `SET resolution` on `eoc_cots_conflicts` (caller-identity equality mirroring `sync-conflicts.ts`'s pattern, a race-safe `UPDATE ... WHERE resolution IS NULL` guard collapsing a double-resolve attempt to the SAME 404 as a not-found conflict, `eoc_cots_sync_log` outbound/inbound write on every resolve, `AuditService.record` call). `IntegrationHealth.tsx` extended with an expand/collapse "N conflict(s) — review" toggle revealing a side-by-side `Card` panel with literal "Keep EPMP value"/"Keep WebEOC value" actions, neither pre-focused, invalidating the conflicts query on success so the resolved conflict disappears with no page reload. Cross-plan touch-up: 08-01's GET conflicts route now also returns `system_name` (one-line addition, this stub adapter has exactly one configured vendor) so the frontend can join without a second endpoint. New `eoc-cots-conflicts.test.ts` (4/4) and `eoc-cots-conflict-resolution.spec.ts` (4/4, including two direct-API-bypass rejection proofs) both green; full backend suite (22 files, 142 tests) zero regression; both builds + `tsc --noEmit` clean; `npm run seed` re-confirmed idempotent. One Rule-3 fix: exported `findOrCreateEocCotsConfig` from 08-01's adapter file (was private) so the new test file could construct a valid fixture conflict row.
+
+Plan 08-04 (this phase): see 08-04-SUMMARY.md for full detail. Shipped F17's Operating Picture frontend half — `OperatingPicture.tsx` now polls Plan 08-02's `GET /api/v1/operating-picture/facilities` via its own `useQuery`, merging facility markers (square shape, status-toned) client-side into the existing `visibleMarkers`/`canvasMarkers`/`legendItems`/`popupNode` pipeline 03-09 established for resource markers — zero design-system changes needed. The facility popup renders title/Badge/`Provenance`(sourced from the marker's own `source`/`as_of`, not the shared `status_bar`)/one status fact only, structurally incapable of showing inventory/maintenance/cost since `ApiFacilityMarker`'s interface has no such field. New `operating-picture-facility-markers.spec.ts` (4/4) proves rendering, popup Provenance + a structural no-forbidden-text assertion, the legend entry, and no regression; `operating-picture.spec.ts` (5/5) and `operating-picture-hazard-layers.spec.ts` (3/3) regression-pass unaffected. One documented deviation (not a code defect): Task 1's diff landed inside parallel wave-2 plan 08-03's commit (`a442609`) due to a concurrent-execution git race — confirmed via direct inspection that the full, correct diff is present and `tsc --noEmit`/`npm run build` both re-verify clean against HEAD.
+
+Plan 08-02 (this phase): see 08-02-SUMMARY.md for full detail. Shipped F17's two backend adapter halves — facility_feed_config/facilities/document_system_config schema (migration renumbered 1700000000013->1700000000015, both 1700000000013/1700000000014 already claimed by 07-02 and this phase's own 08-01 by execution time), a deterministic agency_erp facility/asset-status adapter stub whose fetchFacilityStatus() discards inventory_count/maintenance_due_at/annual_cost at the normalization boundary via an explicit allow-list object-literal copy (proven via a structural Object.keys() test assertion, not just documented intent), and a permission-aware SharePoint-class document adapter stub whose browseDocuments/importDocument/linkDocument all re-check a lazily-seeded per-user simulated delegated-permission set server-side on every call (2-of-3 documents granted deterministically, the third withheld — proven both at the function level and via a real HTTP 403 IMPORT_PERMISSION_DENIED). New GET /api/v1/operating-picture/facilities route feeds Plan 08-04; GET/POST /api/v1/integrations/documents/* feeds Plan 08-05. One Rule-1 fix: restored 08-01's eocCotsRoutes registration in routes.ts, which this plan's own edit had silently clobbered due to a read/edit race against 08-01's parallel commit to the same file (caught by the full-suite re-run, not left undiscovered). Full backend suite (21 files, 138 tests) green with zero regression; npm run build and npm run seed both clean.
+
+Plan 08-01 (this phase): see 08-01-SUMMARY.md for full detail. Shipped F13's EOC COTS Interoperability backend half — eoc_cots_config/eoc_cots_sync_log/eoc_cots_conflicts schema (migration renumbered 1700000000012->1700000000014, same cross-plan collision precedent as every prior phase), a deterministic WebEOC-class adapter stub, and the new isRecordTypeDeclared(recordType) existence check called BEFORE checkRecordAuthority(type) in both runEocCotsSync's per-type loop and the outbound POST route — structurally distinguishing "no registry row" from "registry row explicitly says EPMP," a distinction checkRecordAuthority's own collapsed default return value could never express alone. Deterministic conflict detection via the seeded EOC-CONFLICT-001 external_id writes to eoc_cots_conflicts with resolution left NULL (never auto-resolved). background_jobs bookkeeping scoped exclusively to the pre-existing, previously-unclaimed job_type='sync_reconciliation' value (no new migration ALTER needed). Full backend suite (20 files, 128 tests) green with zero regression; npm run build and npm run seed both clean.
+
+Plan 07-04 (prior phase, complete): Phase 7 (Operating-Picture Read Overlays, Weather & Dispatch) finished all 4 plans — see 07-04-SUMMARY.md and earlier 07-0X-SUMMARY.md files for full detail.
 
 ## v1.0 Summary (for reference, not yet archived to MILESTONES.md)
 
@@ -71,15 +94,15 @@ Plan 05-02 (prior): shipped the client-side half of F6 — SyncStatus design-sys
 
 Plan 05-01 (prior, backend): shipped the F6 backend data layer and API surface — field_reports/field_report_photos/sync_conflicts tables plus idempotent-submit/ordered-batch-sync/photo-upload/conflict-resolve endpoints, every incident-touching write wrapped in the shared withTimelineTransaction invariant. Integration test (4 cases) + full backend suite (15 files, 74 tests) green with zero regression; tsc --noEmit and backend build both clean.
 
-Progress: [██████████] 100%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 40
+- Total plans completed: 41
 - Average duration: 24 min
-- Total execution time: 14.6 hours
+- Total execution time: 15.0 hours
 
 **By Phase:**
 
@@ -157,6 +180,16 @@ Progress: [██████████] 100%
 | Phase 07 P02 | 22 min | 3 tasks | 6 files |
 | Phase 07 P03 | 18 min | 2 tasks | 2 files |
 | Phase 07 P04 | 28 min | 2 tasks | 3 files |
+| Phase 08 P01 | 20 min | 2 tasks | 6 files |
+| Phase 08 P02 | 25 min | 2 tasks | 7 files |
+| Phase 08 P05 | 18 min | 3 tasks | 3 files |
+| Phase 08-record-authority-sync-integrations P04 | 18 min | 2 tasks | 2 files |
+| Phase 08 P03 | 10 min | 3 tasks | 6 files |
+| Phase 08 P06 | 25 min | 3 tasks | 7 files |
+| Phase 08-record-authority-sync-integrations P07 | 12 min | 2 tasks | 1 files |
+| Phase 08-record-authority-sync-integrations P08 | 25 min | 2 tasks | 3 files |
+| Phase 08-record-authority-sync-integrations P09 | 18 min | 2 tasks | 3 files |
+| Phase 08 P10 | 22 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -326,6 +359,21 @@ Recent decisions affecting current work:
 - [Phase 07-04]: Dispatch status Card placed between Command roles and Map in sidebar (own discretion, no mockup ordering exists for F15)
 - [Phase 07-04]: IntegrationHealth.tsx needed zero structural change — confirmed generic over whatever rows the backend returns; only stale EmptyState copy updated
 - [Phase 07-04]: Playwright spec resolves the CAD-linked incident by live DB query (cad_dispatch_events.linked_incident_id), not by assumed seed name, since 07-02's adapter stub re-links its single event across test runs
+- [Phase 08-01]: isRecordTypeDeclared(type) called BEFORE checkRecordAuthority(type) at every F13 call site, structurally distinguishing undeclared record types from EPMP-authoritative ones
+- [Phase 08-02]: Migration renumbered 1700000000013 -> 1700000000015 (1700000000013 claimed by 07-02's cad-dispatch-schema.js, 1700000000014 claimed by this phase's own 08-01 eoc-cots-schema.js by execution time)
+- [Phase 08-02]: facility_sync added as a new background_jobs.job_type CHECK-constraint value via this migration's ALTER, kept structurally distinct from cad_ingestion/feed_ingestion/sync_reconciliation per the established per-adapter job_type-isolation convention
+- [Phase 08-02]: document_links.plan_id left NULL on importDocument (standalone import, no plan association yet); linkDocument accepts an optional planId parameter for when it's already known at link time
+- [Phase 08-05]: ImportDocumentModal uses TextField+Table (not Combobox) for browse/select-a-row-to-act-on, reserving Combobox for single-value form fields
+- [Phase 08-05]: Reused existing signInAsPlanningChief Playwright identity for F17 document import/link e2e coverage rather than seeding a new identity
+- [Phase 08-record-authority-sync-integrations]: [Phase 08-04]: Facility markers polled via their own useQuery, merged client-side into the existing visibleMarkers/canvasMarkers pipeline rather than widening the existing markers endpoint, per Plan 08-02's own file-ownership note avoiding a cross-plan collision in the same wave
+- [Phase 08-03]: Added system_name to 08-01's GET conflicts response (one-line cross-plan touch-up) rather than a second lookup endpoint, since this stub adapter has exactly one configured vendor
+- [Phase 08-06]: Migration renumbered 1700000000014->1700000000016 (both 1700000000014/1700000000015 already claimed by this phase's own 08-01/08-02 by execution time) — same cross-plan collision precedent every prior phase has resolved identically
+- [Phase 08-06]: runDocumentLinkSync()'s idempotency guard phrased as content_status <> 'changed' rather than = 'current' — functionally identical on the two-state CHECK-constrained enum, rewritten specifically so this file's own text never collides with this plan's structural grep verifying only plans.ts's acknowledge route clears the flag
+- [Phase 08-record-authority-sync-integrations]: [Phase 08-07]: Plan treated as fully satisfied by independent re-verification (not re-implementation) since a prior standalone security-audit-fix round (commits a5230d4, 9820718) had already shipped F-08-01's fix and full test coverage before this plan executed
+- [Phase 08-08]: Reworded the fix's explanatory doc comment to avoid literally embedding the stale placeholder string the plan's own verify step greps the file for — the identical self-collision class 08-06 documented for its idempotency-guard wording
+- [Phase 08-08]: Scoped the new Playwright "Tasks" heading locator to h3.ep-card__title specifically, since TaskList's own embedded PageHeader independently renders an h1 also reading "Tasks" — a bare name-only heading locator is ambiguous once the real component (not a placeholder) is mounted
+- [Phase 08-record-authority-sync-integrations]: 08-09: pre-flight hasDocumentAccess() check before plans-table INSERT (not delete-after-the-fact rollback) guarantees zero orphaned Draft plans on a rejected import
+- [Phase 08-10]: handleSubmit's mode values renamed to the backend's literal enum (import_copy/link_live), closing a naming mismatch against 08-09's route; new-plan name field kept editable (not read-only pre-fill) for collision-free repeated test runs
 
 ### Pending Todos
 
@@ -337,6 +385,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-20T10:15:52.191Z
-Stopped at: Completed 07-04-PLAN.md
+Last session: 2026-11-20T18:07:36.547Z
+Stopped at: Completed 08-10-PLAN.md (gap-closure: ImportDocumentModal/PlanRepository frontend half, F17 UAT gap ref 4 CLOSED — Phase 8 fully complete, 10/10 plans)
 Resume file: None

@@ -1,6 +1,9 @@
 import { pool } from '../src/db/client.js';
 import { clusterHazardFeedEvents } from '../src/modules/ai-assist/signal-clustering.js';
 import { syncHazardLayersFromEvents, runHazardFeedIngestion } from '../src/modules/integration-gateway/hazard-feed-adapter.js';
+import { runEocCotsSync } from '../src/modules/integration-gateway/eoc-cots-adapter.js';
+import { runFacilitySync } from '../src/modules/integration-gateway/facility-adapter.js';
+import { linkDocument, runDocumentLinkSync } from '../src/modules/integration-gateway/document-adapter.js';
 
 interface FindOrInsertResult {
   id: string;
@@ -1283,6 +1286,68 @@ async function main() {
   );
   record('plan_versions', uatUnlinkedPlanVersion);
 
+  // UAT data-doctor fixture (Phase 8 UAT pass, test "Live-Linked Document
+  // Flagged Review" — 08-06's F17 final hard requirement): a REAL
+  // mode='link_live' document_links row, already flagged
+  // content_status='changed', attached to the existing UAT-LINK-TASKS-READY
+  // plan above, so a human tester's UAT walkthrough of PlanDetail.tsx's
+  // "Source changed, review" Alert never has to perform the full
+  // import/link-then-wait-for-a-background-sync-tick flow themselves just
+  // to SEE the flagged state once.
+  //
+  // Driven through the REAL functions document-adapter.ts exports — never
+  // a hand-inserted row bypassing the module's own logic (mirrors this
+  // file's own established "run the real adapter function" precedent for
+  // EOC COTS/facility/hazard-feed sync above, and matches
+  // plan-live-link-flagged-review.spec.ts's own "prefer the real detection
+  // path" design note):
+  //  1. linkDocument(userId, externalDocId, planId) — the EXACT function
+  //     POST /api/v1/integrations/documents/:id/link calls, called here
+  //     with plannerUser.id (planning_logistics_chief, who already holds
+  //     the `plans:edit` grant that route requires) and the fixed
+  //     'DOC-SOP-002' external_document_id — the ONE id
+  //     runDocumentLinkSync()'s own content-change simulation recognizes
+  //     as its deterministic trigger (document-adapter.ts's own doc
+  //     comment on that function names it explicitly).
+  //  2. runDocumentLinkSync() — the REAL scheduled-sweep function, called
+  //     once here exactly like this file's EOC COTS/facility precedent
+  //     above, which performs the actual
+  //     `UPDATE document_links SET content_status = 'changed', ...` the
+  //     scheduler would otherwise only perform on its first 5-minute tick.
+  //
+  // Idempotent: linkDocument() has no natural-key guard of its own (a
+  // document CAN legitimately be linked to the same plan twice in real
+  // usage), so this block first checks for an existing link_live row for
+  // this exact (plan_id, external_document_id) pair before calling
+  // linkDocument() again — a second seed run must not create a duplicate
+  // row. runDocumentLinkSync() itself is already idempotent (its own
+  // `AND content_status <> 'changed'` guard), so calling it again on an
+  // already-flagged row here is always a safe no-op.
+  const existingUatLiveLinkRow = await pool.query<{ id: string; content_status: string }>(
+    `SELECT id, content_status FROM document_links
+     WHERE plan_id = $1 AND external_document_id = $2 AND mode = 'link_live'
+     LIMIT 1`,
+    [uatUnlinkedPlan.id, 'DOC-SOP-002'],
+  );
+
+  if (existingUatLiveLinkRow.rows.length === 0) {
+    const linked = await linkDocument(plannerUser.id, 'DOC-SOP-002', uatUnlinkedPlan.id, [
+      jurisdiction.id,
+    ]);
+    record('document_links', { id: linked.id, inserted: true });
+  } else {
+    record('document_links', { id: existingUatLiveLinkRow.rows[0].id, inserted: false });
+  }
+
+  // Always re-run the real sync sweep — idempotent, and self-healing for a
+  // sandbox where the row above was already linked (e.g. by a prior seed
+  // run or a human tester) but hadn't yet been flagged by a scheduled tick.
+  const uatDocLinkSyncResult = await runDocumentLinkSync();
+  console.log(
+    `Document link sync: checked ${uatDocLinkSyncResult.checked} link_live row(s), ` +
+      `${uatDocLinkSyncResult.flagged} newly flagged, ${uatDocLinkSyncResult.permission_revoked} permission-revoked.`,
+  );
+
   // UAT data-doctor fixture (Phase 3 UAT re-run, tests "Resource Request
   // Lifecycle (create -> approve/decline)" and "Resource Request Visible on
   // Operating Picture"): a resource request already in 'Awaiting approval'
@@ -2017,9 +2082,19 @@ async function main() {
   }
 
   // record_authority_registry baseline rows (natural key: record_type, which IS unique)
+  //
+  // Phase 8 (08-01, F13): 'incident' declared EPMP-authoritative here —
+  // the four EOC COTS exchange-record types need a registered authority
+  // for checkRecordAuthority to resolve against something other than its
+  // own 'EPMP' collapsed-default, making the "undeclared record types are
+  // not synced" rule observably testable. 'resource_request'/'status'/
+  // 'activity_log' are left DELIBERATELY UNREGISTERED here — this plan's
+  // own integration test proves they're skipped entirely by
+  // runEocCotsSync's isRecordTypeDeclared gate.
   const authorityRows = [
     { record_type: 'user_identity', authoritative_system: 'EPMP' },
     { record_type: 'personnel_roster', authoritative_system: 'HRIS' },
+    { record_type: 'incident', authoritative_system: 'EPMP' },
   ];
   for (const a of authorityRows) {
     const result = await findOrInsert(
@@ -2573,6 +2648,26 @@ async function main() {
   // seeding, rather than waiting for the scheduler's first tick.
   const ingestionResult = await runHazardFeedIngestion();
   console.log(`Hazard feed ingestion: attempted ${ingestionResult.feeds_attempted} feed(s) (NOAA online, NWS/USGS deterministically offline per this stub's KNOWN_LIVE_FEED contract).`);
+
+  // Phase 8 (08-01, F13): run the EOC COTS sync job once here so
+  // integration_health's 'WebEOC' row and at least one eoc_cots_conflicts
+  // row (via the seeded 'EOC-CONFLICT-001' trigger) exist immediately
+  // after `npm run seed`, without waiting for the 5-minute scheduler's
+  // first tick — matching Plan 07-01/07-02's precedent of calling their
+  // own ingestion function once in seed.ts.
+  const eocCotsSyncResult = await runEocCotsSync();
+  console.log(`EOC COTS sync: ${eocCotsSyncResult.synced} record(s) synced, ${eocCotsSyncResult.conflicts} conflict(s) detected.`);
+
+  // Phase 8 (08-02, F17): run the facility sync job once here so
+  // `facilities` and integration_health's 'Facility/Asset Feed' row are
+  // populated immediately after `npm run seed`, matching the identical
+  // precedent above for EOC COTS/hazard-feed ingestion. No explicit
+  // document-adapter seed call is needed — document-adapter.ts's lazy
+  // per-user access-set seeding means the first browse/import/link call
+  // for any user populates its own state; this is deliberate and matches
+  // the stub's documented lazy-seed design.
+  await runFacilitySync();
+  console.log('Facility sync: populated facilities + Facility/Asset Feed integration_health row.');
 
   console.log(
     'Seed summary: ' +

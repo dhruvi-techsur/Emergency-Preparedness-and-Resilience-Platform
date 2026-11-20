@@ -3,6 +3,12 @@ import type { PoolClient } from 'pg';
 import { requirePermission } from '../auth-org/rbac.js';
 import { query, pool } from '../../db/client.js';
 import { AuditService } from '../auth-org/audit.js';
+import {
+  revalidateDocumentLinkPermission,
+  importDocument,
+  linkDocument,
+  hasDocumentAccess,
+} from '../integration-gateway/document-adapter.js';
 
 export type PlanStatus = 'Draft' | 'Review' | 'Approved';
 export type PlanType = 'EOP' | 'SOP' | 'Annex';
@@ -41,6 +47,18 @@ interface PlanVersionRow {
   reviewed_by: string | null;
   review_action: ReviewAction | null;
   reviewed_at: string | null;
+}
+
+interface DocumentLinkRow {
+  id: string;
+  external_document_id: string;
+  source_system: string;
+  mode: 'import_copy' | 'link_live';
+  permission_status: 'valid' | 'revoked';
+  content_status: 'current' | 'changed';
+  content_flagged_at: string | null;
+  acknowledged_at: string | null;
+  created_at: string;
 }
 
 function shapePlanListRow(row: PlanRow) {
@@ -109,6 +127,38 @@ async function fetchLinkedTaskTemplateIds(sectionIds: string[]): Promise<Map<str
   return map;
 }
 
+// F17's "re-validated at minimum before each render" rule, enforced
+// synchronously on EVERY GET /api/v1/plans/{id} request (not cached from
+// the last scheduled runDocumentLinkSync() tick): for each mode='link_live'
+// row, revalidateDocumentLinkPermission() is called BEFORE this function
+// returns. An 'import_copy'-mode row needs no such re-check — a
+// point-in-time copy has no ongoing source-permission dependency. Each
+// row's re-check is wrapped in its own try/catch so one row's re-check
+// failure never blocks the whole plan detail response from returning —
+// same per-item fault isolation discipline as every prior adapter's
+// per-feed/per-type loop.
+async function fetchPlanDocumentLinks(planId: string): Promise<DocumentLinkRow[]> {
+  const rows = await query<DocumentLinkRow>(
+    `SELECT id, external_document_id, source_system, mode, permission_status, content_status, content_flagged_at, acknowledged_at, created_at
+     FROM document_links WHERE plan_id = $1`,
+    [planId],
+  );
+
+  for (const row of rows) {
+    if (row.mode !== 'link_live') continue;
+    try {
+      const result = await revalidateDocumentLinkPermission(row.id);
+      row.permission_status = result;
+    } catch {
+      // Per-row fault isolation: a re-check failure must not block the
+      // rest of the plan detail response — this row simply keeps
+      // whatever permission_status was already persisted.
+    }
+  }
+
+  return rows;
+}
+
 async function fetchVersionHistory(planId: string) {
   const rows = await query<PlanVersionRow>(
     `SELECT version_number, submitted_by, reviewed_by, review_action, reviewed_at
@@ -134,6 +184,7 @@ async function fetchPlanDetail(planId: string, jurisdictionScope?: string[]) {
   const sections = await fetchPlanSections(planId);
   const templateMap = await fetchLinkedTaskTemplateIds(sections.map((s) => s.id));
   const version_history = await fetchVersionHistory(planId);
+  const document_links = await fetchPlanDocumentLinks(planId);
 
   return {
     ...shapePlanListRow(plan),
@@ -145,6 +196,15 @@ async function fetchPlanDetail(planId: string, jurisdictionScope?: string[]) {
       linked_task_templates: templateMap.get(s.id) ?? [],
     })),
     version_history,
+    document_links: document_links.map((d) => ({
+      id: d.id,
+      external_document_id: d.external_document_id,
+      source_system: d.source_system,
+      mode: d.mode,
+      permission_status: d.permission_status,
+      content_status: d.content_status,
+      content_flagged_at: d.content_flagged_at ?? undefined,
+    })),
   };
 }
 
@@ -265,6 +325,125 @@ export default async function plansRoutes(app: FastifyInstance) {
       } finally {
         client.release();
       }
+    },
+  );
+
+  // F17's missing "land it as a Plan" step (UAT gap ref 4, 08-09): a
+  // DIFFERENT endpoint from document-adapter.ts's own
+  // /api/v1/integrations/documents/{id}/import|link routes (those stay
+  // exactly as-is — 08-07 already fixed their own jurisdiction check).
+  // This route either creates a brand-new Draft/v1 plan with
+  // source_document_ref set (the FRD's literal default, no plan_id
+  // supplied) or attaches the import/link to an existing, in-scope plan
+  // the caller explicitly names via plan_id — while delegating ALL
+  // document-permission enforcement to importDocument/linkDocument so the
+  // permission boundary lives in exactly one place (never reimplemented
+  // or bypassed here).
+  app.post<{
+    Body: {
+      source_document_ref: string;
+      mode: 'import_copy' | 'link_live';
+      name: string;
+      type: PlanType;
+      jurisdiction_id: string;
+      plan_id?: string;
+    };
+  }>(
+    '/api/v1/plans/import',
+    { preHandler: requirePermission('plans', 'create') },
+    async (req, reply) => {
+      const { source_document_ref, mode, name, type, jurisdiction_id, plan_id } = req.body ?? ({} as never);
+
+      let targetPlanId: string;
+
+      if (plan_id) {
+        // Attach to an EXISTING plan — same jurisdiction-scope
+        // enforcement every other plans-mutating route uses (F-08-01's
+        // fix, 08-07). No plans-table INSERT happens on this branch at
+        // all, so a rejected import here can never leave an orphan
+        // behind — there is nothing to roll back.
+        const existing = await fetchPlanRow(query, plan_id, req.epmpUser!.jurisdiction_scope);
+        if (!existing) {
+          return reply.code(404).send(PLAN_NOT_FOUND);
+        }
+        targetPlanId = plan_id;
+
+        try {
+          // Branch on `mode` exactly as the new-plan branch below already
+          // does (REVIEW B1, 08-REVIEW.md iteration 1): the caller's
+          // explicit "Import copy" vs. "Link live sync" choice must be
+          // honored here too, not just on the new-plan path — otherwise
+          // selecting "Import copy" against an existing plan silently
+          // wrote a `link_live` row instead. importDocument() now accepts
+          // an optional `planId` (document-adapter.ts) so its
+          // `document_links` row lands attached to targetPlanId directly,
+          // mirroring linkDocument()'s own optional planId parameter.
+          if (mode === 'import_copy') {
+            await importDocument(req.epmpUser!.id, source_document_ref, targetPlanId);
+          } else {
+            await linkDocument(req.epmpUser!.id, source_document_ref, targetPlanId, req.epmpUser!.jurisdiction_scope);
+          }
+        } catch (err) {
+          if (err instanceof Error && err.message === 'IMPORT_PERMISSION_DENIED') {
+            return reply.code(403).send({
+              error_code: 'IMPORT_PERMISSION_DENIED',
+              message: "You don't have access to this document in the source system.",
+            });
+          }
+          throw err;
+        }
+      } else {
+        // No plan_id — create a NEW plan. Pre-flight the access-set check
+        // via document-adapter.ts's standalone hasDocumentAccess() BEFORE
+        // any plans-table INSERT ever runs, for BOTH mode branches — this
+        // is the SAME accessSet.includes(externalDocId) check
+        // importDocument/linkDocument perform internally, just callable
+        // without a real plan_id yet. Guaranteeing the check runs first
+        // means no orphaned Draft plan can ever survive a rejected import
+        // (must-have 4), with no delete-after-the-fact rollback needed.
+        if (!hasDocumentAccess(req.epmpUser!.id, source_document_ref)) {
+          return reply.code(403).send({
+            error_code: 'IMPORT_PERMISSION_DENIED',
+            message: "You don't have access to this document in the source system.",
+          });
+        }
+
+        // Mirrors POST /api/v1/plans's own create transaction exactly
+        // (BEGIN/INSERT plans/COMMIT), additionally setting
+        // source_document_ref — the column that has existed since Phase
+        // 3's own migration specifically for this moment, never
+        // previously written by any code path.
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          const insertedRows = await client.query<{ id: string }>(
+            `INSERT INTO plans (name, type, jurisdiction_id, owner_id, source_document_ref)
+             VALUES ($1,$2,$3,$4,$5) RETURNING id`,
+            [name, type, jurisdiction_id, req.epmpUser!.id, source_document_ref],
+          );
+          targetPlanId = insertedRows.rows[0].id;
+          await client.query('COMMIT');
+        } catch (err) {
+          await client.query('ROLLBACK');
+          req.log.error(err, 'Plan import-creation transaction failed');
+          throw err;
+        } finally {
+          client.release();
+        }
+
+        // The access-set check already passed above, so these calls are
+        // invoked for their real side effects (the document_links write /
+        // the imported content body), not as a second permission gate —
+        // they are not expected to throw IMPORT_PERMISSION_DENIED here.
+        if (mode === 'import_copy') {
+          await importDocument(req.epmpUser!.id, source_document_ref);
+        } else {
+          await linkDocument(req.epmpUser!.id, source_document_ref, targetPlanId, req.epmpUser!.jurisdiction_scope);
+        }
+      }
+
+      const detail = await fetchPlanDetail(targetPlanId, req.epmpUser!.jurisdiction_scope);
+      return reply.code(201).send(detail);
     },
   );
 
@@ -606,6 +785,59 @@ export default async function plansRoutes(app: FastifyInstance) {
       void task_template_ids;
 
       return reply.code(204).send();
+    },
+  );
+
+  // F17's final hard requirement: the ONLY code path that clears
+  // document_links.content_status back to 'current'. It requires an
+  // explicit named-person PATCH call; it is NEVER cleared automatically by
+  // runDocumentLinkSync() or any scheduled process (structurally verified —
+  // see document-adapter.ts, which contains no `content_status = 'current'`
+  // write anywhere in its own body).
+  app.patch<{ Params: { id: string; linkId: string } }>(
+    '/api/v1/plans/:id/document-links/:linkId/acknowledge',
+    // Acknowledging a flag is an authoring action, matching the feature's
+    // existing edit-level gate.
+    { preHandler: requirePermission('plans', 'edit') },
+    async (req, reply) => {
+      const { id, linkId } = req.params;
+
+      // Jurisdiction-scope enforcement (F-01 fix, 03-SECURITY.md) — same
+      // pattern as every other mutating plans.ts route.
+      const plan = await fetchPlanRow(query, id, req.epmpUser!.jurisdiction_scope);
+      if (!plan) {
+        return reply.code(404).send(PLAN_NOT_FOUND);
+      }
+
+      // Verify the document_links row belongs to THIS plan — 404
+      // PLAN_NOT_FOUND (reusing the existing error shape) if not, never
+      // leaking whether a DIFFERENT plan's link id exists.
+      const linkRows = await query<{ id: string }>(
+        `SELECT id FROM document_links WHERE id = $1 AND plan_id = $2`,
+        [linkId, id],
+      );
+      if (!linkRows[0]) {
+        return reply.code(404).send(PLAN_NOT_FOUND);
+      }
+
+      const updated = await query<{ id: string }>(
+        `UPDATE document_links SET content_status = 'current', acknowledged_by = $1, acknowledged_at = now()
+         WHERE id = $2 AND plan_id = $3 AND content_status = 'changed'
+         RETURNING id`,
+        [req.epmpUser!.id, linkId, id],
+      );
+
+      if (updated.length === 0) {
+        return reply.code(409).send({
+          error_code: 'DOCUMENT_LINK_NOT_FLAGGED',
+          message: 'This document is not currently flagged for review.',
+        });
+      }
+
+      await AuditService.record(req.epmpUser!.id, 'document_link_acknowledge', 'document_link', linkId, {});
+
+      const detail = await fetchPlanDetail(id, req.epmpUser!.jurisdiction_scope);
+      return reply.code(200).send(detail);
     },
   );
 }

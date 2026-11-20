@@ -14,6 +14,7 @@ import {
   type BadgeTone,
 } from '@epmp/design-system';
 import { apiGet } from '../../lib/api-client';
+import { ImportDocumentModal } from './ImportDocumentModal';
 
 type PlanType = 'EOP' | 'SOP' | 'Annex';
 type PlanStatus = 'Draft' | 'Review' | 'Approved';
@@ -70,13 +71,12 @@ interface JurisdictionsResponse {
 /**
  * F3 S3.1 — Plan Repository (List). Routed `/plans`.
  *
- * Phase 3 scope note (per REQUIREMENTS.md's explicit v2 deferral of F17
- * document import/sync): the "Import plan" action is rendered — not
- * omitted — but disabled with an explanatory tooltip, since the UX
- * mockup's S3.1 spec shows it as a standing affordance on this screen.
- * This is the correct way to represent a deferred-but-specified feature:
- * visibly present, explained, inert — never silently dropped and never
- * wired to a handler that would error.
+ * Phase 8 (F17) note: the "Import plan" action was a Phase 3 documented
+ * v2-deferral placeholder (rendered but disabled with an explanatory
+ * tooltip — see 08-05-PLAN.md for the history). F17 is now in scope: this
+ * plan replaces it with a real, enabled entry point opening
+ * `ImportDocumentModal`, which consumes Plan 08-02's permission-aware
+ * document adapter to browse/import/link a document into this repository.
  */
 export function PlanRepository(): JSX.Element {
   const navigate = useNavigate();
@@ -84,6 +84,7 @@ export function PlanRepository(): JSX.Element {
   const [typeFilter, setTypeFilter] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('');
   const [jurisdictionFilter, setJurisdictionFilter] = React.useState('');
+  const [importModalOpen, setImportModalOpen] = React.useState(false);
 
   const hasActiveFilter =
     search.trim() !== '' || typeFilter !== '' || statusFilter !== '' || jurisdictionFilter !== '';
@@ -186,12 +187,7 @@ export function PlanRepository(): JSX.Element {
       <PageHeader
         title="Plans & playbooks"
         actions={[
-          <Button
-            key="import"
-            variant="secondary"
-            disabled
-            title="Document import (F17) ships in v2"
-          >
+          <Button key="import" variant="secondary" onClick={() => setImportModalOpen(true)}>
             Import plan
           </Button>,
           <Button key="create" variant="primary" onClick={() => navigate('/plans/new')}>
@@ -263,6 +259,12 @@ export function PlanRepository(): JSX.Element {
           }
         />
       </Card>
+
+      <ImportDocumentModal
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onImported={(planId) => navigate(`/plans/${planId}`)}
+      />
     </div>
   );
 }

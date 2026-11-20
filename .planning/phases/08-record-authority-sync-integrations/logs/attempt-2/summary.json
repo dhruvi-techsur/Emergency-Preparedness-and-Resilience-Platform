@@ -1,0 +1,32 @@
+{
+  "duration_secs": 2688.0,
+  "token_usage": {
+    "input": 478,
+    "output": 161930,
+    "total": 38493413,
+    "cache_read": 37592793,
+    "cache_write": 738212,
+    "cost": 10.98434459999999
+  },
+  "model": "claude-sonnet-5",
+  "files_changed": [
+    ".pivota/uat-shots/1-integration-health.png",
+    ".pivota/uat-shots/2-conflict-expanded.png",
+    ".pivota/uat-shots/3-operating-picture.png",
+    ".pivota/uat-shots/3b-facility-popup.png",
+    ".pivota/uat-shots/4-import-modal.png",
+    ".pivota/uat-shots/4-repro-after-import.png",
+    ".pivota/uat-shots/4-repro-selected.png",
+    ".pivota/uat-shots/5-plan-detail-flagged.png",
+    ".planning/debug/operating-picture-stale-tasks-placeholder.md",
+    ".planning/debug/plan-repository-document-import-no-visible-result.md",
+    ".planning/phases/08-record-authority-sync-integrations/08-UAT.md",
+    ".planning/phases/08-record-authority-sync-integrations/08-UAT.summary.json",
+    "backend/scripts/seed.ts"
+  ],
+  "verification_status": "failed",
+  "error_message": null,
+  "attempt_number": 2,
+  "created_at": "2026-11-20T13:56:24.727455+00:00",
+  "completed_at": "2026-11-20T14:41:13.650215184+00:00"
+}
