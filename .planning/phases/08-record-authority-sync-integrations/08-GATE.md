@@ -3,14 +3,14 @@ phase: 08
 gate_status: passed
 build_command: "npm run build"
 test_command: "npm test"
-last_updated: 2026-11-20T13:25:26Z
+last_updated: 2026-11-20T18:58:26Z
 tests_disabled_during_fixes: none
 shadowed_sources: 0
 review_blockers_open: 0
 boot_smoke: pass
 browser_suite: pass
-browser_headroom_mb: 8986
-browser_headroom_naive_mb: 5371
+browser_headroom_mb: 4751
+browser_headroom_naive_mb: 1084
 waves:
   - wave: 1
     build: pass
@@ -1838,3 +1838,20 @@ __GATE__ build_exit=0 test_exit=0 build_cmd=[npm run build] test_cmd=[npm test] 
 [2m   Duration [22m 3.55s[2m (transform 487ms, setup 96ms, import 4.44s, tests 4.22s, environment 1ms)[22m
 
 ```
+
+## Browser suite gate (gap-closure run, --gaps-only)
+
+- Runner: Playwright, 29 spec files, workers=1
+- Result: 127/128 expected passed, 1 unexpected failure
+- Headroom at run start: 4751 MB corrected / 1084 MB naive (ample — not the constraint)
+- Verdict recorded: `pass`
+
+**The 1 failing test is `pre_existing`, not a wave 1/2/3 regression:**
+
+`field-mobile-sync-conflict.spec.ts` > "1-6. field_responder seeds a conflict via sync-batch, sees both versions with no default selection, resolves it, and the outcome commits server-side" — timed out waiting for `getByRole('heading', { name: 'Your version' })`.
+
+- `git diff e545ee4...HEAD --stat -- frontend/app/e2e/field-mobile-sync-conflict.spec.ts` → no output: this spec file is untouched by any of this run's 4 gap-closure plans (08-07/08-08/08-09/08-10).
+- `git log --oneline -1 -- frontend/app/e2e/field-mobile-sync-conflict.spec.ts` → `58bae12 feat(05-04)` — last touched in Phase 5, over 60 commits before phase 8 began.
+- This exact flake was already documented in STATE.md's Phase-5 gap-closure history (plan 05-06): "a pre-existing, unrelated test-isolation flake in field-mobile-sync-conflict.spec.ts (jurisdiction-ordering drift from other phases' accumulated test fixtures)" — the shared compose-stack Postgres has accumulated fixture data across every phase's repeated test runs, and this spec's own jurisdiction-ordering assumption is what drifts.
+- Re-ran the spec file in isolation (not just as part of the full suite): same failure, same locator, same timeout — ruling out suite-level worker/ordering interference as a confound; this is the spec's own known instability, not flakiness introduced by running it alongside this phase's new specs.
+- No fix attempted: out of this run's scope (not a file any of 08-07/08-08/08-09/08-10 touched), and the gate's own scope rule is to record `pre_existing` and not chase an unrelated pre-existing defect.
