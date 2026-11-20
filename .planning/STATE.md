@@ -2,15 +2,16 @@
 pivota_spec_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
-current_plan: 4
-status: completed
-last_updated: "2026-11-20T12:10:56.707Z"
-last_activity: "2026-11-20 — Phase 7 complete"
+current_plan: 2
+status: executing
+stopped_at: Completed 08-01-PLAN.md
+last_updated: "2026-11-20T12:19:44.244Z"
+last_activity: 2026-11-20
 progress:
   total_phases: 3
-  completed_phases: 7
-  total_plans: 71
-  completed_plans: 65
+  completed_phases: 1
+  total_plans: 10
+  completed_plans: 5
   percent: 100
 ---
 
@@ -25,11 +26,15 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 
 ## Current Position
 
-Phase: Phase 7 (Operating-Picture Read Overlays, Weather & Dispatch)
-Current Plan: 4
-Total Plans in Phase: 4
-Status: Ready to execute
+Phase: Phase 8 (Record Authority & Sync Integrations)
+Current Plan: 2
+Total Plans in Phase: 6
+Status: Executing
 Last Activity: 2026-11-20
+
+Plan 08-01 (this phase): see 08-01-SUMMARY.md for full detail. Shipped F13's EOC COTS Interoperability backend half — eoc_cots_config/eoc_cots_sync_log/eoc_cots_conflicts schema (migration renumbered 1700000000012->1700000000014, same cross-plan collision precedent as every prior phase), a deterministic WebEOC-class adapter stub, and the new isRecordTypeDeclared(recordType) existence check called BEFORE checkRecordAuthority(type) in both runEocCotsSync's per-type loop and the outbound POST route — structurally distinguishing "no registry row" from "registry row explicitly says EPMP," a distinction checkRecordAuthority's own collapsed default return value could never express alone. Deterministic conflict detection via the seeded EOC-CONFLICT-001 external_id writes to eoc_cots_conflicts with resolution left NULL (never auto-resolved). background_jobs bookkeeping scoped exclusively to the pre-existing, previously-unclaimed job_type='sync_reconciliation' value (no new migration ALTER needed). Full backend suite (20 files, 128 tests) green with zero regression; npm run build and npm run seed both clean.
+
+Plan 07-04 (prior phase, complete): Phase 7 (Operating-Picture Read Overlays, Weather & Dispatch) finished all 4 plans — see 07-04-SUMMARY.md and earlier 07-0X-SUMMARY.md files for full detail.
 
 ## v1.0 Summary (for reference, not yet archived to MILESTONES.md)
 
@@ -157,6 +162,7 @@ Progress: [██████████] 100%
 | Phase 07 P02 | 22 min | 3 tasks | 6 files |
 | Phase 07 P03 | 18 min | 2 tasks | 2 files |
 | Phase 07 P04 | 28 min | 2 tasks | 3 files |
+| Phase 08 P01 | 20 min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -326,6 +332,7 @@ Recent decisions affecting current work:
 - [Phase 07-04]: Dispatch status Card placed between Command roles and Map in sidebar (own discretion, no mockup ordering exists for F15)
 - [Phase 07-04]: IntegrationHealth.tsx needed zero structural change — confirmed generic over whatever rows the backend returns; only stale EmptyState copy updated
 - [Phase 07-04]: Playwright spec resolves the CAD-linked incident by live DB query (cad_dispatch_events.linked_incident_id), not by assumed seed name, since 07-02's adapter stub re-links its single event across test runs
+- [Phase 08-01]: isRecordTypeDeclared(type) called BEFORE checkRecordAuthority(type) at every F13 call site, structurally distinguishing undeclared record types from EPMP-authoritative ones
 
 ### Pending Todos
 
@@ -337,6 +344,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-20T10:15:52.191Z
-Stopped at: Completed 07-04-PLAN.md
+Last session: 2026-11-20T12:19:44.242Z
+Stopped at: Completed 08-01-PLAN.md
 Resume file: None
