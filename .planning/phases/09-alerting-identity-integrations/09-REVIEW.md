@@ -3,32 +3,17 @@ phase: 9
 status: clean
 blockers: 0
 warnings: 0
-files_reviewed: 19
+files_reviewed: 2
 files_reviewed_list:
-  - backend/migrations/1700000000017_notification-provider-schema.js
-  - backend/scripts/seed.ts
-  - backend/src/modules/auth-org/routes.ts
-  - backend/src/modules/comms-reporting/notifications.ts
-  - backend/src/modules/integration-gateway/hris-roster-adapter.test.ts
-  - backend/src/modules/integration-gateway/hris-roster-adapter.ts
-  - backend/src/modules/integration-gateway/notification-provider-adapter.test.ts
-  - backend/src/modules/integration-gateway/notification-provider-adapter.ts
-  - backend/src/modules/integration-gateway/routes.ts
-  - backend/src/server.ts
-  - frontend/app/e2e/notification-provider-cap-delivery.spec.ts
-  - frontend/app/e2e/personnel-roster-reference-data.spec.ts
-  - frontend/app/src/main.tsx
-  - frontend/app/src/pages/admin/PersonnelRoster.css
-  - frontend/app/src/pages/admin/PersonnelRoster.tsx
-  - frontend/app/src/pages/incidents/CommandRoleModal.tsx
   - frontend/app/src/pages/notifications/ComposeNotification.tsx
-  - frontend/app/src/pages/notifications/DeliveryTracking.tsx
-  - frontend/app/src/pages/tasks-resources/ResourceRequestDetail.tsx
-reviewed_at: 2026-11-20T00:00:00Z
+  - frontend/app/e2e/notification-provider-cap-delivery.spec.ts
+reviewed_at: 2026-11-20T23:30:00Z
 iteration: 1
 ---
 
 # Phase 9 Code Review
+
+**Scope note:** This is a `--gaps-only` re-review covering only plan 09-05's three commits (`2c22e18`, `1e362ed`, `1b165b3`), a UAT gap-closure fixing checkbox spacing on Compose Notification's Step 2. Plans 09-01 through 09-04 were already reviewed and shipped as `clean`; they are out of scope here and were not re-read.
 
 ## BLOCKERs
 
@@ -38,26 +23,35 @@ None found.
 
 None found.
 
+## Analysis
+
+### `ComposeNotification.tsx` (2c22e18)
+
+The Channels `CHANNEL_OPTIONS.map(...)` Checkbox list is now wrapped in a `<div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>`. Verified:
+
+- `--space-2` (8px) and `--space-4` (16px) are real tokens defined in `frontend/design-system/tokens/tokens.css:279,281` — not invented values. Inline-style token references via `var(--token)` are an established pattern already used identically elsewhere in this same directory (`IntegrationHealth.tsx`/`RecordAuthority.tsx`/`SsoConfigForm.tsx`/`ApiClients.tsx`, confirmed by grep of the broader frontend codebase for the same `var(--space-N)` inline-style convention).
+- `Checkbox.tsx`/`Checkbox.css` render each option as an `inline-flex` `<label>` with its own internal `gap: var(--space-2)` between box and text — the new wrapper's `flex-direction: column` + `gap` operates one level up, stacking the three `<label>` elements vertically without touching `.ep-checkbox`'s own internal layout. No CSS specificity collision; the wrapper is a plain unstyled div with inline styles only, no class name reused elsewhere.
+- The wrapper's `marginBottom: var(--space-4)` sits between the checkbox group and whichever element renders next — either the conditional `CAP public-alert fields` `Card` (when IPAWS is checked) or directly the `Draft with AI` `Button` (when it isn't). Both of those elements are self-contained components (`Card`/`Button`) with their own no-margin box models, so the new wrapper's margin is the only vertical separator introduced — no double-margin or collapsed-margin interaction identified.
+- No change to `toggleChannel`, `channels` state, the CAP-field gating `if` block (`handleContinueFromStep2`), or the Step 3 Review summary (`Array.from(channels).join(', ')`) — confirmed by diff: only the JSX wrapper changed, logic is byte-identical.
+- `tsc --noEmit` run directly against the frontend project: exit clean, zero errors.
+
+### `notification-provider-cap-delivery.spec.ts` (1e362ed)
+
+New assertion block inserted into test 1, after Step 2 becomes visible and before IPAWS is checked:
+- `getByLabel('IPAWS', { exact: true })` — verified the Channels `Checkbox` usage (line 464 in the modified file) has no `required` prop, so `Checkbox.tsx`'s label is the bare string `'IPAWS'` with no appended marker, making `exact: true` a correct match (the file's own existing tests already document why `exact:true` is wrong for the CAP fields below, which DO have `required` — this new assertion correctly uses `exact:true` only where that caveat doesn't apply).
+- `getByRole('button', { name: 'Draft with AI' })` — only one such button exists on Step 2 in this component tree at the point this assertion runs (confirmed via read of the full file: no other `Draft with AI`-labeled control exists).
+- The gap arithmetic (`draftWithAiButtonBox.y - (ipawsCheckboxBox.y + ipawsCheckboxBox.height)`) is the correct formula for vertical separation between two boxes where the second renders below the first — consistent with the new flex-column layout (IPAWS is the 3rd/last checkbox, Draft with AI renders after it).
+- `playwright test --list` against this spec parses all 5 tests successfully, confirming no syntax/import break was introduced.
+- The two other e2e specs that touch `ComposeNotification.tsx` (`notifications-compose.spec.ts`, `incident-to-evidence-trail.spec.ts`) do not interact with the Channels checkboxes at all (grepped for `Channel|IPAWS|SMS|Email` — no hits), so this layout change carries no regression risk to those suites.
+
+### Contract-scan c-gap disposition (re-verified, not re-filed)
+
+Re-confirmed independently (not taken on faith): `git show --name-only` across all three of plan 09-05's commits (`2c22e18`, `1e362ed`, `1b165b3`) contains neither `SignInCallback.tsx` nor `backend/src/modules/auth-org/routes.ts`; a direct `git diff --name-only` across the full Phase-9 commit range for those two specific paths returns empty. The c-gap `GET /api/v1/auth/sso/callback` flagged by the scanner is unchanged by this gap-closure plan and was already correctly dispositioned as a false positive (method-casing scanner artifact; both sides are POST) in the original 09-REVIEW.md. Per the scope note, it is not re-filed here.
+
 ## Cross-file seams checked
 
-- `POST /api/v1/auth/sso/callback` (backend/src/modules/auth-org/routes.ts:81, pre-existing Phase 1 route, untouched by Phase 9 diff) ↔ `SignInCallback.tsx:65` `fetch(..., { method: 'POST' })` — scanner's `c-gap` line mislabeled the method as GET; both sides are POST and match exactly. Confirmed via diff: `auth-org/routes.ts`'s only Phase-9 change is the unrelated `ADMIN_NAV_ITEMS` personnel-roster entry. Verified-false-positive, not carried forward.
-- `GET /api/v1/field-reports/${fieldReportId}/photos` (c-adv, dynamic path) — advisory only, not in Phase 9's scope (file untouched by this phase's diff). No finding.
-- `notificationProviderRoutes`/`hrisRosterRoutes` registration (integration-gateway/routes.ts) ↔ exports in `notification-provider-adapter.ts`/`hris-roster-adapter.ts` — names and signatures match exactly. OK.
-- `startNotificationRetryScheduler`/`startHrisRosterSyncScheduler` (server.ts) ↔ adapter exports — both wrapped in the same graceful-degradation try/catch pattern as every prior scheduler. OK.
-- `sendViaProvider()` (notification-provider-adapter.ts) ↔ its one caller in `notifications.ts`'s `/send` route — `ProviderSendRequest` shape matches the call site's object literal exactly (notification_id/channel/recipients/message/approved_by/approved_at/capFields). OK.
-- `POST /api/v1/notifications/compose` and `/send` request bodies' `capFields` field, sent by `ComposeNotification.tsx` ↔ backend's declared `Body` types for both routes — neither route type declares nor destructures `capFields` from `req.body`; the backend route handler passes its own hardcoded placeholder object to `sendViaProvider` regardless of what the frontend sends. This is explicitly documented as intentional forward-compatible plumbing in both 09-01's and 09-03's SUMMARY.md (confirmed via grep that no `req.body.capFields` read exists) and does not cause any runtime error (extra JSON body fields are silently ignored by Fastify's body parsing here) — not a defect, by design and verified harmless.
-- `GET /api/v1/integrations/hris/personnel` (hris-roster-adapter.ts) ↔ three independent frontend callers (`PersonnelRoster.tsx`, `CommandRoleModal.tsx`, `ResourceRequestDetail.tsx`) — all three request/response shapes (`PersonnelRosterRow`/`RosterRow` subsets) are consistent subsets of the same backend `PersonnelRosterRow` shape. OK.
-- `GET /api/v1/integrations/notification-providers/health` ↔ `IntegrationHealth.tsx` — confirmed (per 09-03 SUMMARY and direct inspection) that this screen requires zero code change since it has no hardcoded `system_name` allowlist; the new Everbridge/IPAWS rows render through the existing generic table. OK.
-- `GET /api/v1/_test/notification-retry-sweep` (notification-provider-adapter.ts) ↔ `notification-provider-cap-delivery.spec.ts`'s Playwright caller — route path, permission gate (`notifications:view`), and response shape (`{ swept: number }`) all match. OK.
-- `is_cap_send` additive field on `GET /api/v1/notifications/:id/delivery-status` (notifications.ts) ↔ `DeliveryTracking.tsx`'s `DeliveryStatusResponse.is_cap_send?: boolean` — optional field, correctly guarded with `?? false` on the frontend. OK.
-- `personnel_roster` schema (Phase 1 migration, columns: external_person_id/matched_user_id/name/email/role_titles/qualifications/contact_info/jurisdiction_id/source/as_of, UNIQUE(external_person_id, source)) ↔ `hris-roster-adapter.ts`'s INSERT/UPSERT column list and `ON CONFLICT (external_person_id, source)` clause — matches exactly, including the pre-existing UNIQUE constraint. OK.
-- `integration_health.system_name UNIQUE` (Phase 1 schema) ↔ both adapters' `ON CONFLICT (system_name)` upserts (`recordProviderHealth`, `recordHrisHealth`) — constraint exists, upserts are valid. OK.
-- `background_jobs.job_type CHECK (... 'notification_fanout' ... 'report_generation' ...)` (Phase 1 schema) ↔ both adapters' job_type literals — both values pre-exist in the original CHECK constraint list; no migration ALTER needed, and neither adapter collides with any other adapter's claimed job_type (confirmed via the adapters' own structural tests 8/10 asserting sole-claimant status). OK.
-- Migration `1700000000017_notification-provider-schema.js` numbering ↔ the full `backend/migrations/` directory listing — no collision; slots 0-17 are all distinct and sequential. OK.
-- `Combobox` component contract (`frontend/design-system/src/forms/Combobox.tsx`: committed-value-from-list only, `onChange(value, option)`) ↔ its two new Phase-9 call sites (`CommandRoleModal.tsx`'s person-selector, `ResourceRequestDetail.tsx`'s roster quick-pick) — both correctly treat Combobox as value-only and route free-text entry through the separate, pre-existing `TextField`/FK-constrained selector rather than relying on Combobox for arbitrary text. OK.
-- `ADMIN_NAV_ITEMS` new `personnel-roster` entry (`auth-org/routes.ts`) ↔ `main.tsx`'s new `admin/personnel-roster` route ↔ `PersonnelRoster.tsx` component — href, route path, and component all align. The `icon: 'file'` choice is pre-existing-pattern-consistent (several sibling entries already use icons outside `Icon.tsx`'s real `ICON_NAMES` set; this entry at least uses a genuinely valid one) — cosmetic, explicitly out of this phase's scope per its own documented note, not a functional defect.
-- RBAC reachability: `hrisRosterRoutes`'s personnel route (`incidents:view`) is held by `incident_commander`/`eoc_director`/`planning_logistics_chief`/`field_responder`/`secops_admin` (confirmed in seed.ts) — all three frontend consumers (Command Role Assignment, Resource Request Assign, Personnel Roster admin screen) are reachable by the roles that actually use them. OK.
-- `backend/src/modules/comms-reporting/notifications.ts`'s new per-channel `sendViaProvider` dispatch loop ↔ `notification_recipients`/`notification_dispatch_log` schema — one dispatch-log row per distinct channel (not per recipient), consistent with the adapter's own documented aggregate-per-channel contract; no duplicate-dispatch or recipient-loss risk identified.
-- `tsc --noEmit` run clean on both `backend/` and `frontend/app/` against the full Phase 9 diff — zero type errors.
-
-No defects found in scope. All claimed "Known Stubs" sections in 09-01/09-02/09-03/09-04 SUMMARY.md files were independently verified: each named stub (CAP-field placeholder handoff, since-param no-op, provider-call simulation) is genuinely documented, non-blocking, and matches its own FRD/plan's explicit MVP-stub scope.
+- `ComposeNotification.tsx`'s Channels checkbox wrapper styles ↔ `Checkbox.css`'s own internal `.ep-checkbox` layout — no specificity/class collision, wrapper is unstyled inline-only. OK.
+- `ComposeNotification.tsx`'s Channels checkbox group ↔ its only two e2e consumers that exercise it (`notification-provider-cap-delivery.spec.ts` test 1 new assertion; `notifications-compose.spec.ts`/`incident-to-evidence-trail.spec.ts` do not touch Channels at all). OK.
+- `var(--space-2)`/`var(--space-4)` references (new inline styles) ↔ `tokens.css` definitions (8px/16px respectively) — tokens exist, no invented/undefined CSS variable. OK.
+- New Playwright `getByLabel('IPAWS', { exact: true })` assertion ↔ `Checkbox.tsx`'s label-rendering (no `required` marker appended for this field) — exact match is correct. OK.
+- c-gap `GET /api/v1/auth/sso/callback` (SignInCallback.tsx / auth-org/routes.ts) — independently re-verified untouched by 09-05's three commits; already dispositioned false-positive in prior review, not re-filed. OK, no new finding.
