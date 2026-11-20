@@ -518,6 +518,47 @@ describe('plans module — Draft -> Review -> Approved workflow, self-approval g
       expect(linkRows.length).toBeGreaterThan(0);
     });
 
+    // REVIEW B1 (08-REVIEW.md iteration 1): the existing-plan-attach
+    // branch previously ignored `mode` entirely and always called
+    // linkDocument(), silently writing a 'link_live' row even when the
+    // caller explicitly chose "Import copy." This is the previously-
+    // untested combination (DOC-EOP-001 vs. the prior test's
+    // DOC-SOP-002 avoids any cross-test access-set interference within
+    // this same describe block's shared importTestId).
+    it('import_copy with an existing plan_id attaches a import_copy row to THAT plan, not a new one', async () => {
+      const createRes = await request(app.server)
+        .post('/api/v1/plans')
+        .set('Authorization', `Bearer ${importTestToken}`)
+        .send({
+          name: `Pre-existing Plan For Import Copy ${Date.now()}`,
+          type: 'SOP',
+          jurisdiction_id: testJurisdictionId,
+        });
+      expect(createRes.status).toBe(201);
+      const existingPlanId = createRes.body.id;
+
+      const importRes = await request(app.server)
+        .post('/api/v1/plans/import')
+        .set('Authorization', `Bearer ${importTestToken}`)
+        .send({
+          source_document_ref: 'DOC-EOP-001',
+          mode: 'import_copy',
+          plan_id: existingPlanId,
+          name: 'unused',
+          type: 'SOP',
+          jurisdiction_id: testJurisdictionId,
+        });
+      expect(importRes.status).toBe(201);
+      expect(importRes.body.id).toBe(existingPlanId);
+
+      const linkRows = await query<{ id: string; plan_id: string; mode: string }>(
+        `SELECT id, plan_id, mode FROM document_links WHERE plan_id = $1`,
+        [existingPlanId],
+      );
+      expect(linkRows.length).toBeGreaterThan(0);
+      expect(linkRows.every((row) => row.mode === 'import_copy')).toBe(true);
+    });
+
     it('plan_id outside the caller jurisdiction_scope is rejected 404 PLAN_NOT_FOUND', async () => {
       const otherJurisdictionId = await findOrCreateJurisdiction('Plans Test Other Jurisdiction (08-09)');
       const outOfScopePlanInserted = await query<{ id: string }>(

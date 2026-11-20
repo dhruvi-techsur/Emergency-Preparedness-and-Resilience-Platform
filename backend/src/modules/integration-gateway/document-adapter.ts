@@ -126,18 +126,23 @@ export async function browseDocuments(
  * maps this to 403) if the document is outside the user's granted set.
  *
  * On success, writes a real `document_links` row (Phase 3's EXISTING
- * table — see 1700000000007_plans-schema.js) with `plan_id` left NULL:
- * document_links.plan_id is nullable on that table, matching Plan
- * Repository's standalone-import flow where the plan association happens
- * at a later step in Plan 08-05's UI (confirmed via that migration's exact
- * column list before writing this INSERT). `imported_by` is ALWAYS the
- * requesting user's own id — never a shared/system id (T-08-09's
- * mitigation) — since `userId` is a required explicit parameter, not an
- * optional/defaultable value.
+ * table — see 1700000000007_plans-schema.js). `plan_id` is OPTIONAL —
+ * document_links.plan_id is nullable on that table — so callers that
+ * don't yet have a target plan (Plan Repository's standalone-import flow,
+ * where the plan association happens at a later step in Plan 08-05's UI)
+ * can omit it and leave it NULL exactly as before; callers that already
+ * have a target plan (plans.ts's POST /api/v1/plans/import attaching to
+ * an EXISTING plan with mode: 'import_copy') now pass it through so the
+ * resulting row is correctly associated at insert time, mirroring
+ * linkDocument()'s own optional `planId` parameter below. `imported_by`
+ * is ALWAYS the requesting user's own id — never a shared/system id
+ * (T-08-09's mitigation) — since `userId` is a required explicit
+ * parameter, not an optional/defaultable value.
  */
 export async function importDocument(
   userId: string,
   externalDocId: string,
+  planId?: string,
 ): Promise<{ id: string; content: string }> {
   const accessSet = resolveUserAccessSet(userId);
   if (!accessSet.includes(externalDocId)) {
@@ -148,10 +153,10 @@ export async function importDocument(
   const sourceSystem = doc?.source_system ?? 'SharePoint';
 
   const inserted = await query<{ id: string }>(
-    `INSERT INTO document_links (external_document_id, source_system, mode, imported_by)
-     VALUES ($1, $2, 'import_copy', $3)
+    `INSERT INTO document_links (plan_id, external_document_id, source_system, mode, imported_by)
+     VALUES ($1, $2, $3, 'import_copy', $4)
      RETURNING id`,
-    [externalDocId, sourceSystem, userId],
+    [planId ?? null, externalDocId, sourceSystem, userId],
   );
 
   return {
