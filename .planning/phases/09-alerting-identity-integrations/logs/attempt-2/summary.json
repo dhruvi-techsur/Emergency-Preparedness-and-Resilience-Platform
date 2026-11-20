@@ -1,0 +1,21 @@
+{
+  "duration_secs": 4203.0,
+  "token_usage": {
+    "input": 334,
+    "output": 96443,
+    "total": 26818486,
+    "cache_read": 25746879,
+    "cache_write": 974830,
+    "cost": 8.551548799999999
+  },
+  "model": "claude-sonnet-5",
+  "files_changed": [
+    ".planning/phases/09-alerting-identity-integrations/09-UAT.md",
+    ".planning/phases/09-alerting-identity-integrations/09-UAT.summary.json"
+  ],
+  "verification_status": "failed",
+  "error_message": null,
+  "attempt_number": 2,
+  "created_at": "2026-11-20T21:45:04.251790+00:00",
+  "completed_at": "2026-11-20T22:55:07.935419500+00:00"
+}
