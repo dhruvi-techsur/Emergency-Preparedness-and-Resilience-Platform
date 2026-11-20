@@ -8,10 +8,11 @@ import {
   Button,
   EmptyState,
   Modal,
+  Alert,
   type BadgeTone,
 } from '@epmp/design-system';
 import { useQueryClient } from '@tanstack/react-query';
-import { apiGet, ApiRequestError } from '../../lib/api-client';
+import { apiGet, apiPatch, ApiRequestError } from '../../lib/api-client';
 import { ReviewPlanModal } from './ReviewPlanModal';
 import { LinkTasksModal } from './LinkTasksModal';
 import { MaterializeTasksModal } from './MaterializeTasksModal';
@@ -36,6 +37,21 @@ interface PlanVersionHistoryEntry {
   reviewed_at?: string;
 }
 
+// F17's final hard requirement (Plan 08-06): a "Link live" document whose
+// simulated source has changed is flagged here, never silently applied to
+// the plan's own content — see this file's document_links Alert rendering
+// below. permission_status reflects plans.ts's own per-request
+// revalidateDocumentLinkPermission() re-check, not a cached value.
+interface PlanDocumentLink {
+  id: string;
+  external_document_id: string;
+  source_system: string;
+  mode: 'import_copy' | 'link_live';
+  permission_status: 'valid' | 'revoked';
+  content_status: 'current' | 'changed';
+  content_flagged_at?: string;
+}
+
 interface PlanDetailResponse {
   id: string;
   name: string;
@@ -46,6 +62,7 @@ interface PlanDetailResponse {
   owner: { id: string; name: string };
   sections: PlanSection[];
   version_history: PlanVersionHistoryEntry[];
+  document_links: PlanDocumentLink[];
 }
 
 /** Exact FRD tone mapping for plan status (same mapping PlanRepository.tsx
@@ -97,12 +114,23 @@ export function PlanDetail(): JSX.Element {
   const [reviewModalOpen, setReviewModalOpen] = React.useState(false);
   const [linkModalSectionId, setLinkModalSectionId] = React.useState<string | null>(null);
   const [materializeModalOpen, setMaterializeModalOpen] = React.useState(false);
+  const [acknowledgingLinkId, setAcknowledgingLinkId] = React.useState<string | null>(null);
 
   const planQuery = useQuery({
     queryKey: ['plan', id],
     queryFn: () => apiGet<PlanDetailResponse>(`/api/v1/plans/${id}`),
     enabled: Boolean(id),
   });
+
+  async function handleAcknowledge(linkId: string) {
+    setAcknowledgingLinkId(linkId);
+    try {
+      await apiPatch(`/api/v1/plans/${id}/document-links/${linkId}/acknowledge`, {});
+      await queryClient.invalidateQueries({ queryKey: ['plan', id] });
+    } finally {
+      setAcknowledgingLinkId(null);
+    }
+  }
 
   if (planQuery.isError) {
     const message =
@@ -282,6 +310,46 @@ export function PlanDetail(): JSX.Element {
         </div>
 
         <div className="ep-plan-detail__content">
+          {/* 08-06 (F17 final hard requirement): neither of these Alerts
+              blocks rendering of the plan's own sections/content below
+              them — both are purely additive notices, matching this
+              codebase's "the page never fails to render" resilience
+              convention applied to a document-link concern instead of a
+              feed-outage concern. The flagged state is produced ONLY by
+              the backend's background sync detection (document-adapter.ts's
+              runDocumentLinkSync) — this component never alters plan
+              content as a side effect of rendering or acknowledging it. */}
+          {plan.document_links
+            .filter((link) => link.content_status === 'changed')
+            .map((link) => (
+              <Alert
+                key={`content-${link.id}`}
+                tone="warning"
+                title="Source changed, review"
+                actions={
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={acknowledgingLinkId === link.id}
+                    onClick={() => void handleAcknowledge(link.id)}
+                  >
+                    Mark reviewed
+                  </Button>
+                }
+              >
+                This document changed in {link.source_system}. Review before relying on the
+                current EPMP copy.
+              </Alert>
+            ))}
+          {plan.document_links
+            .filter((link) => link.permission_status === 'revoked')
+            .map((link) => (
+              <Alert key={`permission-${link.id}`} tone="danger" title="Access removed">
+                Access to this linked document was removed in {link.source_system}. It's no
+                longer visible here.
+              </Alert>
+            ))}
+
           {sortedSections.length === 0 ? (
             <EmptyState title="This plan has no sections yet">
               {plan.status === 'Draft'
