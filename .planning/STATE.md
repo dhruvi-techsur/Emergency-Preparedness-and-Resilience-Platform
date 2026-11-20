@@ -2,16 +2,16 @@
 pivota_spec_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
-current_plan: 3
+current_plan: 4
 status: executing
-stopped_at: Completed 07-02-PLAN.md
-last_updated: "2026-11-20T10:04:52.014Z"
+stopped_at: Completed 07-03-PLAN.md
+last_updated: "2026-11-20T10:10:42.723Z"
 last_activity: 2026-11-20
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 4
-  completed_plans: 2
+  completed_plans: 3
   percent: 100
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: Phase 7 (Operating-Picture Read Overlays, Weather & Dispatch)
-Current Plan: 3
+Current Plan: 4
 Total Plans in Phase: 4
 Status: Ready to execute
 Last Activity: 2026-11-20
@@ -156,6 +156,7 @@ Progress: [██████████] 100%
 | Phase 06 P13 | 10 min | 2 tasks | 2 files |
 | Phase 07 P01 | 25 min | 3 tasks | 7 files |
 | Phase 07 P02 | 22 min | 3 tasks | 6 files |
+| Phase 07 P03 | 18 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -321,6 +322,7 @@ Recent decisions affecting current work:
 - [Phase 07-01]: recordFeedHealth's UPSERT keys on integration_health.system_name ('<feed> Hazard Feed'), the first adapter in this codebase writing directly into the shared table — same convention Plan 07-02's cad-adapter.ts independently adopted
 - [Phase 07-02]: runCadIngestion re-evaluates incident matching on every tick (no sticky/COALESCE link) -- matches the plan's literal shared-number rule exactly
 - [Phase 07-02]: cad-adapter.ts's job_type='cad_ingestion' kept structurally distinct from Plan 07-01's 'feed_ingestion' via this plan's own background_jobs_job_type_check ALTER, so the two independently-scheduled adapters never clobber the same background_jobs row
+- [Phase 07-03]: ApiLayer/LayersResponse interfaces already matched hazard-<feed> entry shape exactly -- zero type widening needed; MARKER_TYPE_TO_LAYER_ID intentionally has no hazard entry (hazard layers are LayerPanel-only rows, no point marker)
 
 ### Pending Todos
 
@@ -332,6 +334,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-20T10:04:52.013Z
-Stopped at: Completed 07-02-PLAN.md
+Last session: 2026-11-20T10:10:42.721Z
+Stopped at: Completed 07-03-PLAN.md
 Resume file: None
