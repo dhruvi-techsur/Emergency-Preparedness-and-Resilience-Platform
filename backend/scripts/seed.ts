@@ -1,6 +1,7 @@
 import { pool } from '../src/db/client.js';
 import { clusterHazardFeedEvents } from '../src/modules/ai-assist/signal-clustering.js';
 import { syncHazardLayersFromEvents, runHazardFeedIngestion } from '../src/modules/integration-gateway/hazard-feed-adapter.js';
+import { runEocCotsSync } from '../src/modules/integration-gateway/eoc-cots-adapter.js';
 
 interface FindOrInsertResult {
   id: string;
@@ -2017,9 +2018,19 @@ async function main() {
   }
 
   // record_authority_registry baseline rows (natural key: record_type, which IS unique)
+  //
+  // Phase 8 (08-01, F13): 'incident' declared EPMP-authoritative here —
+  // the four EOC COTS exchange-record types need a registered authority
+  // for checkRecordAuthority to resolve against something other than its
+  // own 'EPMP' collapsed-default, making the "undeclared record types are
+  // not synced" rule observably testable. 'resource_request'/'status'/
+  // 'activity_log' are left DELIBERATELY UNREGISTERED here — this plan's
+  // own integration test proves they're skipped entirely by
+  // runEocCotsSync's isRecordTypeDeclared gate.
   const authorityRows = [
     { record_type: 'user_identity', authoritative_system: 'EPMP' },
     { record_type: 'personnel_roster', authoritative_system: 'HRIS' },
+    { record_type: 'incident', authoritative_system: 'EPMP' },
   ];
   for (const a of authorityRows) {
     const result = await findOrInsert(
@@ -2573,6 +2584,15 @@ async function main() {
   // seeding, rather than waiting for the scheduler's first tick.
   const ingestionResult = await runHazardFeedIngestion();
   console.log(`Hazard feed ingestion: attempted ${ingestionResult.feeds_attempted} feed(s) (NOAA online, NWS/USGS deterministically offline per this stub's KNOWN_LIVE_FEED contract).`);
+
+  // Phase 8 (08-01, F13): run the EOC COTS sync job once here so
+  // integration_health's 'WebEOC' row and at least one eoc_cots_conflicts
+  // row (via the seeded 'EOC-CONFLICT-001' trigger) exist immediately
+  // after `npm run seed`, without waiting for the 5-minute scheduler's
+  // first tick — matching Plan 07-01/07-02's precedent of calling their
+  // own ingestion function once in seed.ts.
+  const eocCotsSyncResult = await runEocCotsSync();
+  console.log(`EOC COTS sync: ${eocCotsSyncResult.synced} record(s) synced, ${eocCotsSyncResult.conflicts} conflict(s) detected.`);
 
   console.log(
     'Seed summary: ' +
