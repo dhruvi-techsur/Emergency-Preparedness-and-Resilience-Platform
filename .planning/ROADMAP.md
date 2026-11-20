@@ -29,7 +29,7 @@ capabilities that reach across (rather than own) the rest of the platform.
 - [x] **Phase 3: Plans, Tasks & Resource Requests** - Versioned plan/SOP repository linked to a full task and resource-request lifecycle (completed 2026-11-18)
 - [x] **Phase 4: Notifications & Reporting/Learning** - Accountable, approval-gated notifications and ICS/SITREP/AAR reporting that closes the preparedness loop (completed 2026-11-18)
 - [x] **Phase 5: Mobile Field Operations** - Offline-first, installable field-mobile app with queued submissions and reconciliation (completed 2026-11-19)
-- [ ] **Phase 6: Persona Dashboards & AI Assistance** - Role-scoped dashboards for every persona plus governed, human-approved AI drafting and signal triage
+- [x] **Phase 6: Persona Dashboards & AI Assistance** - Role-scoped dashboards for every persona plus governed, human-approved AI drafting and signal triage (completed 2026-11-20)
 
 ## Phase Details
 
@@ -201,4 +201,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 3. Plans, Tasks & Resource Requests | 9/9 | Complete | 2026-11-18 |
 | 4. Notifications & Reporting/Learning | 7/7 | Complete | 2026-11-18 |
 | 5. Mobile Field Operations | 0/TBD | Complete | 2026-11-19 |
-| 6. Persona Dashboards & AI Assistance | 10/10 | Passed | - |
+| 6. Persona Dashboards & AI Assistance | 10/10 | Complete | 2026-11-20 |
