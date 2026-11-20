@@ -316,6 +316,12 @@ export function OperatingPicture(): JSX.Element {
   // would have incorrectly hidden resource markers too now that a second
   // layer/marker-type exists (Rule 1 fix: generalizing a type==='incident'
   // assumption Phase 2 had no resource markers to assume against).
+  //
+  // Hazard/weather layers (F12) are LayerPanel-only overlay rows with no
+  // corresponding point marker — they never need an entry in this map.
+  // (Phase 7, 07-03: the backend's `hazard-<feed>` layer entries only ever
+  // appear in `layersForPanel` below, never as a `canvasMarkers` row, since
+  // no marker's `type` is ever `'hazard'`.)
   const MARKER_TYPE_TO_LAYER_ID: Record<string, string> = {
     incident: 'incidents',
     resource: 'resource-requests',
