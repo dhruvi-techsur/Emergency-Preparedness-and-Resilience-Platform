@@ -2,16 +2,16 @@
 pivota_spec_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
-current_plan: 10
-status: completed
-stopped_at: Completed 09-02-PLAN.md
-last_updated: "2026-11-20T19:47:06.007Z"
+current_plan: 10 (phase has only 4 plans; counter stays at last value per advance-plan's last_plan edge case)
+status: verifying
+stopped_at: Completed 09-04-PLAN.md
+last_updated: "2026-11-20T19:59:18.723Z"
 last_activity: 2026-11-20
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 18
-  completed_plans: 16
+  completed_plans: 17
   percent: 67
 ---
 
@@ -26,11 +26,13 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 
 ## Current Position
 
-Phase: Phase 9 (Alerting & Identity Integrations) — IN PROGRESS
-Current Plan: 10
+Phase: Phase 9 (Alerting & Identity Integrations) — COMPLETE (ready for verification)
+Current Plan: 10 (phase has only 4 plans; counter stays at last value per advance-plan's last_plan edge case)
 Total Plans in Phase: 4 (09-01 through 09-04)
-Status: Plans 09-01/09-02 of 4 complete (both wave 1, ran in parallel). Plans 09-03/09-04 remaining.
+Status: All 4 plans of Phase 9 complete (09-01/09-02 wave 1 parallel, 09-03/09-04 wave 2 parallel). Ready for /pivota_spec-verify-work.
 Last Activity: 2026-11-20
+
+Plan 09-04 (this phase): see 09-04-SUMMARY.md for full detail. Shipped F16-roster's frontend half — new read-only `PersonnelRoster.tsx` admin screen (Table+Provenance+Badge, mirroring IntegrationHealth.tsx/RecordAuthority.tsx's exact composition) sourced exclusively from Plan 09-02's `GET /api/v1/integrations/hris/personnel`, with a literal "No matched user" Badge on unmatched rows and zero onClick/button/form anywhere on the page — the structural no-edit-affordance guarantee matching the backend's own no-write-route contract. Wired into `main.tsx`'s routes and `ADMIN_NAV_ITEMS` (icon='file', the only ICON_NAMES-valid unclaimed value — several pre-existing entries in that array use icon strings that aren't actual ICON_NAMES members at all, a pre-existing mismatch left untouched). Closed a genuine Phase-1-era gap: `record_authority_registry`'s `personnel_roster` row has carried `notes=NULL` since Phase 1 — a new standalone `ON CONFLICT DO UPDATE` statement in `seed.ts` (not a `findOrInsert` change, which cannot update an existing row) now sets `notes='Reference data only'`, proven idempotent across two consecutive seed runs via direct post-seed DB query. `CommandRoleModal.tsx`'s personnel Combobox gained a roster-qualification hint via a second, independent useQuery merged by `matched_user_id`, with the underlying FK-constrained options list unchanged. `ResourceRequestDetail.tsx`'s Assign modal gained an additive "Or pick from roster" Combobox above the existing free-text field (Combobox.tsx has no accept-arbitrary-typed-text mode, so it populates the same state rather than replacing the TextField). New `personnel-roster-reference-data.spec.ts` (4/4 passing) proves SideNav reachability, matched/unmatched Provenance, the zero-edit-control structural guarantee, Command Role Assignment's live qualification hint, and Resource Request's roster quick-pick. Zero deviations — plan executed exactly as written. Full backend suite (24 files, 171 tests) zero regression; both builds + both `tsc --noEmit` checks clean. One pre-existing, unrelated test-timing flake in `tasks-resources.spec.ts` test 5 (Overdue-sweep polling vs. Playwright's 60s default test-timeout) logged to `deferred-items.md`, confirmed unrelated via isolated re-run of the Resource-Request-specific tests 6/7 in that same file (both pass).
 
 Plan 09-02 (this phase): see 09-02-SUMMARY.md for full detail. Shipped F16-roster's backend half — a deterministic HR/IAM adapter stub (`hris-roster-adapter.ts`) reading into Phase 1's already-existing but until-now-unpopulated `personnel_roster` table. `fetchHrisPersonnel()` returns 2 normalized records on its success path, one carrying the real seeded `commander@epmp.local` user's email (proving the matched path end-to-end) and one matching no seeded user (the deliberate unmatched-record proof); `simulateFailure` deterministically throws `HRIS_FEED_UNREACHABLE`. `runHrisRosterSync()` upserts `personnel_roster`'s own HR-sourced columns, then performs EMAIL-ONLY matching against `users` as a genuinely separate SQL statement — `matched_user_id` is structurally never set by the same write that lands name/role_titles/qualifications; an unmatched record is left `matched_user_id=NULL` rather than guessed or force-matched. A sync failure never throws out of the function and never touches existing `personnel_roster` rows — proven byte-identical across a forced failure (same ids, same `as_of` values) — satisfying F16's "last-known data, labeled with its own age" outage-resilience rule. `job_type='report_generation'` claimed exclusively (one of Phase 1's two originally-reserved-but-unused CHECK values, re-confirmed unclaimed via grep at execution time, chosen over `'signal_triage'`). Zero PATCH/PUT/DELETE route exists anywhere in the codebase for `personnel_roster`, and zero `UPDATE users`/`INSERT INTO users` statement exists in the adapter file — both proven structurally via grep-based test assertions, not just code review. New `hris-roster-adapter.test.ts` (8/8 passing); full backend suite (24 files, 171 tests) zero regression; `npm run build`/`npm run seed` (idempotent) both clean. Two auto-fixed deviations, both Rule 1/3: (a) sibling Wave-1 plan 09-01's own concurrent edit to the same append-only `routes.ts` file clobbered this plan's `hrisRosterRoutes` registration line (identical precedent to Phase 8's 08-04 parallel-wave git-interleave finding) — re-applied; (b) two of this plan's own structural grep test assertions self-matched their own literal strings inside the test file — fixed with `--exclude="*.test.ts"`. One unrelated, self-resolving flake observed once in sibling plan 09-01's own test file during a full-suite run, independently re-verified green twice after zero code changes — not this plan's defect, not logged as a deferred item.
 
@@ -196,6 +198,7 @@ Progress: [███████░░░] 67%
 | Phase 08 P10 | 22 min | 2 tasks | 3 files |
 | Phase 09 P01 | 25 min | 3 tasks | 7 files |
 | Phase 09-alerting-identity-integrations P02 | 25 min | 2 tasks | 5 files |
+| Phase 09-alerting-identity-integrations P04 | 18 min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -384,6 +387,8 @@ Recent decisions affecting current work:
 - [Phase 09]: 403 CAP_AUTHORITY_DENIED intentionally never thrown — this MVP stub has no per-agency CAP-authorization concept, condition is structurally unreachable
 - [Phase 09-alerting-identity-integrations]: job_type='report_generation' claimed exclusively by Plan 09-02's HRIS roster sync — one of Phase 1's original reserved-but-unused background_jobs CHECK values, confirmed unclaimed in application code at execution time, chosen over 'signal_triage' (earlier alphabetically, avoids collision risk with sibling Wave-1 plan 09-01's own job_type choice)
 - [Phase 09-alerting-identity-integrations]: HRIS roster email-only matching uses commander@epmp.local (real seeded Phase 2 user) as the stub's one matched fixture record, proving the email-equality matching rule end-to-end rather than against a synthetic id
+- [Phase 09-04]: ADMIN_NAV_ITEMS personnel-roster entry uses icon='file' — the only ICON_NAMES-valid, unclaimed icon in the array; several of the array's pre-existing entries use icon strings that aren't actual ICON_NAMES members at all (pre-existing mismatch, out of scope)
+- [Phase 09-04]: Resource Request's roster Combobox is additive above the existing free-text TextField, not a replacement — Combobox.tsx has no accept-arbitrary-typed-text mode (reverts on blur), so selecting a roster option populates the same assignedToInput state the TextField already binds
 
 ### Pending Todos
 
@@ -395,6 +400,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-20T19:47:06.005Z
-Stopped at: Completed 09-02-PLAN.md
+Last session: 2026-11-20T19:59:18.721Z
+Stopped at: Completed 09-04-PLAN.md
 Resume file: None
