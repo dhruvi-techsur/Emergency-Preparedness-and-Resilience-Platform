@@ -5,6 +5,7 @@ import federationGrantsRoutes from './federation-grants.js';
 import { gisHealthRoutes } from './gis-adapter.js';
 import { hazardFeedRoutes } from './hazard-feed-adapter.js';
 import { cadRoutes } from './cad-adapter.js';
+import { eocCotsRoutes } from './eoc-cots-adapter.js';
 
 /**
  * Mounts the integration-gateway module's F10 registry/governance endpoints
@@ -21,4 +22,6 @@ export default async function integrationGatewayRoutes(app: FastifyInstance) {
   await app.register(hazardFeedRoutes);
   // F15 CAD/911 — read-only dispatch-events/health routes (Plan 07-02).
   await app.register(cadRoutes);
+  // F13 EOC COTS — exchange-records/conflicts/health routes (Plan 08-01).
+  await app.register(eocCotsRoutes);
 }
