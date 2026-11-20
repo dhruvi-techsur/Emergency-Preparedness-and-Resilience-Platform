@@ -2,6 +2,7 @@ import { pool } from '../src/db/client.js';
 import { clusterHazardFeedEvents } from '../src/modules/ai-assist/signal-clustering.js';
 import { syncHazardLayersFromEvents, runHazardFeedIngestion } from '../src/modules/integration-gateway/hazard-feed-adapter.js';
 import { runEocCotsSync } from '../src/modules/integration-gateway/eoc-cots-adapter.js';
+import { runFacilitySync } from '../src/modules/integration-gateway/facility-adapter.js';
 
 interface FindOrInsertResult {
   id: string;
@@ -2593,6 +2594,17 @@ async function main() {
   // own ingestion function once in seed.ts.
   const eocCotsSyncResult = await runEocCotsSync();
   console.log(`EOC COTS sync: ${eocCotsSyncResult.synced} record(s) synced, ${eocCotsSyncResult.conflicts} conflict(s) detected.`);
+
+  // Phase 8 (08-02, F17): run the facility sync job once here so
+  // `facilities` and integration_health's 'Facility/Asset Feed' row are
+  // populated immediately after `npm run seed`, matching the identical
+  // precedent above for EOC COTS/hazard-feed ingestion. No explicit
+  // document-adapter seed call is needed — document-adapter.ts's lazy
+  // per-user access-set seeding means the first browse/import/link call
+  // for any user populates its own state; this is deliberate and matches
+  // the stub's documented lazy-seed design.
+  await runFacilitySync();
+  console.log('Facility sync: populated facilities + Facility/Asset Feed integration_health row.');
 
   console.log(
     'Seed summary: ' +
