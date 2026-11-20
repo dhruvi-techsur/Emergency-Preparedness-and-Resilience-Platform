@@ -72,6 +72,32 @@ const CHANNEL_OPTIONS: SelectOption[] = [
   { value: 'IPAWS', label: 'IPAWS' },
 ];
 
+// OASIS CAP 1.2's own literal enumerated values for these three fields —
+// not invented, per F14-notification-provider-integration.md's "CAP
+// fields" Inputs section and the backend adapter's own
+// buildCapEnvelope()/sendViaProvider() CAP_FIELDS_INCOMPLETE contract
+// (Plan 09-01, notification-provider-adapter.ts).
+const CAP_URGENCY_OPTIONS: SelectOption[] = [
+  { value: '', label: 'Select urgency' },
+  { value: 'Immediate', label: 'Immediate' },
+  { value: 'Expected', label: 'Expected' },
+  { value: 'Future', label: 'Future' },
+  { value: 'Past', label: 'Past' },
+];
+const CAP_SEVERITY_OPTIONS: SelectOption[] = [
+  { value: '', label: 'Select severity' },
+  { value: 'Extreme', label: 'Extreme' },
+  { value: 'Severe', label: 'Severe' },
+  { value: 'Moderate', label: 'Moderate' },
+  { value: 'Minor', label: 'Minor' },
+];
+const CAP_CERTAINTY_OPTIONS: SelectOption[] = [
+  { value: '', label: 'Select certainty' },
+  { value: 'Observed', label: 'Observed' },
+  { value: 'Likely', label: 'Likely' },
+  { value: 'Possible', label: 'Possible' },
+];
+
 /**
  * F5 S5.3 — Compose Notification (4-step flow, required order). Routed
  * `/notifications/compose`, also accepting an optional `?incident=<id>`
@@ -108,6 +134,19 @@ export function ComposeNotification(): JSX.Element {
   const [aiDraftId, setAiDraftId] = React.useState<string | undefined>(undefined);
   const [draftingWithAi, setDraftingWithAi] = React.useState(false);
   const [messageError, setMessageError] = React.useState<string | null>(null);
+
+  // Step 2 — CAP public-alert fields (F14, Plan 09-03). Only meaningful
+  // when 'IPAWS' is a selected channel — the OASIS CAP 1.2 fields this
+  // plan's own FRD (F14-notification-provider-integration.md) names as
+  // required for a public-warning channel send. Plain empty-string
+  // initialization, same as every other Step-2 field above (no dedicated
+  // reset-on-open effect exists in this file to piggyback on).
+  const [capSender, setCapSender] = React.useState('');
+  const [capEvent, setCapEvent] = React.useState('');
+  const [capUrgency, setCapUrgency] = React.useState('');
+  const [capSeverity, setCapSeverity] = React.useState('');
+  const [capCertainty, setCapCertainty] = React.useState('');
+  const [capArea, setCapArea] = React.useState('');
 
   // Step 4 — Approve and send
   const [confirmModalOpen, setConfirmModalOpen] = React.useState(false);
@@ -234,6 +273,22 @@ export function ComposeNotification(): JSX.Element {
       setMessageError('Select at least one channel.');
       return;
     }
+    // Client-side half mirroring the backend's own 422
+    // CAP_FIELDS_INCOMPLETE gate (sendViaProvider, Plan 09-01) — a
+    // responsive UX improvement only. The backend remains the real
+    // enforcement point; this check never replaces it (T-09-12).
+    if (
+      channels.has('IPAWS') &&
+      (!capSender.trim() ||
+        !capEvent.trim() ||
+        !capUrgency ||
+        !capSeverity ||
+        !capCertainty ||
+        !capArea.trim())
+    ) {
+      setMessageError('Complete the CAP fields before continuing — required for a public-warning channel send.');
+      return;
+    }
     setMessageError(null);
     setStep(3);
   };
@@ -242,6 +297,30 @@ export function ComposeNotification(): JSX.Element {
     setSendError(null);
     setSending(true);
     try {
+      // Forward-compatible plumbing matching the backend's eventual real
+      // contract: Plan 09-01's sendViaProvider()/buildCapEnvelope() DOES
+      // read a capFields shape (see ProviderSendRequest in
+      // notification-provider-adapter.ts), but notifications.ts's own
+      // send route (the caller this request body actually reaches) still
+      // passes its OWN documented placeholder capFields object to
+      // sendViaProvider rather than reading one from THIS request's body
+      // (confirmed via `grep -n "capFields" backend/src/modules/
+      // comms-reporting/notifications.ts` — no `req.body.capFields` read
+      // exists there). Sending it here is still correct: it is the exact
+      // shape 09-01's SUMMARY documents as the Plan 09-01->09-03 handoff
+      // point, and costs nothing if the current backend doesn't yet wire
+      // it through from this specific request body.
+      const capFields = channels.has('IPAWS')
+        ? {
+            sender: capSender,
+            event: capEvent,
+            urgency: capUrgency,
+            severity: capSeverity,
+            certainty: capCertainty,
+            area: capArea,
+          }
+        : undefined;
+
       const composed = await apiPost<NotificationResponse>('/api/v1/notifications/compose', {
         recipient_group_ids: hasGroups ? Array.from(selectedGroupIds) : undefined,
         geotarget_polygon: hasGeotarget ? parsedPolygon : undefined,
@@ -250,10 +329,11 @@ export function ComposeNotification(): JSX.Element {
         incident_id: incidentId,
         ai_origin: aiOrigin,
         ai_draft_id: aiDraftId,
+        capFields,
       });
       const sent = await apiPost<NotificationResponse>(
         `/api/v1/notifications/${composed.id}/send`,
-        { approver_id: user.id },
+        { approver_id: user.id, capFields },
       );
       setConfirmModalOpen(false);
       navigate(`/notifications/${sent.id}/delivery`);
@@ -381,6 +461,46 @@ export function ComposeNotification(): JSX.Element {
             />
           ))}
 
+          {channels.has('IPAWS') ? (
+            <Card title="CAP public-alert fields">
+              <TextField
+                label="Sender (authorized agency identity)"
+                required
+                value={capSender}
+                onChange={(e) => setCapSender(e.target.value)}
+              />
+              <TextField label="Event" required value={capEvent} onChange={(e) => setCapEvent(e.target.value)} />
+              <Select
+                label="Urgency"
+                required
+                options={CAP_URGENCY_OPTIONS}
+                value={capUrgency}
+                onChange={(e) => setCapUrgency(e.target.value)}
+              />
+              <Select
+                label="Severity"
+                required
+                options={CAP_SEVERITY_OPTIONS}
+                value={capSeverity}
+                onChange={(e) => setCapSeverity(e.target.value)}
+              />
+              <Select
+                label="Certainty"
+                required
+                options={CAP_CERTAINTY_OPTIONS}
+                value={capCertainty}
+                onChange={(e) => setCapCertainty(e.target.value)}
+              />
+              <TextField
+                label="Area"
+                required
+                hint="Plain-text description of the affected area"
+                value={capArea}
+                onChange={(e) => setCapArea(e.target.value)}
+              />
+            </Card>
+          ) : null}
+
           <Button variant="secondary" onClick={() => void handleDraftWithAi()} loading={draftingWithAi}>
             Draft with AI
           </Button>
@@ -427,6 +547,18 @@ export function ComposeNotification(): JSX.Element {
 
           <h3 className="h4">Channels</h3>
           <p>{Array.from(channels).join(', ')}</p>
+
+          {channels.has('IPAWS') ? (
+            <>
+              <h3 className="h4">CAP public-alert fields</h3>
+              <p>Sender: {capSender}</p>
+              <p>Event: {capEvent}</p>
+              <p>Urgency: {capUrgency}</p>
+              <p>Severity: {capSeverity}</p>
+              <p>Certainty: {capCertainty}</p>
+              <p>Area: {capArea}</p>
+            </>
+          ) : null}
 
           <h3 className="h4">Approver of record</h3>
           <p>{user.name}</p>
