@@ -19,6 +19,7 @@ import { startHazardFeedIngestionScheduler } from './modules/integration-gateway
 import { startCadIngestionScheduler } from './modules/integration-gateway/cad-adapter.js';
 import { startFacilitySyncScheduler } from './modules/integration-gateway/facility-adapter.js';
 import { startEocCotsSyncScheduler } from './modules/integration-gateway/eoc-cots-adapter.js';
+import { startDocumentLinkSyncScheduler } from './modules/integration-gateway/document-adapter.js';
 import { syncRolePermissionsToOpa, type RolePermissionRow } from './modules/auth-org/opa-client.js';
 import { query } from './db/client.js';
 
@@ -151,6 +152,14 @@ async function start() {
     startEocCotsSyncScheduler();
   } catch (err) {
     app.log.warn(err, 'EOC COTS sync scheduler failed to start — scheduled polling disabled');
+  }
+
+  // Plan 08-06 (F17) — same graceful-degradation posture as the schedulers
+  // above: a scheduler-start failure must never crash the server.
+  try {
+    startDocumentLinkSyncScheduler();
+  } catch (err) {
+    app.log.warn(err, 'Document-link sync scheduler failed to start — scheduled polling disabled');
   }
 
   try {

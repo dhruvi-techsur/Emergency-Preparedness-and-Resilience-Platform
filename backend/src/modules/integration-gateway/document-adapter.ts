@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { requirePermission } from '../auth-org/rbac.js';
 import { query } from '../../db/client.js';
+import { computeBackoff } from './webhook-delivery-worker.js';
 
 export interface DocumentSearchResult {
   external_document_id: string;
@@ -145,6 +146,201 @@ export async function linkDocument(
   );
 
   return { id: inserted[0].id };
+}
+
+/**
+ * Shared permission re-check logic used by BOTH runDocumentLinkSync()'s
+ * scheduled sweep AND revalidateDocumentLinkPermission()'s per-request
+ * synchronous check below — extracted into one private function both call
+ * rather than duplicating the access-set lookup, per this plan's own
+ * instruction. Returns 'revoked' and persists the revocation the FIRST
+ * time a document is found outside the importing user's simulated access
+ * set; returns 'valid' otherwise. This function is the ONLY place either
+ * caller performs the actual access-set comparison.
+ */
+async function checkAndPersistPermission(row: {
+  id: string;
+  external_document_id: string;
+  imported_by: string;
+  permission_status: string;
+}): Promise<'valid' | 'revoked'> {
+  const accessSet = resolveUserAccessSet(row.imported_by);
+  const stillGranted = accessSet.includes(row.external_document_id);
+
+  if (!stillGranted) {
+    // F17's "a permission downgrade at the source immediately restricts
+    // the EPMP-side link's visibility" rule — the ENFORCEMENT of
+    // restricted visibility happens at read-time in plans.ts's GET
+    // /api/v1/plans/{id} route; this write is only the
+    // detection/bookkeeping, idempotent against re-running on an
+    // already-revoked row.
+    await query(
+      `UPDATE document_links SET permission_status = 'revoked', last_permission_check_at = now() WHERE id = $1`,
+      [row.id],
+    );
+    return 'revoked';
+  }
+
+  // Still granted — re-stamp last_permission_check_at so the row reflects
+  // it was genuinely re-checked just now, not merely assumed valid from a
+  // stale prior check. Only touch permission_status if it needs
+  // re-validating back to 'valid' (a document that was previously revoked
+  // and has since been re-granted in the simulated access set — this stub
+  // has no mechanism to re-grant, but the UPDATE is written generally so a
+  // future real-adapter swap that CAN re-grant doesn't need a second code
+  // path).
+  await query(
+    `UPDATE document_links SET permission_status = 'valid', last_permission_check_at = now() WHERE id = $1`,
+    [row.id],
+  );
+  return 'valid';
+}
+
+/**
+ * Scheduled sync job for "Link live" document_links rows (F17's final hard
+ * requirement). For EVERY mode='link_live' row:
+ *   1. Re-checks the row's permission status via checkAndPersistPermission
+ *      above (the periodic background sweep half of F17's "re-validated at
+ *      minimum before each render" rule — the per-request half is
+ *      revalidateDocumentLinkPermission below).
+ *   2. Simulates content-change detection deterministically against the
+ *      SAME fixed DOC-SOP-002 document id this module's own
+ *      DOCUMENT_CATALOG/importDocument/linkDocument already recognize — no
+ *      real SharePoint content-diff exists in this sandbox; this fixed
+ *      trigger simulates the detection path deterministically.
+ *
+ * STRUCTURAL GUARANTEE (this plan's own grep-verified contract): this
+ * function NEVER executes an UPDATE/INSERT against plans, plan_sections,
+ * or plan_versions — the flagged state is PURELY a document_links row
+ * attribute. Applying the external change to the plan's actual content
+ * requires a SEPARATE, not-yet-built future action a named person would
+ * explicitly trigger (out of this plan's scope — F3's Process step 7 only
+ * requires "flagging... for review," not an apply mechanism). This
+ * function also NEVER clears content_status back to 'current' — the ONLY
+ * code path that does that is plans.ts's PATCH .../acknowledge route.
+ */
+export async function runDocumentLinkSync(): Promise<{
+  checked: number;
+  flagged: number;
+  permission_revoked: number;
+}> {
+  try {
+    const rows = await query<{
+      id: string;
+      external_document_id: string;
+      imported_by: string;
+      permission_status: string;
+    }>(
+      `SELECT id, external_document_id, imported_by, permission_status FROM document_links WHERE mode = 'link_live'`,
+    );
+
+    let flagged = 0;
+    let permissionRevoked = 0;
+
+    for (const row of rows) {
+      const result = await checkAndPersistPermission(row);
+      if (result === 'revoked') permissionRevoked += 1;
+
+      // Content-change simulation: fixed, test-reproducible trigger (same
+      // shape as every prior adapter's recognized-trigger convention —
+      // gis-adapter.ts's KNOWN_LAYER_ID, cad-adapter.ts's KNOWN_VENDOR).
+      // The `AND content_status = 'current'` guard in the UPDATE makes
+      // this idempotent — a document already flagged isn't re-flagged/
+      // re-timestamped on every tick.
+      if (row.external_document_id === 'DOC-SOP-002') {
+        const updated = await query<{ id: string }>(
+          `UPDATE document_links SET content_status = 'changed', content_flagged_at = now()
+           WHERE id = $1 AND content_status = 'current' RETURNING id`,
+          [row.id],
+        );
+        if (updated.length > 0) flagged += 1;
+      }
+    }
+
+    // Success path: find-or-update the document_link_sync background_jobs
+    // row, scoped EXCLUSIVELY to job_type = 'document_link_sync' — mirrors
+    // every prior adapter's job-type-isolation discipline (facility-adapter.ts's
+    // 'facility_sync', cad-adapter.ts's 'cad_ingestion').
+    const existingJob = await query<{ id: string }>(
+      `SELECT id FROM background_jobs WHERE job_type = 'document_link_sync' LIMIT 1`,
+    );
+    if (existingJob[0]) {
+      await query(
+        `UPDATE background_jobs SET status = 'idle', last_run_at = now(), failure_count = 0, next_retry_at = NULL
+         WHERE id = $1`,
+        [existingJob[0].id],
+      );
+    } else {
+      await query(
+        `INSERT INTO background_jobs (job_type, status, last_run_at) VALUES ('document_link_sync', 'idle', now())`,
+      );
+    }
+
+    return { checked: rows.length, flagged, permission_revoked: permissionRevoked };
+  } catch (err) {
+    // Failure path: bump failure_count, set next_retry_at via the SHARED
+    // computeBackoff helper, matching every prior adapter's pattern
+    // against this adapter's OWN 'document_link_sync'-scoped row.
+    const existingJob = await query<{ id: string; failure_count: number }>(
+      `SELECT id, failure_count FROM background_jobs WHERE job_type = 'document_link_sync' LIMIT 1`,
+    );
+    const failureCount = (existingJob[0]?.failure_count ?? 0) + 1;
+    const nextRetryAt = computeBackoff(failureCount);
+    if (existingJob[0]) {
+      await query(
+        `UPDATE background_jobs SET status = 'backoff', failure_count = $1, next_retry_at = $2
+         WHERE id = $3`,
+        [failureCount, nextRetryAt, existingJob[0].id],
+      );
+    } else {
+      await query(
+        `INSERT INTO background_jobs (job_type, status, failure_count, next_retry_at)
+         VALUES ('document_link_sync', 'backoff', $1, $2)`,
+        [failureCount, nextRetryAt],
+      );
+    }
+    throw err;
+  }
+}
+
+/**
+ * SYNCHRONOUS, single-row version of the permission re-check above,
+ * callable from plans.ts's GET /:id route so permission re-validation
+ * happens on EVERY render request, not just waiting for the next
+ * scheduled tick — satisfying F17's literal "at minimum, before each
+ * render" cadence. The scheduled runDocumentLinkSync() above is the
+ * periodic background sweep; this helper is the per-request real-time
+ * check. Both share the identical checkAndPersistPermission logic.
+ */
+export async function revalidateDocumentLinkPermission(
+  documentLinkId: string,
+): Promise<'valid' | 'revoked'> {
+  const rows = await query<{
+    id: string;
+    external_document_id: string;
+    imported_by: string;
+    permission_status: string;
+  }>(
+    `SELECT id, external_document_id, imported_by, permission_status FROM document_links WHERE id = $1`,
+    [documentLinkId],
+  );
+  const row = rows[0];
+  if (!row) return 'valid';
+  return checkAndPersistPermission(row);
+}
+
+let intervalHandle: NodeJS.Timeout | undefined;
+
+/**
+ * Same idempotent-against-double-start shape as every prior scheduler in
+ * this module (hazard-feed/cad/facility/eoc-cots) — 5-minute default, bare
+ * setInterval body.
+ */
+export function startDocumentLinkSyncScheduler(intervalMs: number = 300_000): void {
+  if (intervalHandle) return;
+  intervalHandle = setInterval(() => {
+    runDocumentLinkSync().catch((err) => console.error('[document-link-sync] failed', err));
+  }, intervalMs);
 }
 
 let documentHealthRecorded = false;
