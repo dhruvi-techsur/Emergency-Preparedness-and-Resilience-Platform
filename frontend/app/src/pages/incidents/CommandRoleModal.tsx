@@ -21,6 +21,16 @@ interface PersonnelResponse {
   items: PersonnelSummary[];
 }
 
+interface RosterRow {
+  id: string;
+  matched_user_id: string | null;
+  qualifications: string[] | null;
+}
+
+interface RosterResponse {
+  items: RosterRow[];
+}
+
 export interface CommandRoleModalProps {
   incidentId: string;
   roleTitle: CommandRoleTitle;
@@ -34,15 +44,22 @@ export interface CommandRoleModalProps {
 /**
  * F1 S1.4 — Command Role Assignment Modal.
  *
- * Phase 2 scope note: F16's personnel-roster sync is deferred to v2 per
- * REQUIREMENTS.md, so S1.4's "sourced from F16 roster where synced, else
- * manual entry" resolves to manual entry only in Phase 2. Personnel
- * options are populated from `GET /api/v1/incidents/personnel` (added in
- * this plan's incidents.ts, gated by `incidents:view`) rather than
+ * Personnel options are populated from `GET /api/v1/incidents/personnel`
+ * (added in Phase 2's incidents.ts, gated by `incidents:view`) rather than
  * `GET /api/v1/admin/users` — the roles that actually hold `incidents:edit`
  * (incident_commander, eoc_director) deliberately hold no `admin:view`
  * permission (02-01's seed), so reusing the admin-users endpoint would
  * have required widening admin access to a role with no business there.
+ *
+ * F16-roster (Plan 09-04): roster qualification hints are now sourced
+ * live from `GET /api/v1/integrations/hris/personnel` (Plan 09-02's
+ * backend) — a second, independent useQuery merged client-side by
+ * `matched_user_id === person.id` to append a qualification hint to each
+ * option's existing `hint: u.email` text. The underlying person-selection
+ * mechanism (the FK-constrained `person_id`, still sourced exclusively
+ * from `GET /api/v1/incidents/personnel`) is UNCHANGED — this is purely an
+ * enrichment of the hint text for people who happen to have a roster
+ * match. A person with no roster match still appears exactly as before.
  */
 export function CommandRoleModal({
   incidentId,
@@ -62,6 +79,12 @@ export function CommandRoleModal({
     enabled: open,
   });
 
+  const rosterQuery = useQuery({
+    queryKey: ['hris-personnel-for-command-roles'],
+    queryFn: () => apiGet<RosterResponse>('/api/v1/integrations/hris/personnel'),
+    enabled: open,
+  });
+
   React.useEffect(() => {
     if (open) {
       setSelectedPersonId('');
@@ -69,11 +92,24 @@ export function CommandRoleModal({
     }
   }, [open, roleTitle]);
 
-  const personnelOptions: ComboboxOption[] = (personnelQuery.data?.items ?? []).map((u) => ({
-    value: u.id,
-    label: u.name,
-    hint: u.email,
-  }));
+  const rosterByUserId = React.useMemo(() => {
+    const map = new Map<string, RosterRow>();
+    for (const row of rosterQuery.data?.items ?? []) {
+      if (row.matched_user_id) map.set(row.matched_user_id, row);
+    }
+    return map;
+  }, [rosterQuery.data]);
+
+  const personnelOptions: ComboboxOption[] = (personnelQuery.data?.items ?? []).map((u) => {
+    const roster = rosterByUserId.get(u.id);
+    return {
+      value: u.id,
+      label: u.name,
+      hint: roster
+        ? `${u.email} \u00b7 ${(roster.qualifications ?? []).join(', ') || 'No qualifications recorded'}`
+        : u.email,
+    };
+  });
 
   const handleAssign = async () => {
     if (!selectedPersonId) return;
