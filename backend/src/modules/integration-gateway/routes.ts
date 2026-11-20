@@ -6,6 +6,8 @@ import { gisHealthRoutes } from './gis-adapter.js';
 import { hazardFeedRoutes } from './hazard-feed-adapter.js';
 import { cadRoutes } from './cad-adapter.js';
 import { eocCotsRoutes } from './eoc-cots-adapter.js';
+import { facilityRoutes } from './facility-adapter.js';
+import { documentRoutes } from './document-adapter.js';
 
 /**
  * Mounts the integration-gateway module's F10 registry/governance endpoints
@@ -24,4 +26,10 @@ export default async function integrationGatewayRoutes(app: FastifyInstance) {
   await app.register(cadRoutes);
   // F13 EOC COTS — exchange-records/conflicts/health routes (Plan 08-01).
   await app.register(eocCotsRoutes);
+  // F17 (Plan 08-02): facility/asset-status adapter routes (status, health,
+  // operating-picture/facilities) + document adapter routes (browse,
+  // import, link, health) — two independent adapter contracts, both
+  // appended per this file's existing append-only convention.
+  await app.register(facilityRoutes);
+  await app.register(documentRoutes);
 }
