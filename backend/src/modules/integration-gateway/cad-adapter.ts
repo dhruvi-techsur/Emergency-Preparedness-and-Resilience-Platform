@@ -338,6 +338,42 @@ export async function cadRoutes(app: FastifyInstance) {
       return reply.code(200).send({ items: rows });
     },
   );
+
+  // GET /api/v1/_test/cad-forced-outage — test-only failure injection,
+  // never documented in the public OpenAPI schema. Mirrors
+  // operating-picture.ts's `force_gis_failure` query-param pattern exactly
+  // (same "explicit, unguessable-by-accident, HTTP-reachable" shape), but
+  // surfaced as a dedicated route rather than a query param on an existing
+  // route because fetchCadDispatchEvents is this adapter's OWN live-fetch
+  // boundary, not a parameter of GET /api/v1/incidents/:id/dispatch-status
+  // (which only ever reads the already-cached cad_dispatch_events table,
+  // never calls the adapter live). Calls fetchCadDispatchEvents(undefined,
+  // true) SERVER-SIDE (inside this already-running backend process, with a
+  // real DATABASE_URL-backed db/client.ts pool) so a Playwright test can
+  // deterministically exercise the adapter's real CAD_FEED_UNREACHABLE
+  // failure path — flipping integration_health offline exactly as a real
+  // vendor outage would — via a normal HTTP request, with no in-process
+  // backend-source import into the test runner's own Node process (which
+  // has no DATABASE_URL set) and no server restart required. Gated on
+  // 'incidents'/'view' — the same permission the dispatch-status route and
+  // commander@epmp.local's seeded role already hold — not 'admin'/'view',
+  // since this exists to support the Incident Workspace's own e2e coverage.
+  app.get(
+    '/api/v1/_test/cad-forced-outage',
+    { preHandler: requirePermission('incidents', 'view') },
+    async (_req, reply) => {
+      try {
+        await fetchCadDispatchEvents(undefined, true);
+        // fetchCadDispatchEvents(_, true) always throws — reaching this
+        // line would mean the adapter's own failure-injection contract
+        // broke, which is itself worth surfacing as a 500 rather than a
+        // false "forced" confirmation.
+        return reply.code(500).send({ error_code: 'FORCED_OUTAGE_DID_NOT_THROW' });
+      } catch (err) {
+        return reply.code(200).send({ forced: true, message: (err as Error).message });
+      }
+    },
+  );
 }
 
 let intervalHandle: NodeJS.Timeout | undefined;
