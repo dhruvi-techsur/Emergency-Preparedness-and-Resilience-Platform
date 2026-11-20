@@ -8,7 +8,7 @@ import {
   fetchFacilityStatus,
   runFacilitySync,
 } from './facility-adapter.js';
-import { browseDocuments, importDocument } from './document-adapter.js';
+import { browseDocuments, importDocument, linkDocument } from './document-adapter.js';
 
 // Integration test against the real compose stack (Postgres + OPA) — same
 // pattern as gateway.test.ts/incidents.test.ts.
@@ -247,5 +247,79 @@ describe('Plan 08-02: F17 document adapter — permission-boundary enforcement',
     const row = res.body.items.find((r: { system_name: string }) => r.system_name === 'SharePoint');
     expect(row).toBeDefined();
     expect(row.record_authority).toBe('SharePoint');
+  });
+
+  it('9. F-08-01: POST /:id/link with a plan_id belonging to a FOREIGN jurisdiction is rejected 404 PLAN_NOT_FOUND, with zero document_links row written', async () => {
+    const foreignJurisdictionId = await findOrCreateJurisdiction('F-08-01 Foreign Jurisdiction Test');
+
+    const foreignPlan = await query<{ id: string }>(
+      `INSERT INTO plans (name, type, jurisdiction_id, owner_id)
+       VALUES ($1, $2, $3, $4) RETURNING id`,
+      ['F-08-01 Foreign Jurisdiction Plan', 'EOP', foreignJurisdictionId, testUserId],
+    );
+    const foreignPlanId = foreignPlan[0].id;
+
+    const res = await request(app.server)
+      .post('/api/v1/integrations/documents/DOC-EOP-001/link')
+      .set('Authorization', `Bearer ${testToken}`)
+      .send({ plan_id: foreignPlanId });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error_code).toBe('PLAN_NOT_FOUND');
+
+    const linkRows = await query<{ id: string }>(
+      `SELECT id FROM document_links WHERE plan_id = $1`,
+      [foreignPlanId],
+    );
+    expect(linkRows.length).toBe(0);
+  });
+
+  it('10. F-08-01: POST /:id/link with a nonexistent plan_id is rejected 404 PLAN_NOT_FOUND, never a 500', async () => {
+    const res = await request(app.server)
+      .post('/api/v1/integrations/documents/DOC-EOP-001/link')
+      .set('Authorization', `Bearer ${testToken}`)
+      .send({ plan_id: '00000000-0000-0000-0000-000000000000' });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error_code).toBe('PLAN_NOT_FOUND');
+  });
+
+  it('11. F-08-01: a legitimate IN-SCOPE plan_id still succeeds 201 and writes a real document_links row', async () => {
+    const inScopePlan = await query<{ id: string }>(
+      `INSERT INTO plans (name, type, jurisdiction_id, owner_id)
+       VALUES ($1, $2, $3, $4) RETURNING id`,
+      ['F-08-01 In-Scope Plan', 'EOP', testJurisdictionId, testUserId],
+    );
+    const inScopePlanId = inScopePlan[0].id;
+
+    const res = await request(app.server)
+      .post('/api/v1/integrations/documents/DOC-SOP-002/link')
+      .set('Authorization', `Bearer ${testToken}`)
+      .send({ plan_id: inScopePlanId });
+
+    expect(res.status).toBe(201);
+    expect(res.body.id).toBeTruthy();
+
+    const linkRows = await query<{ id: string; plan_id: string }>(
+      `SELECT id, plan_id FROM document_links WHERE id = $1`,
+      [res.body.id],
+    );
+    expect(linkRows[0]).toBeDefined();
+    expect(linkRows[0].plan_id).toBe(inScopePlanId);
+  });
+
+  it('12. F-08-01: linkDocument() called directly with no jurisdictionScope argument (no plan_id) is unaffected', async () => {
+    // imported_by is a real users.id FK, so this uses the already-seeded
+    // testUserId (same pattern as test 7's importDocument call) rather
+    // than a synthetic freshUserId string, which is only safe for
+    // resolveUserAccessSet's in-memory map, not a real FK insert.
+    const result = await linkDocument(testUserId, 'DOC-EOP-001');
+    expect(result.id).toBeTruthy();
+
+    const rows = await query<{ plan_id: string | null }>(
+      `SELECT plan_id FROM document_links WHERE id = $1`,
+      [result.id],
+    );
+    expect(rows[0].plan_id).toBeNull();
   });
 });
