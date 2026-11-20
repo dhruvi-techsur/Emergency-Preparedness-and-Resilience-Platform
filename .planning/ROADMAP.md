@@ -73,7 +73,15 @@ Plans:
   3. A user can see facility/asset status and location markers on the Operating Picture, sourced from the deterministic asset/facility adapter stub, each carrying `Provenance` (source/as-of); no inventory, maintenance, or cost field from that feed is ever displayed or persisted anywhere in EPMP.
   4. A user with document-system permission can browse, import, or live-link an EOP/SOP/annex/evidence document from the simulated SharePoint-class adapter into the Plan Repository; a user the stub says lacks permission to a given document cannot see it in the browse/import list at all — enforced server-side, not merely hidden client-side.
   5. When "Link live" mode's background sync detects a simulated source-document change, the linked plan shows a flagged "source changed, review" state rather than silently auto-applying the external edit.
-**Plans:** TBD
+**Plans:** 6 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — F13 backend: EOC COTS adapter stub (exchange-records, conflict detection), eoc_cots_config/sync_log/conflicts migration, integration_health wiring
+- [ ] 08-02-PLAN.md — F17 backend: facility adapter stub (field-discarding) + document adapter stub (permission-aware browse/import/link), facility_feed_config/facilities/document_system_config migration
+- [ ] 08-03-PLAN.md — F13 frontend+backend: EOC COTS conflict resolution UI on Integration Health ("Keep EPMP value"/"Keep [external] value") + sole resolve route (depends on 08-01)
+- [ ] 08-04-PLAN.md — F17 frontend: Operating Picture facility markers with Provenance (depends on 08-02)
+- [ ] 08-05-PLAN.md — F17 frontend: Plan Repository document browse/import/link modal (depends on 08-02)
+- [ ] 08-06-PLAN.md — F17 backend+frontend: Link-live background sync flagging "source changed, review" (depends on 08-02, 08-05)
 
 ### Phase 9: Alerting & Identity Integrations
 **Goal**: Communications staff can route approved notifications through a deterministic Everbridge/AtHoc-class provider stub (with CAP-formatted public-alert representation) under the exact same named-person-approval rule F5 already enforces, and personnel roster/qualification data syncs read-only from a deterministic HR/IAM adapter stub into resource-request matching and command-role assignment — so no public alert and no roster-sourced assignment can ever happen without a human decision, and no stub provider outage silently drops a message.
@@ -95,5 +103,5 @@ Phases execute in numeric order: 7 → 8 → 9 (continuing from v1.0's completed
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 7. Operating-Picture Read Overlays (Weather & Dispatch) | 0/TBD | Not started | - |
-| 8. Record-Authority & Sync Integrations | 0/TBD | Not started | - |
+| 8. Record-Authority & Sync Integrations | 0/6 | Not started | - |
 | 9. Alerting & Identity Integrations | 0/TBD | Not started | - |
