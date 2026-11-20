@@ -2,16 +2,16 @@
 pivota_spec_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
-current_plan: 2
+current_plan: 3
 status: executing
-stopped_at: Completed 08-01-PLAN.md
-last_updated: "2026-11-20T12:19:44.244Z"
+stopped_at: Completed 08-02-PLAN.md
+last_updated: "2026-11-20T12:23:53.386Z"
 last_activity: 2026-11-20
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 10
-  completed_plans: 5
+  completed_plans: 6
   percent: 100
 ---
 
@@ -27,10 +27,12 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: Phase 8 (Record Authority & Sync Integrations)
-Current Plan: 2
+Current Plan: 3
 Total Plans in Phase: 6
 Status: Executing
 Last Activity: 2026-11-20
+
+Plan 08-02 (this phase): see 08-02-SUMMARY.md for full detail. Shipped F17's two backend adapter halves — facility_feed_config/facilities/document_system_config schema (migration renumbered 1700000000013->1700000000015, both 1700000000013/1700000000014 already claimed by 07-02 and this phase's own 08-01 by execution time), a deterministic agency_erp facility/asset-status adapter stub whose fetchFacilityStatus() discards inventory_count/maintenance_due_at/annual_cost at the normalization boundary via an explicit allow-list object-literal copy (proven via a structural Object.keys() test assertion, not just documented intent), and a permission-aware SharePoint-class document adapter stub whose browseDocuments/importDocument/linkDocument all re-check a lazily-seeded per-user simulated delegated-permission set server-side on every call (2-of-3 documents granted deterministically, the third withheld — proven both at the function level and via a real HTTP 403 IMPORT_PERMISSION_DENIED). New GET /api/v1/operating-picture/facilities route feeds Plan 08-04; GET/POST /api/v1/integrations/documents/* feeds Plan 08-05. One Rule-1 fix: restored 08-01's eocCotsRoutes registration in routes.ts, which this plan's own edit had silently clobbered due to a read/edit race against 08-01's parallel commit to the same file (caught by the full-suite re-run, not left undiscovered). Full backend suite (21 files, 138 tests) green with zero regression; npm run build and npm run seed both clean.
 
 Plan 08-01 (this phase): see 08-01-SUMMARY.md for full detail. Shipped F13's EOC COTS Interoperability backend half — eoc_cots_config/eoc_cots_sync_log/eoc_cots_conflicts schema (migration renumbered 1700000000012->1700000000014, same cross-plan collision precedent as every prior phase), a deterministic WebEOC-class adapter stub, and the new isRecordTypeDeclared(recordType) existence check called BEFORE checkRecordAuthority(type) in both runEocCotsSync's per-type loop and the outbound POST route — structurally distinguishing "no registry row" from "registry row explicitly says EPMP," a distinction checkRecordAuthority's own collapsed default return value could never express alone. Deterministic conflict detection via the seeded EOC-CONFLICT-001 external_id writes to eoc_cots_conflicts with resolution left NULL (never auto-resolved). background_jobs bookkeeping scoped exclusively to the pre-existing, previously-unclaimed job_type='sync_reconciliation' value (no new migration ALTER needed). Full backend suite (20 files, 128 tests) green with zero regression; npm run build and npm run seed both clean.
 
@@ -163,6 +165,7 @@ Progress: [██████████] 100%
 | Phase 07 P03 | 18 min | 2 tasks | 2 files |
 | Phase 07 P04 | 28 min | 2 tasks | 3 files |
 | Phase 08 P01 | 20 min | 2 tasks | 6 files |
+| Phase 08 P02 | 25 min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -333,6 +336,9 @@ Recent decisions affecting current work:
 - [Phase 07-04]: IntegrationHealth.tsx needed zero structural change — confirmed generic over whatever rows the backend returns; only stale EmptyState copy updated
 - [Phase 07-04]: Playwright spec resolves the CAD-linked incident by live DB query (cad_dispatch_events.linked_incident_id), not by assumed seed name, since 07-02's adapter stub re-links its single event across test runs
 - [Phase 08-01]: isRecordTypeDeclared(type) called BEFORE checkRecordAuthority(type) at every F13 call site, structurally distinguishing undeclared record types from EPMP-authoritative ones
+- [Phase 08-02]: Migration renumbered 1700000000013 -> 1700000000015 (1700000000013 claimed by 07-02's cad-dispatch-schema.js, 1700000000014 claimed by this phase's own 08-01 eoc-cots-schema.js by execution time)
+- [Phase 08-02]: facility_sync added as a new background_jobs.job_type CHECK-constraint value via this migration's ALTER, kept structurally distinct from cad_ingestion/feed_ingestion/sync_reconciliation per the established per-adapter job_type-isolation convention
+- [Phase 08-02]: document_links.plan_id left NULL on importDocument (standalone import, no plan association yet); linkDocument accepts an optional planId parameter for when it's already known at link time
 
 ### Pending Todos
 
@@ -344,6 +350,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-20T12:19:44.242Z
-Stopped at: Completed 08-01-PLAN.md
+Last session: 2026-11-20T12:23:53.384Z
+Stopped at: Completed 08-02-PLAN.md
 Resume file: None
