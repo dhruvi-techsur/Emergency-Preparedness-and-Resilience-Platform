@@ -1,83 +1,46 @@
-# Requirements: EPMP (Emergency Preparedness & Management Platform)
+# Requirements: EPMP v2.0 — External Integrations
 
-**Defined:** 2026-11-16
+**Defined:** 2026-11-20
+**Milestone:** v2.0 External Integrations
 **Core Value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
 
-**Source:** Derived from `project_specs/PRD-EPMP.md` (19 features, F0–F18) and `project_specs/RTM-EPMP.md`. Feature IDs (F0–F18) are preserved unchanged from the PRD/FRD/TechArch/UserStories/RTM spec suite — no renumbering.
+**Source:** Derived from `project_specs/PRD-EPMP.md` §5 (F12–F17) and §10 (Out of Scope), and `.planning/milestones/v1.0-REQUIREMENTS.md` (deferral record). Feature IDs (F12–F17) are preserved unchanged from the original PRD/FRD/TechArch/UserStories/RTM spec suite — no renumbering. Phase numbering continues from v1.0's final phase (Phase 6), so v2.0 starts at **Phase 7**.
 
-## v1 Requirements
-
-Scoped per user decision (2026-11-16): all 12 P0 features + F9 (P1, AI assistance) in v1. Remaining P1 integrations (F12, F13, F14, F16-roster) and both P2 integrations (F15, F17) deferred to v2 — see below.
-
-### Platform Core
-
-- [ ] **F0**: Web & Mobile Application Shell (EPMP Design System UI) — app shell, `SideNav`, page patterns, loading/empty/error states, light/dark/contrast themes, installable mobile-first web app. The single required UI surface for the entire platform.
-- [ ] **F8**: Security & Administration — SSO (SAML2/OIDC), granular RBAC, append-only audit logging, encryption at rest/in transit, operational/availability monitoring, admin console.
-- [ ] **F10**: Platform API, Integration Gateway & Event Bus — versioned OpenAPI/REST contracts, OAuth2/OIDC/SAML2 delegated auth, webhook/event-bus publication, background job processing, record-authority registry, provenance enforcement at the API boundary, policy-enforced revocable federation.
-
-### Operational Modules (named MVP operational foundation)
-
-- [ ] **F1**: Incident / ICS — incident intake/classification, command-role assignment, append-only activity timeline, ICS checklists/forms, activation-level change with consequence confirmation, incident workspace.
-- [ ] **F2**: Common Operating Picture — map view with status-coded markers, live EOC/executive dashboards, weather/hazard overlay layers (sourced via F12 adapter where available), data-age/source status bar, degraded/offline schematic base map fallback.
-- [ ] **F3**: Plans & Playbooks — plan/SOP repository with version history and draft→review→approved workflow, linkage from plan/SOP section to generated tasks, document import/sync from SharePoint-class systems (via F17 adapter where available), reading-max (720px) content view.
-- [ ] **F4**: Tasks & Resource Requests — task lifecycle (create/assign/approve/track/close), basic resource-request lifecycle (create/approve/assign/track/close) linked to incident/task, list/table views with search/filter/bulk actions.
-- [ ] **F5**: Notifications Integration — recipient-group management, reusable message templates, geotargeted audience selection, audience→message→review→send compose flow, delivery/acknowledgment tracking view, named-person approval required before any external send.
-- [ ] **F6**: Mobile Field Operations — mobile-optimized installable web app with 44px touch targets, structured field forms with photo/location capture, offline-first operation with queued submissions, reconciliation on reconnect with named-person conflict resolution.
-- [ ] **F7**: Reporting & Learning — ICS-standard output/SITREP generation, initial AAR generation (timeline export, decisions log, resource-request history, findings/corrective-action list), evidence/audit log views, analytics/reporting dashboard.
-
-### AI Assistance (Phase 1 only — governed, human-reviewed)
-
-- [ ] **F9**: AI-Assisted Drafting & Signal Triage — signal triage/clustering on approved hazard feeds (never auto-promoted to incident), AI-assisted drafting of ICS form fields/incident narrative via `AIDraft` + `Provenance`, named-person approval required before any AI-drafted content becomes official, absolute prohibition on AI auto-issuing public warnings/evacuation instructions/binding resource decisions.
-
-### External Integrations (MVP-appropriate depth)
-
-- [ ] **F11**: GIS & Geospatial Integration — read integration with agency GIS (OGC/GeoJSON/Esri REST) for base maps/boundaries/facilities, EPMP-authored layers published back where permitted, graceful fallback to schematic base map on feed failure.
-- [ ] **F16-SSO**: HR/IAM SSO/Authentication (shared critical path with F8) — SAML2/OIDC identity-provider integration for authentication. *(Roster/qualification sync portion of F16 is deferred to v2 — see below.)*
-
-### Experience / Role Views
-
-- [ ] **F18**: Persona & Role-Specific Dashboards — role-scoped default dashboard/landing view for each of the 9 named personas (consolidated into PER-01–PER-05 for design/story purposes), role-based navigation/action visibility driven by F8's RBAC model, executive-briefing view with 1–3 headline KPIs.
-
-### Deployability
-
-- [ ] **DEPLOY-01**: The repository deploys as it stands: it meets the Deployability Checklist in `/home/daytona/.config/opencode/pivota_spec-framework/references/deployable.md` (root Dockerfile, numeric non-root USER, listens on $PORT, unauthenticated GET /healthz returning 200, its main page (or a redirect to it) at /, no secrets in the Dockerfile or .env.example, no fixable CRITICAL CVE in the image) with `pivota-deploy.yaml`: port 8080, healthPath /healthz, size small, database postgres. The app calls a model only through LLM_BASE_URL, LLM_API_KEY and LLM_MODEL, lists them in .env.example with empty values, and starts without them. The app keeps its data in Postgres through DATABASE_URL, migrates its schema at start, and starts and passes /healthz without it.
+**Build pattern (user decision, 2026-11-20):** Every integration in this milestone ships as a deterministic, documented adapter stub — no live vendor credentials, simulating success/timeout/degraded paths, with mandatory graceful fallback and `Provenance` enforced at every boundary — following the exact precedent v1.0 Phase 2 established for F11 (GIS). This is a hard constraint on every plan in this milestone, not a per-feature choice.
 
 ## v2 Requirements
 
-Deferred per user decision (2026-11-16). Each remains fully specified in the existing spec suite (PRD/FRD/TechArch/UserStories/RTM) and can be pulled into a future milestone without re-elaboration.
+All six features deferred from v1.0 are in scope for v2.0. Grouped into 3 phases by domain pairing (user decision, 2026-11-20): weather/dispatch overlays, record-authority/sync integrations, and alerting/identity integrations. Exact phase numbers are assigned by the roadmapper.
 
-### External Integrations (deferred)
+### Group A — Operating-Picture Read Overlays (Weather & Dispatch)
 
-- **F12**: Weather & Hazard Feed Ingestion — NOAA/NWS/USGS read-only hazard overlay layers with provenance; v1's F2 operating picture ships without live hazard feeds (unverified-feed UI affordances remain built via F2, but no external feed is wired in v1).
-- **F13**: EOC COTS Interoperability — WebEOC/Veoci/DisasterLAN adapter integration, record-authority declaration, conflict resolution UI; core to the interoperability commercial posture but not required for the standalone-workspace MVP demonstration.
-- **F14**: Notification Provider & Public-Alerting Integration — Everbridge/AtHoc outbound channels, IPAWS/OASIS CAP public-warning formatting; v1's F5 ships the internal notification domain/UI without a live external send provider wired in.
-- **F16-roster**: HR/IAM roster/qualification sync — read sync of personnel roster, role, and qualification data as reference data into F1/F4; v1 ships SSO/authentication only (F16-SSO, in v1 above).
+- [ ] **F12**: Weather & Hazard Feed Ingestion — scoped, read-only ingestion of forecasts/warnings/events/hazard locations with confidence metadata from approved sources (NOAA/NWS/USGS adapter stub); every ingested fact carries source/timestamp/confidence via `Provenance`; unverified feeds stay visibly unverified until a person validates them; feeds surface as toggleable `LayerPanel` layers on the Operating Picture (F2), off by default when unverified; ingestion runs as an F10 background job with retry/backoff on simulated feed outage.
+- [ ] **F15**: CAD / 911 Integration — vendor-authorized, read-oriented adapter stub surfacing dispatch status against an EPMP incident in the incident workspace; record authority for dispatch data stays with the CAD/911 system (EPMP references/displays with provenance, never edits); integration-health visibility consistent with F13's pattern (last sync, direction, authority, `SyncStatus`).
 
-### External Integrations (deferred, P2 in PRD)
+### Group B — Record-Authority & Sync Integrations
 
-- **F15**: CAD / 911 Integration — read-only dispatch status display in incident workspace; depends heavily on agency-specific vendor access.
-- **F17**: Asset, Facility & Document System Integration — facility/asset status feed into F2, SharePoint document import/link for F3; v1's F3 ships plan repository/versioning without the live document-system import adapter wired in.
+- [ ] **F13**: EOC COTS Interoperability — approved adapter-stub integration exchanging incidents, boards, resource requests, status, and activity logs with incumbent EOC COTS systems (WebEOC/Veoci/DisasterLAN) at MVP depth (defined record set, not every board/widget type); explicit record-authority declaration per integrated system, visible in an integration-health `Table`; conflict surfacing when the same record differs between EPMP and the external system — both values shown side by side with "Keep EPMP value" / "Keep [external] value" actions, never a silent overwrite.
+- [ ] **F17**: Asset, Facility & Document System Integration — read-only facility/asset status and location feed into the Operating Picture (F2) as facility markers with provenance; permission-aware import/link/sync of EOPs/SOPs/annexes/evidence documents from a SharePoint-class system into the plan repository (F3), preserving the source system's access permissions; no write-back of inventory/maintenance/cost data (that remains out of scope per the Advanced Logistics exclusion).
+
+### Group C — Alerting & Identity Integrations
+
+- [ ] **F14**: Notification Provider & Public-Alerting Integration — provider-integration adapter stub for sending approved messages through an Everbridge/AtHoc-class channel, with delivery-status/acknowledgment callbacks fed back into F5's delivery view; OASIS CAP-formatted alert representation for any message routed through an IPAWS/CAP-compatible public-warning channel; every external send stays approval-controlled by a named person (`AIDraft` may fill content, but send is always a deliberate human action); graceful failure — simulated provider outages queue messages for retry and surface delivery failures in the UI rather than silently dropping them.
+- [ ] **F16-roster**: HR/IAM roster/qualification sync — read sync of personnel roster, role, qualification, and contact data from an HR/IAM adapter stub, with HR treated as authoritative for personnel records; role/qualification data flows into resource-request matching (F4) and command-role assignment (F1) as reference data, not an independently maintained EPMP personnel system of record. (Completes F16 alongside v1.0's F16-SSO, which already shipped authentication.)
 
 ## Out of Scope
 
-Carried forward from `.planning/PROJECT.md` and `PRD-EPMP.md` §10 — explicit, reasoned exclusions, not silent omissions.
+Carried forward from `project_specs/PRD-EPMP.md` §10 and `.planning/PROJECT.md`, with two additions specific to this milestone's build pattern:
 
 | Feature | Reason |
 |---------|--------|
-| Advanced logistics (inventory, workforce scheduling, mutual aid, fulfillment tracing) | Deferred to post-MVP expansion; MVP ships only the *basic* resource-request lifecycle in F4 |
-| Risk intelligence module (curated hazard feeds with correlation/alerting beyond basic overlay layers) | Expansion phase, not MVP |
-| Exercises & simulation (scenarios, injects, evaluations, training evidence) | Expansion phase |
-| Continuous monitoring (sensor/CCTV/cyber feeds) | Expansion phase |
-| Continuity & recovery module (essential functions, restoration plans, damage/impact assessments) beyond basic AAR | Expansion phase |
-| Advanced AI & analytics beyond Phase 1 (conversational assistant, predictive models, AI resource-matching, autonomous agent workflows) | Only signal triage/clustering and AI-assisted ICS form drafting (F9) are in MVP scope, both human-reviewed |
-| Any auto-issued AI-generated public warning, evacuation instruction, or binding resource decision | Explicitly forbidden in this and all future phases; all AI output requires human approval |
-| FedRAMP authorization claims in any UI copy or marketing text | Product may target FedRAMP-compatible patterns but must never claim authorization it does not hold |
-| Building parallel systems of record for GIS/CAD/alerting/infrastructure systems | EPMP integrates with (not replaces) these systems; each integration is an approved adapter/read feed, not full bidirectional sync |
-| Native iOS/Android app-store builds | F6 ships as a responsive, installable web app from the same design system; native app is a separate, later decision |
-| Full partner-portal UX / cross-agency collaboration workspace | The federation policy engine (F10 NFR) is in scope; a dedicated partner-portal experience is not |
-| Full bidirectional, field-complete sync with any named external system | Each integration targets an MVP-appropriate, explicitly declared record subset, not comprehensive two-way sync of every field |
-| Dollar-figure market sizing, TAM/SAM/SOM modeling, pricing, procurement-route decisions | Commercial/business questions, explicitly separated from engineering and product-build scope |
-| Commercial edition packaging (named editions from source material) | Market-organization hypotheses, not a committed SKU structure for this MVP build |
+| Real vendor API credentials or live third-party accounts for any v2.0 integration | No real NOAA/WebEOC/Veoci/DisasterLAN/Everbridge/AtHoc/IPAWS/CAD/HR-IAM/document-system account exists in this environment; every integration is a deterministic, documented stub per the user's explicit build-pattern decision |
+| Full bidirectional, field-complete sync with any named external system (EOC COTS, CAD, HR/IAM, asset/document systems) | Each integration targets an MVP-appropriate, explicitly declared record subset via approved adapters/read feeds, not comprehensive two-way sync of every field |
+| Write-back of inventory, maintenance, or cost data via F17's asset/facility feed | Explicitly excluded per the PRD; full asset/inventory/maintenance management is deferred to the Advanced Logistics expansion phase (unchanged from v1.0's Out of Scope) |
+| Curated/correlated risk-intelligence module (alerting/correlation beyond F12's basic overlay layers) | Expansion phase, not this milestone — F12 ships ingestion + display only |
+| Advanced AI & analytics beyond v1.0 Phase 6 scope | Unchanged from v1.0's Out of Scope; no new AI capability is introduced by this milestone |
+| Any auto-issued AI-generated public warning, evacuation instruction, or binding resource decision | Unchanged hard constraint; F14's public-alerting integration still requires named-person approval for every external send |
+| FedRAMP authorization claims in any UI copy or marketing text | Unchanged from v1.0 |
+| Commercial edition packaging / dollar-figure market sizing | Unchanged from v1.0 — business/commercial questions, not engineering scope |
 
 ## Traceability
 
@@ -85,27 +48,18 @@ Populated during roadmap creation by the roadmapper agent.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| F0 | Phase 1 | Pending |
-| F8 | Phase 1 | Pending |
-| F10 | Phase 1 | Pending |
-| F1 | Phase 2 | Pending |
-| F2 | Phase 2 | Pending |
-| F3 | Phase 3 | Pending |
-| F4 | Phase 3 | Pending |
-| F5 | Phase 4 | Pending |
-| F6 | Phase 5 | Pending |
-| F7 | Phase 4 | Pending |
-| F9 | Phase 6 | Pending |
-| F11 | Phase 2 | Pending |
-| F16-SSO | Phase 1 | Pending |
-| F18 | Phase 6 | Pending |
-| DEPLOY-01 | Phase 1 | Pending |
+| F12 | TBD | Pending |
+| F15 | TBD | Pending |
+| F13 | TBD | Pending |
+| F17 | TBD | Pending |
+| F14 | TBD | Pending |
+| F16-roster | TBD | Pending |
 
 **Coverage:**
-- v1 requirements: 15 total (12 P0 features + F9 + F16-SSO sub-scope + DEPLOY-01)
-- Mapped to phases: 15 ✓
-- Unmapped: 0
+- v2 requirements: 6 total (F12, F13, F14, F15, F16-roster, F17)
+- Mapped to phases: 0
+- Unmapped: 6 (pending roadmap creation)
 
 ---
-*Requirements defined: 2026-11-16*
-*Last updated: 2026-11-16 after roadmap creation (6 phases, 100% coverage)*
+*Requirements defined: 2026-11-20*
+*Last updated: 2026-11-20 after milestone v2.0 requirements definition*

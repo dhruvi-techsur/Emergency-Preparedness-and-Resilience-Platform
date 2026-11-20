@@ -2,9 +2,10 @@
 pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-last_updated: "2026-11-20T01:15:59.981Z"
-last_activity: "2026-11-20 — Phase 6 complete"
+status: Milestone v2.0 requirements being scoped; roadmap not yet created.
+stopped_at: Completed 06-13-PLAN.md
+last_updated: "2026-11-20T02:55:28.372Z"
+last_activity: 2026-11-19 -- Plan 06-13 complete (see 06-13-SUMMARY.md for full detail). All Phase 6 gap-closure plans (06-11, 06-12, 06-13) are now done.
 progress:
   total_phases: 6
   completed_phases: 6
@@ -17,17 +18,20 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-11-14)
+See: .planning/PROJECT.md (updated 2026-11-20)
 
 **Core value:** Give emergency management organizations one shared, trustworthy operating picture — spanning readiness, live incident coordination, and after-action learning — so they can demonstrate preparedness, coordinate a response with less manual reconciliation, and show measurable resilience improvement after every incident or exercise.
-**Current focus:** Phase 6 — Persona Dashboards & AI Assistance — core 10 plans shipped; all 3 gap-closure plans added post-UAT/GATE (06-11, 06-12, 06-13 all now done). Phase 6 is ready to re-enter verification. Plan 06-01 shipped the F9 AI-governance substrate (schema + shared assertAiOriginApproved guard) and its first real governed consumer (ICS Form Editor draft/approve); Plan 06-05 shipped the AIDraft design-system component; Plan 06-02 populated role_landing_config and shipped GET /api/v1/me/landing-config; Plan 06-03 shipped the AI-drafts request/approve/discard backend lifecycle; Plan 06-04 shipped the Signal Triage Queue backend (real clustering + promote/dismiss); Plan 06-06 shipped PER-01's EOC Dashboard and PER-03's My Work Dashboard, plus RouteGuard's reusable landing-config redirect mechanism; Plan 06-07 shipped PER-04's bottom-bar-only AppShell override and PER-05's dual-facet (Admin/Executive) experience, completing F18's all-5-personas success criterion; Plan 06-08 shipped the ICS Form Editor, the first real reachable consumer of 06-01's ics_forms backend wired to 06-05's AIDraft component, proving F9's governance cascade end-to-end via Playwright including a direct-API-bypass rejection proof; Plan 06-09 shipped the Signal Triage Queue/Detail screens, the frontend consumer of 06-04's signal-clustering backend, proving success criterion 5's user-facing half (Promote only ever navigates to the pre-filled Create Incident form); Plan 06-10 (the phase's terminal integration-proof plan, mirroring 03-08/04-07) shipped one Playwright suite proving all 5 personas end-to-end in a single run, closed the PER-02 landing-config redirect gap no individual plan re-tested, and proved the incidents:approve RBAC gate rejects a non-holder's direct API bypass with 403. Plan 06-11 (gap closure) extended seed.ts's hazard-feed fixture pool so signal-triage.spec.ts survives repeated full-suite re-runs, closing 06-GATE.md's browser_suite failure #3. Phase 5 (Mobile Field Operations) is COMPLETE (all 6 plans shipped, incl. gap-closure plan 05-06). 06-12 and 06-13 gap-closure plans remain before Phase 6/the milestone can re-enter verification.
+**Current focus:** Milestone v2.0 External Integrations — defining requirements for F12–F17 (the six integrations deferred from v1.0: weather/hazard feeds, CAD/911, EOC COTS interoperability, public-alerting providers, HR/IAM roster sync, asset/facility/document systems). v1.0 MVP (Phases 1–6, F0–F11/F16-SSO/F18/DEPLOY-01) shipped complete on 2026-11-20 and is not yet formally archived via `/pivota_spec-complete-milestone` — phase numbering for v2.0 continues from Phase 7.
 
 ## Current Position
 
-Phase: 6 of 6 (Persona Dashboards & AI Assistance) — all 13 plans complete, ready for verification
+Phase: Not started (defining requirements for v2.0)
+Plan: —
+Status: Milestone v2.0 requirements being scoped; roadmap not yet created.
 
-Plan: 13 of 13 complete in current phase (06-01 through 06-13 all done)
-Status: Plan 06-13 (gap closure, wave 1, depends_on none) closed UAT gap ref 8 (06-UAT.md, cosmetic): the Signal Triage Queue's Dismiss confirmation Modal's multiline Reason TextField visually overflowed the Modal's own right edge. Direct measurement during UAT diagnosis found the true root cause was NOT specific to this one Modal — it was a systemic, app-wide CSS integration gap: `tokens.css`'s `box-sizing: border-box` reset is scoped exclusively to descendants of an element carrying the literal class `.ep` (`.ep, .ep * { box-sizing: border-box }`), and the design system's own test harnesses always wrap fixtures in `<div className="ep">` to activate it — but `AppShell.tsx`'s root (the single outermost element wrapping every page in the app) only ever carried the unrelated `ep-shell` layout class, never `.ep` itself. Fixed with a single-class addition (`className="ep ep-shell"`), activating the reset app-wide with zero changes to `Modal.css`/`TextField.css` or any other design-system stylesheet — resolving not just the one reported overflow but the entire systemic class of Modal+multiline-TextField width miscalculations the gap's own diagnosis identified across the codebase (RecipientGroups, MessageTemplates, ComposeNotification, SignalDetail, ResourceRequestDetail, ReviewPlanModal, RecordAuthority). Added a Playwright `boundingBox()` geometry regression guard to `signal-triage.spec.ts`'s existing Dismiss Modal test plus a new standalone test 2b at a 390px mobile viewport (5/5 passing). Regression sample of 4 other Modal+multiline-TextField spec files (24 tests) and the app-shell suite (4 tests) all pass unaffected. `tsc --noEmit` and `npm run build` both clean. Zero deviations from plan. All three gap-closure plans (06-11, 06-12, 06-13) for this phase are now complete — Phase 6 (and the v1.0 milestone's final phase) is ready to re-enter verification.
+## v1.0 Summary (for reference, not yet archived to MILESTONES.md)
+
+All 6 phases complete (2026-11-16 → 2026-11-20), 61 plans, shipping F0–F11, F16-SSO, F18, DEPLOY-01. See full history below this line and in `.planning/phases/`.
 Last activity: 2026-11-19 -- Plan 06-13 complete (see 06-13-SUMMARY.md for full detail). All Phase 6 gap-closure plans (06-11, 06-12, 06-13) are now done.
 
 Plan 06-12 (prior, this phase): see 06-12-SUMMARY.md for full detail. Gap-closure plan: closed UAT gap ref 1 (major) by removing the stale, self-contradictory "ships in a later phase" hint from EocDashboard.tsx's Open tasks/Pending resource requests Stat tiles, which were already rendering real jurisdiction-scoped nonzero counts from dashboard.ts's genuine COUNT(*) queries. New regression guard added to persona-dashboards.spec.ts.
