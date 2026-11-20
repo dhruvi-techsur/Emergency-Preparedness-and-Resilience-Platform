@@ -1,62 +1,60 @@
 ---
 phase: 7
-status: issues_found
+status: clean
 blockers: 0
-warnings: 2
-files_reviewed: 15
+warnings: 0
+files_reviewed: 4
 files_reviewed_list:
-  - backend/migrations/1700000000012_hazard-layers-schema.js
-  - backend/migrations/1700000000013_cad-dispatch-schema.js
-  - backend/scripts/seed.ts
-  - backend/src/modules/incident-ops/incidents.test.ts
-  - backend/src/modules/incident-ops/incidents.ts
-  - backend/src/modules/incident-ops/operating-picture.test.ts
-  - backend/src/modules/incident-ops/operating-picture.ts
-  - backend/src/modules/integration-gateway/cad-adapter.ts
   - backend/src/modules/integration-gateway/hazard-feed-adapter.ts
-  - backend/src/modules/integration-gateway/routes.ts
-  - backend/src/server.ts
-  - frontend/app/e2e/incident-workspace-dispatch-status.spec.ts
-  - frontend/app/e2e/operating-picture-hazard-layers.spec.ts
-  - frontend/app/src/pages/admin/IntegrationHealth.tsx
-  - frontend/app/src/pages/incidents/IncidentWorkspace.tsx
-  - frontend/app/src/pages/operating-picture/OperatingPicture.tsx
-reviewed_at: 2026-11-20T10:38:11Z
-iteration: 1
+  - frontend/app/package.json
+  - package-lock.json
+  - .planning/phases/07-operating-picture-read-overlays-weather-dispatch/07-REVIEW.md
+reviewed_at: 2026-11-20T10:52:00Z
+iteration: 2
 ---
 
-# Phase 7 Code Review
+# Phase 7 Code Review (iteration 2 — re-review of fixer's commits)
 
-## BLOCKERs
+Scope: verify iteration-1's W1 and W2 fixes (commits `461ed2e`, `ad72c74`, docs commit `87b4095`) are real, correct, and free of fix-introduced regressions. Per the prompt, this is scoped to the previously reviewed files list plus files the fixer touched — not a from-scratch re-review of the full phase diff.
 
-None found.
+## W1 verification — hazard-layer verify 404 guard
 
-## WARNINGs
+**File:** `backend/src/modules/integration-gateway/hazard-feed-adapter.ts:257-267`
 
-### W1: `POST /api/v1/hazard-layers/:id/verify` silently succeeds (204) for a non-existent hazard-layer id
-- **File:** `backend/src/modules/integration-gateway/hazard-feed-adapter.ts:233-262`
-- **Evidence:** The handler checks caller-identity equality (`verified_by !== req.epmpUser!.id` → 403) but never checks whether the `UPDATE hazard_layers SET verified = true ... WHERE id = $2` actually matched a row. `query()` (`backend/src/db/client.ts`) returns `result.rows`, discarding `rowCount`, so there's no way for this handler to detect a zero-row UPDATE even if it tried — and it doesn't try. A caller hitting this route with a mistyped/stale/already-deleted `id` and their own user id gets `204 No Content` exactly as if the verification succeeded, with no `hazard_layers` row actually changed. This is a confirmable-not-fatal gap (no data corruption, no security impact — the action silently no-ops) but it diverges from the FRD's implicit expectation that a verification action be unambiguous, and from this codebase's own `INCIDENT_NOT_FOUND`-style precedent of confirming existence before mutating.
-- **Fix direction:** Either `SELECT id FROM hazard_layers WHERE id = $1` first (same existence-guard convention `fetchIncidentForMutation` establishes) and 404 if absent, or inspect the raw `pg` `rowCount` from the UPDATE and 404 on zero.
-- **Resolution:** fixed (461ed2e) — added a `SELECT id FROM hazard_layers WHERE id = $1` existence guard before the UPDATE, returning `404 HAZARD_LAYER_NOT_FOUND` when absent, matching `fetchIncidentForMutation`'s convention. Verified: `tsc --noEmit` clean; `operating-picture.test.ts`'s existing verify-route test (mismatch→403, own-id→204) still passes (11/11 tests green) against the live compose stack.
+The fix adds exactly what iteration 1 asked for: a `SELECT id FROM hazard_layers WHERE id = $1` existence check inserted between the `verified_by` identity-equality check (403 path, unchanged) and the `UPDATE ... SET verified = true` mutation. On zero rows it returns `404 { error_code: 'HAZARD_LAYER_NOT_FOUND' }` before touching the database, matching the `fetchIncidentForMutation` / `INCIDENT_NOT_FOUND` convention in `incidents.ts` referenced by the original finding.
 
-### W2: Playwright spec imports backend business-logic module directly from the frontend package, a new pattern with no import-boundary enforcement
-- **File:** `frontend/app/e2e/incident-workspace-dispatch-status.spec.ts:4`
-- **Evidence:** `import { fetchCadDispatchEvents } from '../../../backend/src/modules/integration-gateway/cad-adapter';` pulls in `cad-adapter.ts`'s full transitive dependency graph (`fastify` types, `pg`, the shared `db/client.ts` pool, `webhook-delivery-worker.ts`) into a test file that lives in `frontend/app`'s own workspace package — `frontend/app/package.json` declares no `fastify` dependency at all (confirmed: `grep -n '"fastify"' frontend/app/package.json` returns nothing); this resolves today only because npm workspaces hoist `fastify`/`jose`/`nats` to the monorepo root `node_modules`, which every other e2e spec in this codebase has never relied on (every other spec using `pg.Pool` for fixture access imports only the `pg` driver itself, which frontend/app *does* declare as its own devDependency). I confirmed this actually runs correctly in this sandbox (ran the full spec live against the compose stack: 4/4 pass once the shared CAD fixture link — independently destabilized by a prior backend test run, a pre-existing/documented cross-plan interaction — was restored), so this is not a current failure, but it is a fragile, undeclared cross-package coupling: a future change to `frontend/app/package.json`'s dependency resolution (e.g. disabling hoisting, or `npm ci` with stricter workspace isolation) would break this spec with no compile-time signal in `frontend/app` itself (its own `tsc --noEmit` passes clean today only because `moduleResolution: Bundler` doesn't verify package-level dependency declarations, just path resolution).
-- **Fix direction:** Prefer re-exercising the adapter's failure path via an HTTP call against a running backend (as `operating-picture.spec.ts` does for the analogous GIS-adapter forced-failure case) rather than a direct cross-package source import, or add `fastify`/the backend package as an explicit (dev)dependency of `frontend/app` so the coupling is declared rather than incidental.
-- **Resolution:** fixed (ad72c74) — took the "declare the coupling" fix direction rather than rewriting the spec's HTTP-call pattern (no equivalent `force_cad_failure` query-param injection point currently exists on any CAD route — `fetchCadDispatchEvents`'s `simulateFailure` flag is only reachable via this direct import or `runCadIngestion`'s own non-HTTP `cadIncidentNumber` test-injection path — so switching to an HTTP-only approach would require adding new route surface, which is out of this fix's scope). Added `"@epmp/backend": "*"` to `frontend/app/package.json`'s devDependencies, matching the existing `"@epmp/design-system": "*"` workspace-reference pattern. Verified: `tsc --noEmit` clean in `frontend/app`; ran the spec live against the running compose stack — all 4/4 tests pass (after restoring the shared CAD fixture link the review itself documents as independently destabilized by prior backend test runs, same pre-existing cross-plan interaction, not a regression from this fix).
+Checked for regressions:
+- Ordering is correct — the identity check still runs first (an unauthenticated/wrong-identity caller gets 403 regardless of whether the id is real, which is the right precedence: don't leak existence info to a caller who isn't even verifying as themselves... though in this case the error message is generic enough either way).
+- The existing passing test (`operating-picture.test.ts:318`, "rejects a mismatched verified_by, and succeeds for the caller's own id") still exercises both the 403 and 204 paths with a real `layerId` fixture, so the new guard's "existing row" branch is covered. Ran it live against the compose stack: **11/11 tests pass**, including this one, confirmed via direct test run (not just trusting the commit log) — `req-c` (mismatch) → 403, `req-d` (own id) → 204.
+- No test explicitly exercises the new 404 branch (a request with a syntactically-valid-but-nonexistent UUID), but the code path is a straightforward early-return mirroring an already-proven pattern elsewhere in the codebase; this is a minor coverage gap, not a defect — not escalating to a WARNING since the logic is simple, correct on inspection, and type-checks clean (`tsc --noEmit` on backend: no output, clean).
+- No change to the route's registration, permission gate, or response shape for the two pre-existing paths (403/204) — confirmed by diff: only 12 lines inserted, nothing else touched.
+
+**Verdict: fix is correct, complete, and regression-free.**
+
+## W2 verification — `@epmp/backend` devDependency declaration
+
+**File:** `frontend/app/package.json`, `package-lock.json`
+
+The fix adds `"@epmp/backend": "*"` to `frontend/app/package.json`'s `devDependencies`, in the same style as the pre-existing `"@epmp/design-system": "*"` workspace-reference entry, and the corresponding `package-lock.json` workspace entry is updated in lockstep (both files modified in the same commit, `ad72c74`).
+
+Checked for regressions:
+- `npm ls @epmp/backend --workspace=frontend/app` resolves correctly: `@epmp/app@0.1.0 -> ./frontend/app` now depends on `@epmp/backend@0.1.0 -> ./backend`, confirming the workspace link is live, not just declared-and-dangling.
+- `package-lock.json`'s `node_modules/@epmp/backend` entry (`"resolved": "backend", "link": true`) is unchanged by this commit — it already existed as a root-level workspace link before this fix; the fix only adds the explicit consumer-side declaration in `frontend/app`'s own dependency list, which is exactly the "declare the coupling" fix direction iteration 1 recommended. No new package version, no new transitive dependency tree, no conflicting version constraint introduced.
+- `tsc --noEmit` in `frontend/app`: clean, no output.
+- The import site itself (`frontend/app/e2e/incident-workspace-dispatch-status.spec.ts:4`, `import { fetchCadDispatchEvents } from '../../../backend/src/modules/integration-gateway/cad-adapter'`) is unchanged — the fix doesn't touch the spec, only the dependency declaration, which is the correct minimal-diff resolution for a "declare existing implicit coupling" finding.
+
+**Verdict: fix is correct, minimal, and regression-free.**
+
+## Docs commit (`87b4095`)
+
+Appends the two "Resolution:" paragraphs to iteration 1's `07-REVIEW.md` under each WARNING — administrative only, no source change, nothing to review.
 
 ## Cross-file seams checked
 
-- `backend/src/modules/integration-gateway/routes.ts` → `hazardFeedRoutes`/`cadRoutes` exports: both registered alongside `gisHealthRoutes`, append-only, confirmed in file — OK
-- `backend/src/server.ts` → `startHazardFeedIngestionScheduler`/`startCadIngestionScheduler`: both called inside their own graceful-degradation try/catch blocks, matching existing scheduler-start convention — OK
-- `backend/src/modules/incident-ops/operating-picture.ts` → `syncHazardLayersFromEvents` (imported from `hazard-feed-adapter.ts`): called at top of `GET /layers` handler, wrapped in empty try/catch per plan's own must-have ("never blocks the response") — OK
-- `backend/src/modules/incident-ops/operating-picture.ts`'s `GET /layers` hazard-aggregation query → `hazard_feed_config`/`hazard_feed_events`/`hazard_layers` schema (Phase 6 + this phase's migration): column names (`feed_id`, `feed_name`, `issued_at`, `hazard_feed_event_id`, `verified`) all match the actual DDL — OK
-- `backend/src/modules/incident-ops/incidents.ts`'s `GET /:id/dispatch-status` → `cad_dispatch_events` schema (this phase's migration): `status`/`unit_ids`/`source`/`updated_at`/`linked_incident_id` column names match the DDL exactly — OK
-- `frontend/app/src/pages/operating-picture/OperatingPicture.tsx`'s `ApiLayer` interface → backend `GET /operating-picture/layers` response shape (`id`/`label`/`source`/`as_of`/`verified`/`count`/`checked`): field-for-field match, confirmed by direct read of both sides — OK (matches 07-03-SUMMARY's own claim, independently verified here)
-- `frontend/app/src/pages/incidents/IncidentWorkspace.tsx`'s `DispatchStatusResponse` interface → backend `GET /incidents/:id/dispatch-status` response shape (`linked`/`status`/`unit_ids`/`source`/`updated_at`): matches exactly, including the `linked:false`-means-no-other-fields contract — OK
-- `backend/src/modules/integration-gateway/hazard-feed-adapter.ts`'s `recordFeedHealth` / `backend/src/modules/integration-gateway/cad-adapter.ts`'s `recordCadHealth` → shared `integration_health` table (`system_name` UNIQUE constraint from `01-01`'s migration): both UPSERTs key on `system_name` correctly, `record_authority` is always the vendor name (`'NOAA'`/`'NWS'`/`'USGS'`/`'CAD/911'`), never `'EPMP'` — confirmed live against the running database (`SELECT system_name, record_authority ... FROM integration_health`) — OK
-- `background_jobs.job_type` CHECK constraint (`1700000000013`'s ALTER) → both adapters' bookkeeping queries (`WHERE job_type = 'feed_ingestion'` vs `WHERE job_type = 'cad_ingestion'`): structurally distinct, confirmed via grep and via the cross-adapter integration tests in both `operating-picture.test.ts` and `incidents.test.ts`, both of which pass live — OK
-- `frontend/app/src/pages/admin/IntegrationHealth.tsx` → `backend/src/modules/auth-org/admin-integration-health.ts` (GET /admin/integration-health, pre-existing Phase 1 route, not modified this phase): plain `SELECT *` with no `system_name` filter, confirmed generic over the new hazard-feed/CAD rows — OK
-- `c-gap` (scanner finding) `SignInCallback.tsx:65` GET vs backend POST route mismatch: independently verified via `git log` that `SignInCallback.tsx` was last touched by the pre-phase-7 "docs: phase 7 status → In Progress" commit (not by any of phase 7's 4 plans), and independently confirmed the backend route at `auth-org/routes.ts:72` is a `POST` handler while the frontend code at line 65 calls `fetch(..., { method: 'POST' })` — the scanner's "GET" characterization does not match the actual code on either side. This is a pre-existing scanner false-positive unrelated to phase 7's diff, not a phase-7 regression; not counted as a phase-7 BLOCKER per the prompt's exception clause.
-- `c-adv` (scanner advisory) `api-client.ts:121` dynamic path `GET /field-reports/${id}/photos`: independently confirmed `api-client.ts` was also last touched by the same pre-phase-7 docs commit — out of this phase's diff entirely, no action needed.
-- `cad-adapter.ts`'s `CadDispatchEvent.location` field → `IncidentWorkspace.tsx`'s dispatch-status Card: the frontend never reads `location` from the dispatch-status response (backend's `GET /dispatch-status` route doesn't expose it either, only `status`/`unit_ids`/`source`/`updated_at`) — consistent, no dangling consumer expectation — OK
+- `hazard-feed-adapter.ts` verify route → `operating-picture.test.ts`'s existing verify test: both paths (403, 204) still pass live against the running stack post-fix — OK
+- `frontend/app/package.json` → `package-lock.json` workspace entry: declaration and lockfile in sync, `npm ls` confirms live resolution — OK
+- Fixer's commits touched only the two files flagged in iteration 1 (plus the lockfile and the review doc itself) — no incidental touches to unrelated phase-7 files, so the iteration-1 "Cross-file seams checked" section (routes↔schema, UI↔API shapes, job_type isolation, etc.) remains valid and unaffected by these two commits — not re-verified from scratch per the re-review scope, but no fixer-touched file intersects with any of those seams.
+
+## Conclusion
+
+Both iteration-1 WARNINGs are genuinely fixed, verified against the live compose stack (not just commit-message trust), and introduce no new defects. No new findings in the fixer's commits. Phase 7 is clean.
