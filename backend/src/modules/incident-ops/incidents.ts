@@ -371,6 +371,57 @@ export default async function incidentsRoutes(app: FastifyInstance) {
     },
   );
 
+  // GET /api/v1/incidents/:id/dispatch-status — F15 (CAD/911 Integration).
+  // Read-only: this route ONLY ever reads cad_dispatch_events, never
+  // writes it — the write path for that table lives exclusively in
+  // cad-adapter.ts's runCadIngestion (populating the local cache of an
+  // external read feed), matching F15's "references incidents... never
+  // writes to fields it doesn't own" framing applied symmetrically in the
+  // other direction. Reuses this module's own jurisdiction-scope-guard
+  // convention (fetchIncidentForMutation) rather than writing a second
+  // existence/scope check, same as every other mutation/detail route in
+  // this file.
+  app.get<{ Params: { id: string } }>(
+    '/api/v1/incidents/:id/dispatch-status',
+    { preHandler: requirePermission('incidents', 'view') },
+    async (req, reply) => {
+      const incident = await fetchIncidentForMutation(req.params.id, req.epmpUser!.jurisdiction_scope);
+      if (!incident) {
+        return reply.code(404).send(INCIDENT_NOT_FOUND);
+      }
+
+      const rows = await query<{
+        status: string;
+        unit_ids: string[] | null;
+        source: string;
+        updated_at: string;
+      }>(
+        `SELECT status, unit_ids, source, updated_at
+         FROM cad_dispatch_events
+         WHERE linked_incident_id = $1
+         ORDER BY updated_at DESC
+         LIMIT 1`,
+        [req.params.id],
+      );
+
+      const dispatch = rows[0];
+      if (!dispatch) {
+        // An honestly-unmatched state is not an error (F15's "remains
+        // unlinked... not force-attached") — the frontend renders this as
+        // "No dispatch data linked to this incident" rather than erroring.
+        return reply.code(200).send({ linked: false });
+      }
+
+      return reply.code(200).send({
+        linked: true,
+        status: dispatch.status,
+        unit_ids: dispatch.unit_ids ?? [],
+        source: dispatch.source,
+        updated_at: dispatch.updated_at,
+      });
+    },
+  );
+
   // Generic metadata edit only (name/type/description). severity/
   // activation_level/status have their own dedicated endpoints in later
   // 02-* plans — kept out of this PATCH to avoid bypassing their own

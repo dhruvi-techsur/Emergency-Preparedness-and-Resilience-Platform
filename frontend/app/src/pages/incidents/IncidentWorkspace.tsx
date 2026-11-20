@@ -10,6 +10,7 @@ import {
   Badge,
   Avatar,
   Button,
+  Provenance,
   type BadgeTone,
   type TabItem,
   type TimelineItem,
@@ -103,6 +104,18 @@ interface EvidenceLogEntry {
 
 interface EvidenceLogResponse {
   items: EvidenceLogEntry[];
+}
+
+/** Shape of `GET /api/v1/incidents/:id/dispatch-status` (Plan 07-02's
+ * incidents.ts route) — F15's read-only CAD/911 dispatch-status contract.
+ * `linked: false` is an honest "no matched CAD event" state, never an
+ * error; the optional fields are only ever present when `linked: true`. */
+interface DispatchStatusResponse {
+  linked: boolean;
+  status?: string;
+  unit_ids?: string[];
+  source?: string;
+  updated_at?: string;
 }
 
 type ReportStatus = 'Draft' | 'Approved' | 'Finalized';
@@ -216,6 +229,15 @@ export function IncidentWorkspace(): JSX.Element {
   const timelineQuery = useQuery({
     queryKey: ['incident-timeline', id],
     queryFn: () => apiGet<TimelineResponse>(`/api/v1/incidents/${id}/timeline`),
+    enabled: Boolean(id),
+  });
+
+  // F15 (Plan 07-02 backend) — read-only CAD/911 dispatch status. No
+  // mutation/invalidation path exists here by design: this Card has no
+  // write affordance, so there is nothing to invalidate this query on.
+  const dispatchStatusQuery = useQuery({
+    queryKey: ['incident-dispatch-status', id],
+    queryFn: () => apiGet<DispatchStatusResponse>(`/api/v1/incidents/${id}/dispatch-status`),
     enabled: Boolean(id),
   });
 
@@ -489,6 +511,49 @@ export function IncidentWorkspace(): JSX.Element {
                 </div>
               );
             })}
+          </Card>
+
+          {/*
+            F15 (07-04) — read-only CAD/911 Dispatch status. Sits between
+            Command roles (most operationally urgent) and Map (least) per
+            this plan's own documented discretion, since Screen-05's own
+            layout predates F15 and names no explicit ordering for it.
+
+            Structurally this Card has NO button, NO form, and NO onClick
+            handler anywhere in its subtree — that absence IS the "no edit
+            action" mechanism (per F15's "absence, not merely hidden" rule,
+            mirroring 04-06's AarGenerator closure-gate precedent). Do not
+            add a Refresh/Edit button here, even disabled.
+          */}
+          <Card title="Dispatch status">
+            {dispatchStatusQuery.isLoading ? (
+              <p className="caption" aria-busy="true">
+                Loading…
+              </p>
+            ) : !dispatchStatusQuery.data?.linked ? (
+              <EmptyState title="No dispatch data linked">
+                This incident has no matched CAD/911 dispatch event.
+              </EmptyState>
+            ) : (
+              <>
+                <p>Status: {dispatchStatusQuery.data.status}</p>
+                {dispatchStatusQuery.data.unit_ids && dispatchStatusQuery.data.unit_ids.length > 0 ? (
+                  <p className="caption">Units: {dispatchStatusQuery.data.unit_ids.join(', ')}</p>
+                ) : null}
+                {/* Never verified={false} here — CAD data isn't an
+                    "unverified feed" being validated (F12's concept), it's
+                    read-only data whose authority lives elsewhere, so the
+                    default verified-true branch is the correct rendering. */}
+                <Provenance
+                  source={dispatchStatusQuery.data.source ?? 'Unknown'}
+                  time={
+                    dispatchStatusQuery.data.updated_at
+                      ? new Date(dispatchStatusQuery.data.updated_at).toLocaleString()
+                      : undefined
+                  }
+                />
+              </>
+            )}
           </Card>
 
           {/*

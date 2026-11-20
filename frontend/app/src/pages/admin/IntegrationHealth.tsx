@@ -4,11 +4,16 @@ import { PageHeader, Card, Table, type TableColumn } from '@epmp/design-system';
 import { apiGet } from '../../lib/api-client';
 
 /**
- * F8 S8.6 — Integration Health. Phase 1 genuinely has zero rows here: no
- * F11-F17 integration adapter exists yet to write to integration_health
- * (01-09's admin-integration-health.ts is a correct passthrough read of an
- * always-empty table in this phase). This is the CORRECT, expected state —
- * the screen renders it as a clean first-use EmptyState, not an error.
+ * F8 S8.6 — Integration Health. Phase 1 genuinely had zero rows here (no
+ * F11-F17 integration adapter existed yet). Phase 2's GIS adapter (F11)
+ * and Phase 7's hazard-feed/CAD-911 adapters (F12/F15, Plans 07-01/07-02)
+ * now write real rows into this same shared table — this component is
+ * generic over whatever rows `GET /api/v1/admin/integration-health`
+ * returns (01-09's admin-integration-health.ts, a correct passthrough
+ * read), so no code change was needed beyond this doc comment and the
+ * EmptyState copy below to stop implying no adapter is configured yet.
+ * The EmptyState itself only ever renders pre-any-adapter or on a
+ * fresh/empty database — not the expected steady state anymore.
  */
 
 interface IntegrationHealthRow {
@@ -73,7 +78,7 @@ export function IntegrationHealth(): JSX.Element {
           empty={{
             title: 'No integrations connected yet',
             children:
-              'Integration health populates once an external system adapter (GIS, HR/IAM, EOC COTS, etc.) is configured.',
+              'Integration health populates as external system adapters (GIS, hazard feeds, CAD/911, HR/IAM, EOC COTS, etc.) sync.',
           }}
         />
       </Card>

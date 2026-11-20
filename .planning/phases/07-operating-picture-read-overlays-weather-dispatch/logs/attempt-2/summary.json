@@ -1,0 +1,21 @@
+{
+  "duration_secs": 1551.0,
+  "token_usage": {
+    "input": 192,
+    "output": 65036,
+    "total": 15585466,
+    "cache_read": 15333236,
+    "cache_write": 187002,
+    "cost": 4.184896200000001
+  },
+  "model": "claude-sonnet-5",
+  "files_changed": [
+    ".planning/phases/07-operating-picture-read-overlays-weather-dispatch/07-UAT.md",
+    ".planning/phases/07-operating-picture-read-overlays-weather-dispatch/07-UAT.summary.json"
+  ],
+  "verification_status": "passed",
+  "error_message": null,
+  "attempt_number": 2,
+  "created_at": "2026-11-20T11:43:06.917097+00:00",
+  "completed_at": "2026-11-20T12:08:58.425894872+00:00"
+}

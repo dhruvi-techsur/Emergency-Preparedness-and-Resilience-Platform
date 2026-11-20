@@ -48,7 +48,8 @@ against a real vendor's live uptime, a real API key, or a real third-party netwo
 
 ### Phase 7: Operating-Picture Read Overlays (Weather & Dispatch)
 **Goal**: EOC and incident-command staff see weather/hazard and CAD/911 dispatch data as additional, clearly-sourced read-only layers on the Operating Picture and incident workspace — simulated via deterministic adapter stubs that behave exactly like F11's GIS adapter (default degraded/fallback path, provenance-tagged, no live vendor credentials) — so an unverified feed is never treated as operational fact and a stub outage never breaks the page.
-**Status**: Passed
+**Status**: Complete (2026-11-20)
+**Last Updated**: 2026-11-20T12:10:41Z
 **Depends on**: Phase 2 (Operating Picture, F11's GIS adapter pattern), Phase 1 (integration-health view)
 **Requirements**: F12, F15
 **Success Criteria** (what must be TRUE):
