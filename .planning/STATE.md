@@ -4,8 +4,8 @@ milestone: v2.0
 milestone_name: milestone
 current_plan: 10
 status: completed
-stopped_at: Completed 09-01-PLAN.md
-last_updated: "2026-11-20T19:46:56.249Z"
+stopped_at: Completed 09-02-PLAN.md
+last_updated: "2026-11-20T19:47:06.007Z"
 last_activity: 2026-11-20
 progress:
   total_phases: 3
@@ -29,8 +29,10 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 Phase: Phase 9 (Alerting & Identity Integrations) — IN PROGRESS
 Current Plan: 10
 Total Plans in Phase: 4 (09-01 through 09-04)
-Status: Plan 09-01 of 4 complete (wave 1, parallel with 09-02). Plans 09-02/09-03/09-04 remaining.
+Status: Plans 09-01/09-02 of 4 complete (both wave 1, ran in parallel). Plans 09-03/09-04 remaining.
 Last Activity: 2026-11-20
+
+Plan 09-02 (this phase): see 09-02-SUMMARY.md for full detail. Shipped F16-roster's backend half — a deterministic HR/IAM adapter stub (`hris-roster-adapter.ts`) reading into Phase 1's already-existing but until-now-unpopulated `personnel_roster` table. `fetchHrisPersonnel()` returns 2 normalized records on its success path, one carrying the real seeded `commander@epmp.local` user's email (proving the matched path end-to-end) and one matching no seeded user (the deliberate unmatched-record proof); `simulateFailure` deterministically throws `HRIS_FEED_UNREACHABLE`. `runHrisRosterSync()` upserts `personnel_roster`'s own HR-sourced columns, then performs EMAIL-ONLY matching against `users` as a genuinely separate SQL statement — `matched_user_id` is structurally never set by the same write that lands name/role_titles/qualifications; an unmatched record is left `matched_user_id=NULL` rather than guessed or force-matched. A sync failure never throws out of the function and never touches existing `personnel_roster` rows — proven byte-identical across a forced failure (same ids, same `as_of` values) — satisfying F16's "last-known data, labeled with its own age" outage-resilience rule. `job_type='report_generation'` claimed exclusively (one of Phase 1's two originally-reserved-but-unused CHECK values, re-confirmed unclaimed via grep at execution time, chosen over `'signal_triage'`). Zero PATCH/PUT/DELETE route exists anywhere in the codebase for `personnel_roster`, and zero `UPDATE users`/`INSERT INTO users` statement exists in the adapter file — both proven structurally via grep-based test assertions, not just code review. New `hris-roster-adapter.test.ts` (8/8 passing); full backend suite (24 files, 171 tests) zero regression; `npm run build`/`npm run seed` (idempotent) both clean. Two auto-fixed deviations, both Rule 1/3: (a) sibling Wave-1 plan 09-01's own concurrent edit to the same append-only `routes.ts` file clobbered this plan's `hrisRosterRoutes` registration line (identical precedent to Phase 8's 08-04 parallel-wave git-interleave finding) — re-applied; (b) two of this plan's own structural grep test assertions self-matched their own literal strings inside the test file — fixed with `--exclude="*.test.ts"`. One unrelated, self-resolving flake observed once in sibling plan 09-01's own test file during a full-suite run, independently re-verified green twice after zero code changes — not this plan's defect, not logged as a deferred item.
 
 Plan 09-01 (this phase): see 09-01-SUMMARY.md for full detail. Shipped F14's backend half — a deterministic Everbridge/AtHoc-class notification-provider adapter stub (`notification-provider-adapter.ts`) whose `sendViaProvider()` re-verifies F5's named-person approval SERVER-SIDE inside the adapter itself (not merely trusting notifications.ts's own route gate) as its very first executable check, proven by a direct-function-call test that never touches the HTTP route at all. A message sent through the one `is_public_warning_channel:true` channel (IPAWS) is wrapped in a hand-built OASIS CAP 1.2 XML envelope (all required fields: identifier/sender/sent/status/scope/category/event/urgency/severity/certainty/area) and persisted to new `cap_alert_records`; an incomplete CAP request is rejected with `422 CAP_FIELDS_INCOMPLETE` BEFORE any dispatch, proven to write zero rows. A simulated provider outage (unrecognized channel or the `FORCE_PROVIDER_OUTAGE` trigger) queues for retry rather than throwing; `runNotificationRetrySweep()` escalates a 4th consecutive failure into F5's EXISTING `notification_delivery_status` table as `'Failed'` with a visible `failure_reason`, scoped exclusively to the previously-unused `job_type='notification_fanout'` (confirmed via grep before use, same precedent as every prior adapter's job_type-isolation pattern). Inbound delivery callbacks match by `external_message_id`+recipient-contact and update F5's existing delivery-status table; an unmatched callback is logged (200, never dropped or misattached). `notifications.ts`'s existing send route now additively dispatches through `sendViaProvider` once per distinct channel, wrapped in per-channel try/catch so one channel's failure never aborts others or rolls back F5's own already-committed send. New `notification-provider-adapter.test.ts` (10/10 passing) proves all of the above; full backend suite (24 files, 171 tests) zero regression; `npm run build`/`npm run seed` both clean. One auto-fixed Rule-3 deviation (migration template-literal backtick collision, trivial reword). One documented non-defect: `routes.ts`/`server.ts`/`seed.ts` show the same concurrent-execution git interleave with parallel-wave Plan 09-02 that Phase 8's 08-04 previously hit — verified harmless by direct inspection, both plans' wiring is present and the full suite passes clean.
 
@@ -380,6 +382,8 @@ Recent decisions affecting current work:
 - [Phase 08-10]: handleSubmit's mode values renamed to the backend's literal enum (import_copy/link_live), closing a naming mismatch against 08-09's route; new-plan name field kept editable (not read-only pre-fill) for collision-free repeated test runs
 - [Phase 09]: Migration renumbered 1700000000012 -> 1700000000017 (Phase 7/8 adapter plans already claimed 012-016 by execution time)
 - [Phase 09]: 403 CAP_AUTHORITY_DENIED intentionally never thrown — this MVP stub has no per-agency CAP-authorization concept, condition is structurally unreachable
+- [Phase 09-alerting-identity-integrations]: job_type='report_generation' claimed exclusively by Plan 09-02's HRIS roster sync — one of Phase 1's original reserved-but-unused background_jobs CHECK values, confirmed unclaimed in application code at execution time, chosen over 'signal_triage' (earlier alphabetically, avoids collision risk with sibling Wave-1 plan 09-01's own job_type choice)
+- [Phase 09-alerting-identity-integrations]: HRIS roster email-only matching uses commander@epmp.local (real seeded Phase 2 user) as the stub's one matched fixture record, proving the email-equality matching rule end-to-end rather than against a synthetic id
 
 ### Pending Todos
 
@@ -391,6 +395,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-20T19:46:33.606Z
-Stopped at: Completed 09-01-PLAN.md
+Last session: 2026-11-20T19:47:06.005Z
+Stopped at: Completed 09-02-PLAN.md
 Resume file: None
