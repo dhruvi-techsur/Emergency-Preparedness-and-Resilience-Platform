@@ -1,57 +1,80 @@
 ---
 phase: 8
-status: clean
-blockers: 0
-warnings: 0
-files_reviewed: 6
+status: issues_found
+blockers: 1
+warnings: 2
+files_reviewed: 9
 files_reviewed_list:
-  - backend/src/modules/integration-gateway/eoc-cots-adapter.ts
   - backend/src/modules/integration-gateway/document-adapter.ts
   - backend/src/modules/plans/plans.test.ts
-  - backend/src/modules/integration-gateway/eoc-cots-adapter.test.ts
-  - backend/src/modules/integration-gateway/eoc-cots-conflicts.test.ts
-  - backend/src/modules/integration-gateway/facility-document-adapter.test.ts
-reviewed_at: 2026-11-20T13:25:00Z
-iteration: 2
+  - backend/src/modules/plans/plans.ts
+  - frontend/app/e2e/operating-picture-facility-markers.spec.ts
+  - frontend/app/e2e/operating-picture-resource-markers.spec.ts
+  - frontend/app/e2e/plan-document-import-link.spec.ts
+  - frontend/app/src/pages/operating-picture/OperatingPicture.tsx
+  - frontend/app/src/pages/plans/ImportDocumentModal.tsx
+  - frontend/app/src/pages/plans/PlanRepository.tsx
+reviewed_at: 2026-11-20T18:45:35Z
+iteration: 1
 ---
 
 # Phase 8 Code Review
 
+## Contract-scan disposition (step 0)
+
+The single `c-gap` reported (`frontend/app/src/pages/SignInCallback.tsx:65` → `GET /api/v1/auth/sso/callback`, no matching backend route) is a **false positive, out of this review's scope**, confirmed by direct inspection:
+
+- `git diff e545ee4..HEAD --stat` touches neither `SignInCallback.tsx` nor `backend/src/modules/auth-org/routes.ts` — both files are untouched by the 08-07/08-08/08-09/08-10 diff (`SignInCallback.tsx` last changed in `ea23577`, "fix(04-08)"; `routes.ts` last changed in `720036e`, "feat(06-06)" — both predate this gap-closure run entirely).
+- Reading the actual call site (`SignInCallback.tsx:65-69`): `fetch('/api/v1/auth/sso/callback', { method: 'POST', ... })` — the method is declared in the options object, not inline with the URL, which is exactly why the scanner's static method-sniffing mis-detected GET. The backend route (`auth-org/routes.ts:72`) is `app.post<...>('/api/v1/auth/sso/callback', ...)` — a real, matching POST route exists.
+
+Not carried forward as a finding: it is neither real nor in this run's diff.
+
 ## BLOCKERs
 
-None.
+### B1: `POST /api/v1/plans/import` with `plan_id` + `mode: 'import_copy'` silently performs a `link_live` write instead, misrepresenting the user's explicit choice
+- **File:** backend/src/modules/plans/plans.ts:359-381
+- **Category:** bug
+- **Evidence:** In the `if (plan_id)` branch (attach-to-existing-plan path), the route unconditionally calls `linkDocument(...)` — never branching on `mode` at all:
+  ```ts
+  if (plan_id) {
+    const existing = await fetchPlanRow(query, plan_id, req.epmpUser!.jurisdiction_scope);
+    if (!existing) { return reply.code(404).send(PLAN_NOT_FOUND); }
+    targetPlanId = plan_id;
+    try {
+      await linkDocument(req.epmpUser!.id, source_document_ref, targetPlanId, req.epmpUser!.jurisdiction_scope);
+      // ^ always linkDocument(), regardless of req.body.mode
+  ```
+  Compare to the `else` (new-plan) branch, which DOES correctly branch:
+  ```ts
+  if (mode === 'import_copy') {
+    await importDocument(req.epmpUser!.id, source_document_ref);
+  } else {
+    await linkDocument(...);
+  }
+  ```
+  Concrete failing input: a user opens `ImportDocumentModal`, selects "Attach to an existing plan," and clicks **"Import copy"** (`handleSubmit('import_copy')`, `ImportDocumentModal.tsx:218`) — the frontend sends `{ mode: 'import_copy', plan_id: <id>, ... }`. The backend ignores `mode` entirely on this branch and always writes a `document_links` row with `mode = 'link_live'` (hardcoded inside `linkDocument()`, `document-adapter.ts:218`). The user asked for a one-time point-in-time copy (no ongoing sync/flagging) and silently got a live, periodically-revalidated sync link instead — the two modes have materially different behavior per the FRD (S3.6: "choose Import copy vs. Link live sync mode," Process step 7: only `link_live` rows are swept by the background job and can be flagged "source changed" for review). The user has no way to discover this happened: the 201 response and UI navigation are identical for both buttons, and `PlanDetail.tsx`'s document_links Alert (flagged "source changed" review UI) will now spuriously apply to a document link the user believed was a disconnected copy.
+  - This also means `importDocument()`'s own `import_copy` row (and its generated `content` body — the actual imported text) is never written or surfaced anywhere for the existing-plan-attach path, regardless of which button the user clicked — there is no code path in this route that ever calls `importDocument()` when `plan_id` is provided, even when `mode === 'import_copy'`.
+  - Neither `plans.test.ts` nor `plan-document-import-link.spec.ts` tests `mode: 'import_copy'` combined with an existing `plan_id` — the gap is untested, which is why it shipped unnoticed (08-09's Task 2 test suite only exercises `import_copy` on the new-plan path and `link_live` on the existing-plan path, never the opposite pairing on either branch).
+- **Fix direction:** Branch on `mode` inside the `if (plan_id)` block exactly as the `else` branch already does: call `importDocument()` when `mode === 'import_copy'` (and, since `importDocument()` itself never accepts a `plan_id`, either extend it to accept one or have the route separately UPDATE the resulting `document_links` row's `plan_id` after the call) vs. `linkDocument(..., targetPlanId, ...)` when `mode === 'link_live'`, matching the semantics the new-plan branch already implements correctly.
 
 ## WARNINGs
 
-None.
+### W1: Imported document content is discarded on every `import_copy` path — `source_document_ref` is the only trace of the import, no section/body content is ever written to the new plan
+- **File:** backend/src/modules/plans/plans.ts:425-426
+- **Evidence:** `await importDocument(req.epmpUser!.id, source_document_ref);` — the call's return value (`{ id, content }`, where `content` is the simulated imported document body, `document-adapter.ts:157-160`) is never captured or used. The new plan is created with zero `plan_sections` rows (the INSERT at line 407 only sets `name/type/jurisdiction_id/owner_id/source_document_ref`, no section-population step follows). A user who clicks "Import copy" gets a completely empty Draft plan with no visible connection to the document's actual content — only `source_document_ref` (not rendered anywhere in `PlanDetail.tsx`, confirmed by grep: the field exists in neither `PlanDetailResponse`'s interface nor any JSX in that file) records what was imported. This is a materially incomplete implementation of the FRD's "import... landing it in Draft status" flow (F03 S3.6) — the document is fetched and a `document_links` row is written, but none of its content actually lands in the plan a user can read. Given this is a known sandbox stub (no real SharePoint content to import), this is a WARNING rather than a BLOCKER — the plumbing exists and a future real-adapter swap could wire the content through, but as shipped the "import copy" button produces an empty plan indistinguishable from a blank "Create plan," with no UI surfacing of `source_document_ref` to even confirm an import happened.
+- **Fix direction:** Either write `importDocument()`'s returned `content` into a `plan_sections` row on creation (mirroring `POST /api/v1/plans`'s `content_sections` handling), or surface `source_document_ref` visibly on `PlanDetail.tsx` so a user can at least confirm which document was imported.
 
-## Verification detail
-
-### B1 (unbounded duplicate `eoc_cots_conflicts` rows) — fix confirmed correct
-- **Fix (c47134d):** `eoc-cots-adapter.ts:285-317` now runs `SELECT id FROM eoc_cots_conflicts WHERE config_id = $1 AND record_type = $2 AND external_value = $3::jsonb LIMIT 1` before the INSERT, and skips the insert entirely (no `conflicts += 1` bump either) if a row already exists for that `(config_id, record_type, external_value)` triple — whether that prior row is resolved or still open.
-- **Read the actual guard, not just the commit message:** the guard keys on `external_value` (the full JSON payload, stable across ticks since `fetchExchangeRecords`'s stub returns an identical fixed payload for `EOC-CONFLICT-001` every call), not a weaker key like `config_id+record_type` alone — so a genuinely changed external value for the same record_type would still raise a new row, matching the stated fix direction exactly.
-- **Manual repro (ad-hoc script run against the live dev Postgres via the real `runEocCotsSync()`/`findOrCreateEocCotsConfig()` exports, not a mock):**
-  - 3 consecutive `runEocCotsSync()` calls → exactly 1 `eoc_cots_conflicts` row for `record_type='incident'` (previously: 3).
-  - Manually marking that row `resolution='keep_epmp'`, then running `runEocCotsSync()` once more → still exactly 1 row, now showing the resolved value — confirming a resolved conflict does **not** reappear on the next tick, which was the literal failure mode B1 described.
-  - Output: `After 3 ticks, rows: 1 [...resolution:null]` / `After resolve + 1 more tick, rows: 1 [...resolution:"keep_epmp"]`.
-- **Automated tests:** `eoc-cots-adapter.test.ts` (8/8 pass) and `eoc-cots-conflicts.test.ts` (4/4 pass), run live against the project's real Postgres/OPA compose stack, no mocking.
-- B1 is genuinely fixed; no regression found in `eoc-cots-conflicts.ts`'s resolve route (untouched, still enforces the `AND resolution IS NULL` race guard and caller-identity check correctly).
-
-### W1 (dead document-permission-revocation path) — fix confirmed correct
-- **Fix (ad51b49):** `document-adapter.ts:73-79` adds `simulateDocumentAccessRevocation(userId, externalDocId)`, which mutates the SAME in-memory `SIMULATED_USER_DOCUMENT_ACCESS` map `resolveUserAccessSet`/`checkAndPersistPermission` already read — not a separate fixture or a hand-set DB column. It is exported exactly once and consumed exactly once, in `plans.test.ts`.
-- **The new test genuinely drives the production path, not a mock:** `plans.test.ts`'s new `describe('document_links permission revocation (F17)')` block (1) creates a real plan via `POST /api/v1/plans`, (2) links `DOC-EOP-001` via the real `POST /api/v1/integrations/documents/:id/link` route (which lazily seeds `authorId`'s access set with `GRANTED_DOCUMENT_IDS` — the identical seeding path every other document-adapter caller uses), (3) confirms `permission_status: 'valid'` via a real `GET /api/v1/plans/{id}`, (4) calls the new trigger to remove `DOC-EOP-001` from `authorId`'s access set, (5) re-GETs `/api/v1/plans/{id}` and asserts the response flips to `'revoked'`, and (6) independently confirms the DB row itself was persisted as `'revoked'` via a direct `SELECT`. This exercises `plans.ts`'s real `fetchPlanDocumentLinks` → `revalidateDocumentLinkPermission` → `checkAndPersistPermission`'s `stillGranted === false` branch end-to-end — exactly the path that was previously unreachable.
-- **Confirmed the UI consumer is wired to the same field:** `PlanDetail.tsx:345-347` filters `document_links` on `permission_status === 'revoked'` and renders the "Access removed" `Alert` — this field is the same one the new test now proves is reachable, so the UI path is no longer dead.
-- **Test isolation checked:** `simulateDocumentAccessRevocation` is called only once, against `authorId`/`DOC-EOP-001`, in a `describe` block that runs after all other `plans.test.ts` tests that reference `authorId` for unrelated assertions (`submitted_by`, `acknowledged_by`) — none of those prior assertions depend on `authorId`'s document-access set, so the revocation introduces no test-order coupling within the file. `facility-document-adapter.test.ts` and `eoc-cots-adapter.test.ts`/`eoc-cots-conflicts.test.ts` were confirmed via `git diff` to be byte-for-byte untouched by either fix commit (the task description's framing of them as "fixer-touched" does not match the actual diff — verified no changes were made, no regression possible there).
-- **Automated tests:** `plans.test.ts` (5/5 pass) and `facility-document-adapter.test.ts` (10/10 pass) both pass live against the real stack.
-
-### Regression sweep
-- Full backend suite re-run (`npx vitest run`, live Postgres/NATS/OPA stack): **22 test files, 144 tests, all pass** — no regression anywhere in the repo from either fix.
-- `npx tsc --noEmit` on the backend package: clean, no type errors.
-- `git diff e9d74d9 HEAD --stat` confirms the fixer touched exactly the 3 files the fix commits claim (`eoc-cots-adapter.ts`, `document-adapter.ts`, `plans.test.ts`) plus this REVIEW.md — no stray edits elsewhere in the phase's file set.
+### W2: Pre-existing `jurisdiction_id`-unvalidated-against-caller-scope pattern reused, not introduced, by the new route — flagged for awareness only
+- **File:** backend/src/modules/plans/plans.ts:407-409
+- **Evidence:** The new-plan creation branch writes `jurisdiction_id` straight from the request body with no check that it is within `req.epmpUser!.jurisdiction_scope` — but this is the *exact same* pattern the pre-existing `POST /api/v1/plans` route already has (confirmed via `git show e545ee4:backend/src/modules/plans/plans.ts`, unchanged by this diff) and is not a regression this gap-closure diff introduced. Noted as an observation, not a finding requiring action in this review (pre-existing defect in an un-diffed code pattern, out of this review's bounded scope per the constraints) — surfacing it here only because the new route is the kind of place a reviewer might otherwise assume jurisdiction validation was freshly added everywhere.
 
 ## Cross-file seams checked
-- `eoc-cots-adapter.ts`'s dedup `SELECT` ↔ `eoc_cots_conflicts` schema (`1700000000014_eoc-cots-schema.js`) — `external_value JSONB NOT NULL` column exists and the `$3::jsonb` cast matches; `idx_eoc_cots_conflicts_unresolved` partial index is unaffected (guard doesn't rely on it). OK.
-- `document-adapter.ts`'s `simulateDocumentAccessRevocation` export ↔ `plans.test.ts`'s import — signature (`(userId: string, externalDocId: string): void`) matches the single call site exactly. OK.
-- `plans.ts`'s `revalidateDocumentLinkPermission` import/usage ↔ `document-adapter.ts`'s export — unchanged by either fix, still matches (confirmed in iteration 1, re-confirmed here since `document-adapter.ts` was touched). OK.
-- `PlanDetail.tsx`'s `permission_status === 'revoked'` filter ↔ `plans.ts`'s GET response shape — unchanged, still matches; now proven reachable by the new test rather than merely structurally correct. OK.
-- No other seams in this iteration's touched-file scope (`eoc-cots-adapter.ts`, `document-adapter.ts`, `plans.test.ts`) were altered in ways that affect any other consumer — `eocCotsRoutes`'s exported shape, `isRecordTypeDeclared`, `findOrCreateEocCotsConfig`, `browseDocuments`, `importDocument`, `linkDocument`, `runDocumentLinkSync`, and `checkAndPersistPermission`'s signatures are all byte-identical to iteration 1.
+
+- `ImportDocumentModal.tsx`'s `apiPost('/api/v1/plans/import', {...})` body shape ↔ `plans.ts`'s `POST /api/v1/plans/import` `Body` type — fields match exactly (`source_document_ref`, `mode`, `name`, `type`, `jurisdiction_id`, `plan_id`); `mode` enum values (`'import_copy'|'link_live'`) match literally on both sides — OK, except see B1 (backend mishandles one combination, not a signature mismatch).
+- `ImportDocumentModal.tsx`'s `onImported: (planId: string) => void` ↔ `PlanRepository.tsx`'s `onImported={(planId) => navigate(...)}` usage — signature matches, `result.id` from the POST response is the real new-or-existing plan id — OK.
+- `plans.ts`'s new route importing `{ importDocument, linkDocument, hasDocumentAccess }` from `document-adapter.ts` ↔ `document-adapter.ts`'s actual exports — all three exist with matching signatures (`hasDocumentAccess(userId, externalDocId): boolean`, confirmed additive per 08-09-SUMMARY's own disclosure) — OK.
+- `linkDocument()`'s 4th `jurisdictionScope?: string[]` parameter (08-07's fix) ↔ every call site in `plans.ts`'s new route — both call sites pass `req.epmpUser!.jurisdiction_scope` correctly — OK.
+- `OperatingPicture.tsx`'s `<TaskList incidentId={selectedId} />` ↔ `TaskList.tsx`'s `TaskListProps.incidentId?: string` — `selectedId: string | undefined` matches the optional-string prop type exactly, no cast needed — OK.
+- `operating-picture-facility-markers.spec.ts` / `operating-picture-resource-markers.spec.ts`'s Tasks-card-absence assertions (`getByRole('heading', { name: 'Tasks' })` toHaveCount(0)) ↔ `OperatingPicture.tsx`'s `!selectedIsResource && !selectedIsFacility` gate — structurally absent, not merely hidden, confirmed by reading the gate — OK.
+- `plans.test.ts`'s new `describe('POST /api/v1/plans/import...)` fixture user (`importTestId`/`importTestToken`) ↔ `document-adapter.ts`'s module-level `SIMULATED_USER_DOCUMENT_ACCESS` map — correctly isolated from the earlier `simulateDocumentAccessRevocation(authorId, ...)` call in the same file/process, avoiding a false-negative — OK.
+- 08-07's claimed "zero code changes" — independently confirmed: `git diff e545ee4..HEAD --stat` shows no changes to `document-adapter.ts`'s `linkDocument`/`planIsInScope` (the file WAS changed in this diff range, but only by 08-09's `hasDocumentAccess` addition — `linkDocument`/`planIsInScope` content is untouched, matching 08-07-SUMMARY's claim) — OK.
