@@ -314,25 +314,25 @@ describe('incident-ops incidents routes', () => {
 describe('07-02: F15 CAD/911 dispatch-status (read-only contract)', () => {
   afterAll(async () => {
     // Shared-fixture cleanup: the "after runCadIngestion() links..." test
-    // below deliberately exercises runCadIngestion()'s REAL "shared
-    // number" matching end-to-end against its own throwaway
-    // `CAD-UAT-001 Matchable Incident ...` fixture (created in
-    // testJurisdictionId, not the seed's 'Default Agency' jurisdiction).
-    // Because the stub adapter always emits the SAME single
-    // external_event_id ('UAT-CAD-001') and matching re-evaluates on every
-    // tick (ORDER BY opened_at DESC, no sticky behavior — see
-    // cad-adapter.ts's own docstring), every runCadIngestion() call in
-    // this describe block (including the online/offline flip test) ends
-    // up re-linking that ONE shared cad_dispatch_events row away from
-    // backend/scripts/seed.ts's intended demo incident
-    // ('UAT-ESCALATE-READY Default Agency Wildfire') onto this file's own
-    // test fixtures — which live in a jurisdiction the e2e suite's
-    // commander@epmp.local identity cannot see. Restore the shared row
-    // back to the seed's incident here so every OTHER consumer of this
-    // database (the Playwright e2e suite, manual demo use) sees the
-    // seed-intended link after this test file finishes, regardless of run
-    // order. Scoped to this describe block only — no other shared fixture
-    // is touched.
+    // below deliberately forces a FRESH, first-time "shared number" match
+    // (by nulling the shared row's linked_incident_id before calling
+    // runCadIngestion()) against its own throwaway `CAD-UAT-001 Matchable
+    // Incident ...` fixture (created in testJurisdictionId, not the
+    // seed's 'Default Agency' jurisdiction) — exercising
+    // cad-adapter.ts's first-time-match branch end-to-end. That
+    // deliberately leaves the ONE shared cad_dispatch_events row
+    // (external_event_id 'UAT-CAD-001') pointed at this file's own test
+    // fixture, not backend/scripts/seed.ts's intended demo incident
+    // ('UAT-ESCALATE-READY Default Agency Wildfire'), and — now that
+    // runCadIngestion's match is STICKY once linked (see cad-adapter.ts's
+    // own docstring) — that link would otherwise persist forever (the
+    // live scheduler no longer re-evaluates/re-breaks an existing valid
+    // link on later ticks, which is the whole point of the sticky fix).
+    // Restore the shared row back to the seed's incident here so every
+    // OTHER consumer of this database (the Playwright e2e suite, manual
+    // demo use) sees the seed-intended link after this test file
+    // finishes, regardless of run order. Scoped to this describe block
+    // only — no other shared fixture is touched.
     const seedIncident = await query<{ id: string }>(
       `SELECT id FROM incidents WHERE name = $1 ORDER BY opened_at DESC LIMIT 1`,
       ['UAT-ESCALATE-READY Default Agency Wildfire'],
@@ -372,7 +372,7 @@ describe('07-02: F15 CAD/911 dispatch-status (read-only contract)', () => {
     expect(dispatchRes.body).toEqual({ linked: false });
   });
 
-  it('after runCadIngestion() links a dispatch event by shared number, dispatch-status returns linked:true with real provenance', async () => {
+  it('after runCadIngestion() links a dispatch event by shared number (first-time match), dispatch-status returns linked:true with real provenance', async () => {
     const token = await mintSessionToken({
       id: testUserId,
       role_id: testRoleId,
@@ -394,11 +394,26 @@ describe('07-02: F15 CAD/911 dispatch-status (read-only contract)', () => {
       });
     expect(createRes.status).toBe(201);
 
+    // runCadIngestion's match is now STICKY once a dispatch event already
+    // has a valid linked_incident_id (see cad-adapter.ts's own docstring
+    // — this is a deliberate design fix: re-evaluating the name-match on
+    // every tick forever made the scheduler perpetually re-link the ONE
+    // shared row to whatever name-matching incident happened to exist
+    // most recently, including unrelated test fixtures accumulated across
+    // repeated suite runs). To deterministically exercise the FIRST-TIME
+    // match branch (not the sticky preserve-existing-link branch) in this
+    // test, clear the shared row's existing link before calling
+    // runCadIngestion() — mirroring exactly what a real brand-new CAD
+    // dispatch event (no prior link yet) looks like.
+    await query(`UPDATE cad_dispatch_events SET linked_incident_id = NULL WHERE external_event_id = $1`, [
+      'UAT-CAD-001',
+    ]);
+
     // The stub's one synthetic event always carries the SAME
-    // external_event_id ('UAT-CAD-001') — runCadIngestion's UPSERT
-    // re-evaluates incident matching on every tick (not "sticky"), so the
-    // most-recently-opened incident whose name contains the shared number
-    // is the one that ends up linked, including this freshly-created one.
+    // external_event_id ('UAT-CAD-001'). With no existing valid link,
+    // runCadIngestion's first-time-match branch runs the "shared number"
+    // ILIKE search (ORDER BY opened_at DESC), which links this
+    // freshly-created, most-recently-opened matching incident.
     await runCadIngestion();
 
     const dispatchRes = await request(app.server)
@@ -411,6 +426,50 @@ describe('07-02: F15 CAD/911 dispatch-status (read-only contract)', () => {
     expect(Array.isArray(dispatchRes.body.unit_ids)).toBe(true);
     expect(dispatchRes.body.source).toBe('agency_cad');
     expect(dispatchRes.body.updated_at).toBeTruthy();
+  });
+
+  it('a SECOND runCadIngestion() tick does NOT re-link the dispatch event to a newer name-matching incident (sticky-once-matched)', async () => {
+    const token = await mintSessionToken({
+      id: testUserId,
+      role_id: testRoleId,
+      jurisdiction_scope: [testJurisdictionId],
+    });
+
+    // The previous test already left the shared 'UAT-CAD-001' dispatch
+    // event linked to its own matching incident via a first-time match.
+    // Capture that link, then create a SECOND, even-more-recently-opened
+    // incident whose name also contains the shared number — under the
+    // OLD "re-evaluate every tick" design this second call would have
+    // stolen the link onto this new incident (the exact production defect
+    // this fix addresses). Under the new sticky design, the existing
+    // valid link must be preserved untouched.
+    const before = await query<{ linked_incident_id: string | null }>(
+      `SELECT linked_incident_id FROM cad_dispatch_events WHERE external_event_id = $1`,
+      ['UAT-CAD-001'],
+    );
+    expect(before[0]?.linked_incident_id).toBeTruthy();
+    const previouslyLinkedId = before[0].linked_incident_id;
+
+    const createRes = await request(app.server)
+      .post('/api/v1/incidents')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        name: `CAD-UAT-001 Matchable Incident ${Date.now()}`,
+        type: 'Other',
+        severity: 'Normal',
+        jurisdiction_id: testJurisdictionId,
+        opened_at: new Date().toISOString(),
+      });
+    expect(createRes.status).toBe(201);
+
+    await runCadIngestion();
+
+    const after = await query<{ linked_incident_id: string | null }>(
+      `SELECT linked_incident_id FROM cad_dispatch_events WHERE external_event_id = $1`,
+      ['UAT-CAD-001'],
+    );
+    expect(after[0]?.linked_incident_id).toBe(previouslyLinkedId);
+    expect(after[0]?.linked_incident_id).not.toBe(createRes.body.id);
   });
 
   it('fetchCadDispatchEvents(undefined, true) deterministically rejects with CAD_FEED_UNREACHABLE', async () => {
