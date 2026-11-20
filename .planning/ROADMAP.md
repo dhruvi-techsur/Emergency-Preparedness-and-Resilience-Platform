@@ -67,7 +67,8 @@ Plans:
 
 ### Phase 8: Record-Authority & Sync Integrations
 **Goal**: EOC/logistics and planning staff see WebEOC/Veoci-class EOC COTS data and facility/asset/document-system data integrated into EPMP via deterministic adapter stubs with explicit, visible record-authority declarations — and when a record conflicts between EPMP and the external system, a named person resolves it through an explicit side-by-side "Keep EPMP value" / "Keep [external] value" action — so no sync integration in this milestone ever silently overwrites a record or hides which system actually owns it.
-**Status**: Passed
+**Status**: Complete (2026-11-20)
+**Last Updated**: 2026-11-20T19:36:15Z
 **Depends on**: Phase 7 (integration-health view pattern extended for the first time), Phase 3 (Plans & Playbooks, F2 Operating Picture)
 **Requirements**: F13, F17
 **Success Criteria** (what must be TRUE):
