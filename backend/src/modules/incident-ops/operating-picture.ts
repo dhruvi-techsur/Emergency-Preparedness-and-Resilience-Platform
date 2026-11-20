@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { requirePermission } from '../auth-org/rbac.js';
 import { query } from '../../db/client.js';
 import { fetchGisFeatures } from '../integration-gateway/gis-adapter.js';
+import { syncHazardLayersFromEvents } from '../integration-gateway/hazard-feed-adapter.js';
 import type { ActivationLevel, Severity } from './incidents.js';
 
 const SCHEMATIC_FALLBACK_LABEL = 'Schematic base map, offline';
@@ -239,10 +240,11 @@ export default async function operatingPictureRoutes(app: FastifyInstance) {
     async (req, reply) => {
       // Phase 2 scope: a single layer entry for the incidents overlay
       // itself, since F12 (hazard feeds) and F17 (facilities) are out of
-      // Phase 2 scope. Phase 3 (this plan) adds a second entry for the
-      // resource-request overlay now that resource_requests exists — the
-      // full 4-8-layer target per the FRD is reached once F12/F17 ship in
-      // later phases.
+      // Phase 2 scope. Phase 3 added a second entry for the
+      // resource-request overlay now that resource_requests exists. This
+      // plan (07-01, F12) appends hazard-feed layer entries below — the
+      // full 4-8-layer target per the FRD is reached once F17 ships in a
+      // later phase.
       const jurisdictionScope = req.epmpUser!.jurisdiction_scope;
       const countRows = await query<{ count: string }>(
         `SELECT COUNT(*) AS count FROM incidents WHERE status = 'Open' AND jurisdiction_id = ANY($1)`,
@@ -259,28 +261,87 @@ export default async function operatingPictureRoutes(app: FastifyInstance) {
       );
       const resourceCount = parseInt(resourceCountRows[0]?.count ?? '0', 10);
 
-      return reply.code(200).send({
-        layers: [
-          {
-            id: 'incidents',
-            label: 'Incidents',
-            source: 'EPMP',
-            as_of: new Date().toISOString(),
-            verified: true,
-            count,
-            checked: true,
-          },
-          {
-            id: 'resource-requests',
-            label: 'Resource requests',
-            source: 'EPMP',
-            as_of: new Date().toISOString(),
-            verified: true,
-            count: resourceCount,
-            checked: true,
-          },
-        ],
-      });
+      const layers: Array<{
+        id: string;
+        label: string;
+        source: string;
+        as_of: string;
+        verified: boolean;
+        count: number;
+        checked: boolean;
+      }> = [
+        {
+          id: 'incidents',
+          label: 'Incidents',
+          source: 'EPMP',
+          as_of: new Date().toISOString(),
+          verified: true,
+          count,
+          checked: true,
+        },
+        {
+          id: 'resource-requests',
+          label: 'Resource requests',
+          source: 'EPMP',
+          as_of: new Date().toISOString(),
+          verified: true,
+          count: resourceCount,
+          checked: true,
+        },
+      ];
+
+      // Idempotent, cheap: guarantees every hazard_feed_events row (Phase
+      // 6's seed fixtures included) has a corresponding hazard_layers row
+      // even if the scheduler/seed hasn't run yet. Wrapped in a try/catch
+      // (empty catch, same posture as the GIS-fetch try/catch in the
+      // markers handler above) — a hazard-layer sync failure must never
+      // block the layers response.
+      try {
+        await syncHazardLayersFromEvents();
+      } catch {
+        // Sync failure — the layers array below simply reflects whatever
+        // hazard_layers rows already exist (possibly none yet). No
+        // rethrow, no 500.
+      }
+
+      const hazardFeedRows = await query<{
+        feed_name: string;
+        count: string;
+        as_of: string | null;
+        all_verified: boolean | null;
+      }>(
+        `SELECT hfc.feed_name,
+                COUNT(hl.id) AS count,
+                MAX(hfe.issued_at) AS as_of,
+                bool_and(hl.verified) AS all_verified
+         FROM hazard_feed_config hfc
+         JOIN hazard_feed_events hfe ON hfe.feed_id = hfc.id
+         JOIN hazard_layers hl ON hl.hazard_feed_event_id = hfe.id
+         WHERE hfc.active = true
+         GROUP BY hfc.feed_name, hfc.id`,
+      );
+
+      for (const row of hazardFeedRows) {
+        // A feed with zero ingested events yet (bool_and over an empty set
+        // is NULL, same as COUNT being 0) is simply omitted — no fake
+        // empty layer, matching the existing entries' convention of only
+        // appearing when they have something to show. The JOINs above
+        // already guarantee this query only returns rows with >=1 event,
+        // but the explicit check below defends the "unverified stays off
+        // by default" rule even if that invariant ever changes.
+        const allVerified = row.all_verified === true;
+        layers.push({
+          id: `hazard-${row.feed_name.toLowerCase()}`,
+          label: `${row.feed_name} hazard feed`,
+          source: row.feed_name,
+          as_of: row.as_of ?? new Date().toISOString(),
+          verified: allVerified,
+          count: parseInt(row.count, 10),
+          checked: allVerified, // off by default whenever verified is false
+        });
+      }
+
+      return reply.code(200).send({ layers });
     },
   );
 }

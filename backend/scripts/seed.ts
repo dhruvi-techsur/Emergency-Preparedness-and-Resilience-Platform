@@ -1,5 +1,6 @@
 import { pool } from '../src/db/client.js';
 import { clusterHazardFeedEvents } from '../src/modules/ai-assist/signal-clustering.js';
+import { syncHazardLayersFromEvents, runHazardFeedIngestion } from '../src/modules/integration-gateway/hazard-feed-adapter.js';
 
 interface FindOrInsertResult {
   id: string;
@@ -2514,6 +2515,21 @@ async function main() {
   // populated for human review/demo purposes after every `npm run seed`.
   const clusterResult = await clusterHazardFeedEvents();
   console.log(`Signal clustering: ${clusterResult.clustersCreated} new signal(s) created from hazard feed events.`);
+
+  // Phase 7 (07-01, F12): promote every hazard_feed_events row (the fixture
+  // rows seeded above) into hazard_layers — idempotent, calls the SAME
+  // exported function Task 1 built rather than duplicating the promotion
+  // SQL inline here. Leaves hazard_layers populated for manual QA/UAT
+  // immediately after a fresh `npm run seed`, before the 5-minute
+  // scheduler's first tick.
+  await syncHazardLayersFromEvents();
+  console.log('Hazard layers: promoted hazard_feed_events rows into hazard_layers.');
+
+  // Also run the ingestion job once here so integration_health has real
+  // NOAA(online)/NWS(offline)/USGS(offline) rows immediately after
+  // seeding, rather than waiting for the scheduler's first tick.
+  const ingestionResult = await runHazardFeedIngestion();
+  console.log(`Hazard feed ingestion: attempted ${ingestionResult.feeds_attempted} feed(s) (NOAA online, NWS/USGS deterministically offline per this stub's KNOWN_LIVE_FEED contract).`);
 
   console.log(
     'Seed summary: ' +
