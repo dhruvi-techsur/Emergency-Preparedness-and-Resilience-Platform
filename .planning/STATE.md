@@ -2,16 +2,16 @@
 pivota_spec_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
-current_plan: 5
+current_plan: 6
 status: executing
-stopped_at: Completed 08-04-PLAN.md
-last_updated: "2026-11-20T12:30:37.886Z"
+stopped_at: Completed 08-03-PLAN.md
+last_updated: "2026-11-20T12:34:41.978Z"
 last_activity: 2026-11-20
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 10
-  completed_plans: 8
+  completed_plans: 9
   percent: 100
 ---
 
@@ -27,12 +27,14 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: Phase 8 (Record Authority & Sync Integrations)
-Current Plan: 5
+Current Plan: 6
 Total Plans in Phase: 6
 Status: Executing
 Last Activity: 2026-11-20
 
 Plan 08-05 (this phase): see 08-05-SUMMARY.md for full detail. Shipped F17's Plan Repository frontend half — new `ImportDocumentModal.tsx` (TextField search + `Table` results, Import copy/Link live footer buttons) consuming Plan 08-02's permission-aware document adapter, with `PlanRepository.tsx`'s "Import plan" action changed from Phase 3's documented disabled placeholder to a real, enabled entry point. The results list renders exactly what `GET /api/v1/integrations/documents/browse` returns with zero client-side re-filtering — the server-side filter in 08-02's `browseDocuments()` is the sole enforcement mechanism, proven by a new `plan-document-import-link.spec.ts` (4/4) asserting the withheld third document (`DOC-ANNEX-003`) has `toHaveCount(0)` in the modal's DOM, plus a direct `page.evaluate`+`fetch` bypass of the browse UI proving the import route still rejects it with a real 403 `IMPORT_PERMISSION_DENIED`. Reused the existing `signInAsPlanningChief` identity (no new seed needed). Zero deviations; `tsc --noEmit`/`npm run build` clean, backend suite (21 files, 138 tests) and `plans.spec.ts` (4/4) regression both green.
+
+Plan 08-03 (this phase): see 08-03-SUMMARY.md for full detail. Shipped F13's conflict-resolution half — new `eoc-cots-conflicts.ts`, the sole code path permitted to `SET resolution` on `eoc_cots_conflicts` (caller-identity equality mirroring `sync-conflicts.ts`'s pattern, a race-safe `UPDATE ... WHERE resolution IS NULL` guard collapsing a double-resolve attempt to the SAME 404 as a not-found conflict, `eoc_cots_sync_log` outbound/inbound write on every resolve, `AuditService.record` call). `IntegrationHealth.tsx` extended with an expand/collapse "N conflict(s) — review" toggle revealing a side-by-side `Card` panel with literal "Keep EPMP value"/"Keep WebEOC value" actions, neither pre-focused, invalidating the conflicts query on success so the resolved conflict disappears with no page reload. Cross-plan touch-up: 08-01's GET conflicts route now also returns `system_name` (one-line addition, this stub adapter has exactly one configured vendor) so the frontend can join without a second endpoint. New `eoc-cots-conflicts.test.ts` (4/4) and `eoc-cots-conflict-resolution.spec.ts` (4/4, including two direct-API-bypass rejection proofs) both green; full backend suite (22 files, 142 tests) zero regression; both builds + `tsc --noEmit` clean; `npm run seed` re-confirmed idempotent. One Rule-3 fix: exported `findOrCreateEocCotsConfig` from 08-01's adapter file (was private) so the new test file could construct a valid fixture conflict row.
 
 Plan 08-04 (this phase): see 08-04-SUMMARY.md for full detail. Shipped F17's Operating Picture frontend half — `OperatingPicture.tsx` now polls Plan 08-02's `GET /api/v1/operating-picture/facilities` via its own `useQuery`, merging facility markers (square shape, status-toned) client-side into the existing `visibleMarkers`/`canvasMarkers`/`legendItems`/`popupNode` pipeline 03-09 established for resource markers — zero design-system changes needed. The facility popup renders title/Badge/`Provenance`(sourced from the marker's own `source`/`as_of`, not the shared `status_bar`)/one status fact only, structurally incapable of showing inventory/maintenance/cost since `ApiFacilityMarker`'s interface has no such field. New `operating-picture-facility-markers.spec.ts` (4/4) proves rendering, popup Provenance + a structural no-forbidden-text assertion, the legend entry, and no regression; `operating-picture.spec.ts` (5/5) and `operating-picture-hazard-layers.spec.ts` (3/3) regression-pass unaffected. One documented deviation (not a code defect): Task 1's diff landed inside parallel wave-2 plan 08-03's commit (`a442609`) due to a concurrent-execution git race — confirmed via direct inspection that the full, correct diff is present and `tsc --noEmit`/`npm run build` both re-verify clean against HEAD.
 
@@ -172,6 +174,7 @@ Progress: [██████████] 100%
 | Phase 08 P02 | 25 min | 2 tasks | 7 files |
 | Phase 08 P05 | 18 min | 3 tasks | 3 files |
 | Phase 08-record-authority-sync-integrations P04 | 18 min | 2 tasks | 2 files |
+| Phase 08 P03 | 10 min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -348,6 +351,7 @@ Recent decisions affecting current work:
 - [Phase 08-05]: ImportDocumentModal uses TextField+Table (not Combobox) for browse/select-a-row-to-act-on, reserving Combobox for single-value form fields
 - [Phase 08-05]: Reused existing signInAsPlanningChief Playwright identity for F17 document import/link e2e coverage rather than seeding a new identity
 - [Phase 08-record-authority-sync-integrations]: [Phase 08-04]: Facility markers polled via their own useQuery, merged client-side into the existing visibleMarkers/canvasMarkers pipeline rather than widening the existing markers endpoint, per Plan 08-02's own file-ownership note avoiding a cross-plan collision in the same wave
+- [Phase 08-03]: Added system_name to 08-01's GET conflicts response (one-line cross-plan touch-up) rather than a second lookup endpoint, since this stub adapter has exactly one configured vendor
 
 ### Pending Todos
 
@@ -359,6 +363,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-20T12:30:37.884Z
-Stopped at: Completed 08-04-PLAN.md
+Last session: 2026-11-20T12:34:41.976Z
+Stopped at: Completed 08-03-PLAN.md
 Resume file: None
