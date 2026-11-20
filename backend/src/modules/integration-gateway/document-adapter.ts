@@ -79,6 +79,23 @@ export function simulateDocumentAccessRevocation(userId: string, externalDocId: 
 }
 
 /**
+ * Standalone, side-effect-free access-set membership check — extracted so
+ * a caller (plans.ts's POST /api/v1/plans/import, 08-09) can pre-flight
+ * the IDENTICAL check importDocument()/linkDocument() perform internally
+ * BEFORE committing to a plans-table INSERT, without needing a real
+ * plan_id yet (linkDocument() itself can't be called pre-flight for the
+ * new-plan path since it needs a real target plan_id to write its row).
+ * This is a pure read against the same lazily-seeded
+ * SIMULATED_USER_DOCUMENT_ACCESS map both functions already use — calling
+ * it does not mutate or re-seed anything beyond what resolveUserAccessSet
+ * already does on first touch for a given userId.
+ */
+export function hasDocumentAccess(userId: string, externalDocId: string): boolean {
+  const accessSet = resolveUserAccessSet(userId);
+  return accessSet.includes(externalDocId);
+}
+
+/**
  * Browse the document catalog, filtered server-side to ONLY documents
  * (a) in the requesting user's own delegated access set AND (b) whose name
  * matches `searchQuery` (case-insensitive substring, empty query matches

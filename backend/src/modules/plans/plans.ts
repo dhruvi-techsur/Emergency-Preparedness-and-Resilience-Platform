@@ -3,7 +3,12 @@ import type { PoolClient } from 'pg';
 import { requirePermission } from '../auth-org/rbac.js';
 import { query, pool } from '../../db/client.js';
 import { AuditService } from '../auth-org/audit.js';
-import { revalidateDocumentLinkPermission } from '../integration-gateway/document-adapter.js';
+import {
+  revalidateDocumentLinkPermission,
+  importDocument,
+  linkDocument,
+  hasDocumentAccess,
+} from '../integration-gateway/document-adapter.js';
 
 export type PlanStatus = 'Draft' | 'Review' | 'Approved';
 export type PlanType = 'EOP' | 'SOP' | 'Annex';
@@ -320,6 +325,112 @@ export default async function plansRoutes(app: FastifyInstance) {
       } finally {
         client.release();
       }
+    },
+  );
+
+  // F17's missing "land it as a Plan" step (UAT gap ref 4, 08-09): a
+  // DIFFERENT endpoint from document-adapter.ts's own
+  // /api/v1/integrations/documents/{id}/import|link routes (those stay
+  // exactly as-is — 08-07 already fixed their own jurisdiction check).
+  // This route either creates a brand-new Draft/v1 plan with
+  // source_document_ref set (the FRD's literal default, no plan_id
+  // supplied) or attaches the import/link to an existing, in-scope plan
+  // the caller explicitly names via plan_id — while delegating ALL
+  // document-permission enforcement to importDocument/linkDocument so the
+  // permission boundary lives in exactly one place (never reimplemented
+  // or bypassed here).
+  app.post<{
+    Body: {
+      source_document_ref: string;
+      mode: 'import_copy' | 'link_live';
+      name: string;
+      type: PlanType;
+      jurisdiction_id: string;
+      plan_id?: string;
+    };
+  }>(
+    '/api/v1/plans/import',
+    { preHandler: requirePermission('plans', 'create') },
+    async (req, reply) => {
+      const { source_document_ref, mode, name, type, jurisdiction_id, plan_id } = req.body ?? ({} as never);
+
+      let targetPlanId: string;
+
+      if (plan_id) {
+        // Attach to an EXISTING plan — same jurisdiction-scope
+        // enforcement every other plans-mutating route uses (F-08-01's
+        // fix, 08-07). No plans-table INSERT happens on this branch at
+        // all, so a rejected import here can never leave an orphan
+        // behind — there is nothing to roll back.
+        const existing = await fetchPlanRow(query, plan_id, req.epmpUser!.jurisdiction_scope);
+        if (!existing) {
+          return reply.code(404).send(PLAN_NOT_FOUND);
+        }
+        targetPlanId = plan_id;
+
+        try {
+          await linkDocument(req.epmpUser!.id, source_document_ref, targetPlanId, req.epmpUser!.jurisdiction_scope);
+        } catch (err) {
+          if (err instanceof Error && err.message === 'IMPORT_PERMISSION_DENIED') {
+            return reply.code(403).send({
+              error_code: 'IMPORT_PERMISSION_DENIED',
+              message: "You don't have access to this document in the source system.",
+            });
+          }
+          throw err;
+        }
+      } else {
+        // No plan_id — create a NEW plan. Pre-flight the access-set check
+        // via document-adapter.ts's standalone hasDocumentAccess() BEFORE
+        // any plans-table INSERT ever runs, for BOTH mode branches — this
+        // is the SAME accessSet.includes(externalDocId) check
+        // importDocument/linkDocument perform internally, just callable
+        // without a real plan_id yet. Guaranteeing the check runs first
+        // means no orphaned Draft plan can ever survive a rejected import
+        // (must-have 4), with no delete-after-the-fact rollback needed.
+        if (!hasDocumentAccess(req.epmpUser!.id, source_document_ref)) {
+          return reply.code(403).send({
+            error_code: 'IMPORT_PERMISSION_DENIED',
+            message: "You don't have access to this document in the source system.",
+          });
+        }
+
+        // Mirrors POST /api/v1/plans's own create transaction exactly
+        // (BEGIN/INSERT plans/COMMIT), additionally setting
+        // source_document_ref — the column that has existed since Phase
+        // 3's own migration specifically for this moment, never
+        // previously written by any code path.
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          const insertedRows = await client.query<{ id: string }>(
+            `INSERT INTO plans (name, type, jurisdiction_id, owner_id, source_document_ref)
+             VALUES ($1,$2,$3,$4,$5) RETURNING id`,
+            [name, type, jurisdiction_id, req.epmpUser!.id, source_document_ref],
+          );
+          targetPlanId = insertedRows.rows[0].id;
+          await client.query('COMMIT');
+        } catch (err) {
+          await client.query('ROLLBACK');
+          req.log.error(err, 'Plan import-creation transaction failed');
+          throw err;
+        } finally {
+          client.release();
+        }
+
+        // The access-set check already passed above, so these calls are
+        // invoked for their real side effects (the document_links write /
+        // the imported content body), not as a second permission gate —
+        // they are not expected to throw IMPORT_PERMISSION_DENIED here.
+        if (mode === 'import_copy') {
+          await importDocument(req.epmpUser!.id, source_document_ref);
+        } else {
+          await linkDocument(req.epmpUser!.id, source_document_ref, targetPlanId, req.epmpUser!.jurisdiction_scope);
+        }
+      }
+
+      const detail = await fetchPlanDetail(targetPlanId, req.epmpUser!.jurisdiction_scope);
+      return reply.code(201).send(detail);
     },
   );
 
