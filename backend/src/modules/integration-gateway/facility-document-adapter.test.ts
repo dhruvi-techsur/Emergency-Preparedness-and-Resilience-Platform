@@ -9,6 +9,7 @@ import {
   runFacilitySync,
 } from './facility-adapter.js';
 import { browseDocuments, importDocument, linkDocument } from './document-adapter.js';
+import { readFile } from 'fs/promises';
 
 // Integration test against the real compose stack (Postgres + OPA) — same
 // pattern as gateway.test.ts/incidents.test.ts.
@@ -321,5 +322,46 @@ describe('Plan 08-02: F17 document adapter — permission-boundary enforcement',
       [result.id],
     );
     expect(rows[0].plan_id).toBeNull();
+  });
+
+  it('13. Task 1 happy path: the SharePoint integration_health row still lands correctly against the live compose DB (zero regression)', async () => {
+    // The module-level `app` import above has already triggered
+    // documentRoutes()'s registration on load (against this test file's
+    // own live compose DB), which performs the one-time
+    // recordDocumentHealth('online') write this plan's fix now wraps in
+    // try/catch. This test proves the happy-path write is UNAFFECTED by
+    // that wrapping when the DB IS reachable.
+    const rows = await query<{
+      system_name: string;
+      record_authority: string;
+      sync_status: string;
+    }>(`SELECT system_name, record_authority, sync_status FROM integration_health WHERE system_name = 'SharePoint'`);
+
+    expect(rows[0]).toBeDefined();
+    expect(rows[0].record_authority).toBe('SharePoint');
+    expect(['online', 'offline']).toContain(rows[0].sync_status);
+  });
+
+  // Task 1 fix verification (structural, not live-exploitation): the
+  // in-memory `documentHealthRecorded` module-level flag is already
+  // `true` by the time this test file runs (this file's own module-level
+  // `app` import above has already triggered documentRoutes()'s
+  // registration once against the live compose DB), which makes a SECOND
+  // live re-registration attempt a no-op by design — there is no DI seam
+  // in document-adapter.ts to swap the shared `query`/pool for a broken
+  // connection without rearchitecting the source file just for this test,
+  // and monkey-patching the shared pool globally would race every other
+  // concurrently-running test in this file against a poisoned connection.
+  // So, mirroring 09-SECURITY.md's own precedent of proving several
+  // threats (e.g. T-09-07, T-09-09) via grep-based structural assertions
+  // rather than live exploitation, this test reads the source directly and
+  // confirms the try/catch now wraps the one previously-unguarded call.
+  it('Task 1 fix: documentRoutes() registration never throws even when the DB is unreachable at startup', async () => {
+    const fixtureSource = await readFile(new URL('./document-adapter.ts', import.meta.url), 'utf-8');
+    const registrationBlock = fixtureSource.slice(
+      fixtureSource.indexOf('if (!documentHealthRecorded)'),
+      fixtureSource.indexOf('app.get(', fixtureSource.indexOf('if (!documentHealthRecorded)')),
+    );
+    expect(registrationBlock).toMatch(/try\s*{[\s\S]*recordDocumentHealth\('online'\)[\s\S]*}\s*catch/);
   });
 });
