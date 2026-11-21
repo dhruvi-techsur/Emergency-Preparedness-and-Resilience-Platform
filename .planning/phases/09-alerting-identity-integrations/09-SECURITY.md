@@ -1,0 +1,101 @@
+# Security Report — Phase 9: Alerting & Identity Integrations
+
+**Mode:** verify (threat register declared at plan time — across 6 PLAN.md files: 09-01 through 09-05 declared T-09-01–T-09-16; 09-06-PLAN.md declared T-09-17) — RE-AUDIT ROUND 2 (prior audit, same day, recorded `OPEN_THREATS` with T-09-17 CONFIRMED as "declared, plan exists, not yet executed." This round independently verifies whether 09-06's fix has now landed in code.)
+**Audited:** 2026-11-21 (same day, second follow-up pass)
+**Verdict:** SECURED
+**Confirmed HIGH/CRITICAL:** 0
+
+## Summary
+
+The prior audit (recorded `OPEN_THREATS`, 1 confirmed HIGH finding, T-09-17) found that `documentRoutes()`'s registration-time `recordDocumentHealth('online')` call was unguarded by any try/catch, causing an uncaught `AggregateError [ECONNREFUSED]` to crash the Fastify process with exit code 1 on cold boot whenever `DATABASE_URL` is unreachable — breaking the DEPLOY-01 D4 contract ("container started with only `PORT` set must come up and answer `/healthz`"). A gap-closure plan, `09-06-PLAN.md`, was authored to close this exact gap but had not yet been executed at the time of the prior audit.
+
+**This round independently confirms the fix has now landed, is correctly scoped, is covered by passing tests, and introduces no new attack surface or regression.** Verification was NOT limited to reading the SUMMARY's claims — five independent checks were performed against live source and a live container:
+
+1. **Diff scoping.** `git diff 13ef86e..HEAD --stat -- backend/ frontend/` confirms exactly 2 implementation files changed since the prior audit: `document-adapter.ts` (+9/-1) and `facility-document-adapter.test.ts` (+42). Everything else that changed (`STATE.md`, `09-GATE.md`, `09-REVIEW.md`, `09-VERIFICATION.md`, `09-06-SUMMARY.md`, `logs/`) is planning/gate/review artifacts, not implementation. `server.ts` and `routes.ts` show an EMPTY diff (`git diff 13ef86e..HEAD -- backend/src/server.ts` and `-- backend/src/modules/integration-gateway/routes.ts` both produced zero output) — confirming the plan's own "no changes to `server.ts`/`routes.ts`" scope claim held exactly.
+
+2. **Direct source read of the fix.** `document-adapter.ts:527-537` now reads:
+   ```ts
+   if (!documentHealthRecorded) {
+     documentHealthRecorded = true;
+     try {
+       await recordDocumentHealth('online');
+     } catch (err) {
+       app.log.warn(
+         err,
+         'Document adapter health record failed at startup — integration_health row not yet populated',
+       );
+     }
+   }
+   ```
+   This is a try/catch that logs via `app.log.warn` and swallows the error without re-throwing — exactly matching the pattern every sibling adapter/`server.ts` startup block already uses, and exactly matching 09-06-PLAN.md's Task 1 specification verbatim. `recordDocumentHealth()` itself (`document-adapter.ts:441-453`) is unchanged — still a bare `query(...)` with no internal error handling, which is correct: the catch belongs at the call site, not inside the shared helper (sibling adapters' `record*Health()` functions follow the identical "helper has no catch, caller wraps it" shape).
+
+3. **`documentHealthRecorded` flag semantics unchanged.** `documentHealthRecorded = true` is still set unconditionally BEFORE the `try` (line 528, before line 530's `await`), preserving the pre-existing "never retry on next hot-reload" behavior described in the plan — confirmed this is not a behavior change, just an added safety net around the one `await`.
+
+4. **Live empirical reproduction of the exact DEPLOY-01 D4 scenario** (not just reading code or trusting the SUMMARY): built a fresh image via `docker build` and ran it with ONLY `PORT=8080` set (no `DATABASE_URL`/`NATS_URL`/`OPA_URL`). Result:
+   - Container `State.Status` = `running` (not `exited`)
+   - `GET /healthz` → `200`
+   - Logs show the expected graceful-degradation warnings for OPA sync, NATS connect, AND a NEW "Document adapter health record failed at startup — integration_health row not yet populated" warning carrying the `AggregateError [ECONNREFUSED]` as its `err` field — proving the exact previously-uncaught exception is now caught and logged, not swallowed silently and not crashing the process.
+   - No uncaught exception, no process exit, server reaches `"Server listening at http://0.0.0.0:8080"` normally.
+   This is byte-for-byte the UAT.md Gap's reproducing scenario (`deploy_check: FAIL (D4 run)`, root-caused to this exact call chain: `document-adapter.ts:527-530` → `recordDocumentHealth` → `server.ts:61`'s unawaited `app.register(integrationGatewayRoutes)`), now independently confirmed PASSING against a fresh, uncached container run performed by this audit itself.
+
+5. **Test suite verification.** Ran `cd backend && npx tsc --noEmit` (exit 0, clean) and `npm test -- facility-document-adapter.test.ts` independently: 16/16 tests pass (14 pre-existing + 2 new). Read both new tests directly:
+   - Test 13 ("Task 1 happy path") queries `integration_health WHERE system_name = 'SharePoint'` against the live compose DB and asserts `record_authority = 'SharePoint'` and `sync_status` is `online`/`offline` — this genuinely proves the happy-path write is unaffected by the new try/catch (zero regression claim verified, not just assumed).
+   - Test "Task 1 fix" is a structural test: it reads `document-adapter.ts`'s own source via `readFile`, slices the registration block between `if (!documentHealthRecorded)` and the next `app.get(`, and regex-asserts `/try\s*{[\s\S]*recordDocumentHealth\('online'\)[\s\S]*}\s*catch/`. This is a structural (not live-exploitation) assertion — the test file's own comment candidly explains why: the shared module-level `documentHealthRecorded` flag and shared `pool`/`query` singleton make a genuine second live DB-unreachable trigger impossible to safely re-exercise from this test file without a DI seam the source doesn't have, and monkey-patching the shared pool would race concurrently-running tests in the same file. This is an honest, previously-precedented trade-off (the plan itself cites T-09-07/T-09-09 as prior examples of structural-assertion verification in this same codebase) — not a test that silently fails to test anything. Combined with check #4 above (a genuine live reproduction via Docker, independent of this unit test), the fix is proven both structurally AND empirically by this audit.
+
+**No new attack surface or regression was found.** The fix:
+- Does not touch `recordDocumentHealth()`'s SQL, parameters, or the `integration_health` table schema — same UPSERT, same hardcoded `'SharePoint'` literal, same `ON CONFLICT` semantics.
+- Does not touch any permission/authz gate — `documentRoutes()`'s four routes (`browse`, `import`, `link`, `health`) all retain their pre-existing `requirePermission(...)` preHandlers, untouched by this diff (confirmed by reading the full `documentRoutes()` body, lines 458-550 — the only change is the 7 inserted lines at 529-536).
+- Does not swallow a broader class of error than intended — the try/catch wraps exactly one statement (`await recordDocumentHealth('online')`), not a larger block that could mask unrelated bugs.
+- Does not change `documentHealthRecorded`'s "set-before-attempt, never retry" semantics, so repeated hot-reloads still do not hammer the DB with redundant health-stamp writes — this was an explicit design question the plan flagged and the implementation correctly preserved.
+- Introduces no new trust boundary: the call still takes a hardcoded literal (`'online'`), never request-derived data, so there is no new injection surface, no new data-exposure path, and no privilege change — consistent with 09-06-PLAN.md's own threat model framing of this as "a pure availability fix."
+
+**T-09-17 is now moved to Resolved findings below.**
+
+**Everything else (T-09-01 through T-09-16, plus the 3 prior "fresh sweep" supplementary items from the original 2026-11-21 audit) is carried forward unchanged from the prior audit's verdicts**, per the same methodology the prior audit used and the same scoping check performed independently this round: `git diff 13ef86e..HEAD --stat -- backend/ frontend/` confirms the ONLY implementation files that changed since the prior audit are `document-adapter.ts` and `facility-document-adapter.test.ts` — both scoped entirely to T-09-17's fix. No code-level event touches `notification-provider-adapter.ts`, `hris-roster-adapter.ts`, `ComposeNotification.tsx`, or any other file underpinning the other 23 verdicts, so there is no new reason to re-derive them from scratch this round. They are listed below exactly as the prior audit recorded them, explicitly flagged as carried-forward.
+
+## Attack surface audited
+
+| Area | STRIDE | Verdict | Evidence (file:line) |
+|------|--------|---------|----------------------|
+| T-09-17 (RE-AUDITED): `documentRoutes()` registration-time `recordDocumentHealth('online')` call | D | **RESOLVED — fix confirmed live in code AND empirically reproduced** | `document-adapter.ts:527-537` — `await recordDocumentHealth('online')` now wrapped in `try { ... } catch (err) { app.log.warn(err, '...') }`, matching the plan's exact specification. Independently confirmed via (a) direct source read, (b) a fresh `docker build` + `docker run` with only `PORT` set staying `running` with `/healthz` → `200` and the expected new warning log line, (c) `npx tsc --noEmit` clean, (d) `npm test -- facility-document-adapter.test.ts` 16/16 passing including 2 new tests read and verified to test what they claim. |
+| Scope check: did the fix touch `recordDocumentHealth()`, `routes.ts`, or `server.ts`? | T (regression check) | SAFE — scope held exactly as planned | `git diff 13ef86e..HEAD -- backend/src/server.ts` → empty. `git diff 13ef86e..HEAD -- backend/src/modules/integration-gateway/routes.ts` → empty. `recordDocumentHealth()` body (`document-adapter.ts:441-453`) byte-identical to pre-fix version — only the call site (lines 527-537) changed. |
+| New attack surface check: does the try/catch mask a different, more serious error, or widen any permission boundary? | E / T | SAFE | Catch block wraps exactly one statement; no change to any `requirePermission(...)` preHandler in `documentRoutes()`'s 4 routes (browse/import/link/health, lines 461-549, confirmed unchanged byte-for-byte outside the one inserted block). Call still takes a hardcoded literal, no request-derived input reaches it — no new injection or privilege-boundary surface introduced. |
+| `documentHealthRecorded` flag semantics regression check | D (retry-storm check) | SAFE | Flag still set to `true` unconditionally BEFORE the `try` (line 528, before line 530's `await`) — "never retry on next hot-reload" behavior preserved exactly; a DB-unreachable startup does not cause repeated connection-storm attempts on subsequent hot-reloads. |
+| T-09-01 (carried forward from original audit): `sendViaProvider()` approval re-check | E | SAFE (not re-derived this round — file unchanged) | `notification-provider-adapter.ts` — outside this round's diff scope (`git diff 13ef86e..HEAD --stat -- backend/ frontend/` confirms zero changes to this file). Carried forward from original audit's citation at `notification-provider-adapter.ts:192`. |
+| T-09-02 through T-09-16, plus 3 original "fresh sweep" supplementary items (carried forward, not re-derived this round) | various | SAFE / SAFE (accepted risk) | Carried forward unchanged from the original 2026-11-21 audit. Justification: this round's `git diff 13ef86e..HEAD --stat -- backend/ frontend/` confirms the only 2 implementation files touched since that audit are `document-adapter.ts` and its test file — neither underpins any of these 23 verdicts. No code-level event exists that could have altered them. |
+
+## Confirmed findings
+
+| ID | Severity | Category | file:line | Exploit | Fix |
+|----|----------|----------|-----------|---------|-----|
+| — | — | — | — | — | 0 confirmed HIGH/CRITICAL findings this round. |
+
+## Resolved findings
+
+| ID | Severity (as originally scored) | Category | Status | Evidence of fix | How verified |
+|----|------|----------|--------|------------------|---------------|
+| T-09-17 | HIGH (availability) | Denial of Service | **Fixed in 09-06** (commit `d883e40` fix, `5cb2028` test) | `document-adapter.ts:527-537` — `await recordDocumentHealth('online')` now wrapped in `try { ... } catch (err) { app.log.warn(err, 'Document adapter health record failed at startup — integration_health row not yet populated'); }`. `recordDocumentHealth()` itself (lines 441-453), `routes.ts`, and `server.ts` are all byte-identical to the pre-fix version (empty `git diff` confirmed for both latter files) — the fix is scoped exactly as the plan specified, touching only the one call site. | (1) Direct read of live source confirming the try/catch exists and wraps exactly the one statement. (2) Independent fresh `docker build` + `docker run -e PORT=8080` (no `DATABASE_URL`/`NATS_URL`/`OPA_URL`) performed BY THIS AUDIT (not cited from the SUMMARY): container stayed `running`, `GET /healthz` returned `200`, logs showed the new "Document adapter health record failed at startup" warning carrying the `AggregateError [ECONNREFUSED]` with no uncaught exception and no process exit — this is the exact previously-failing scenario from `09-UAT.md`'s Gap, now independently reproduced as PASSING. (3) `cd backend && npx tsc --noEmit` → exit 0. (4) `cd backend && npm test -- facility-document-adapter.test.ts` → 16/16 passing (both new tests read directly and confirmed to test what they claim: a live happy-path `integration_health` row check, and a structural try/catch regex assertion against live source). (5) Confirmed no regression to `documentHealthRecorded`'s "set-before-attempt, no retry" semantics, no change to any of `documentRoutes()`'s 4 route permission gates, and no widening of the error-handling scope beyond the one targeted statement. |
+
+## Accepted risks
+
+Carried forward unchanged from the original 2026-11-21 audit (no code change invalidates any of these — see "carried forward" note above for this round's methodology):
+
+| ID | Risk | Why accepted | Owner |
+|----|------|--------------|-------|
+| T-09-04 | A forged inbound `POST .../notification-providers/callback` (no auth, by design) could flip an existing recipient's delivery status if the forger already knows a valid `external_message_id` (a `randomUUID()`, unguessable) AND the exact `recipient_contact` string for that notification | Match requires BOTH an exact, cryptographically unguessable `external_message_id` AND an exact recipient-contact string scoped to that same dispatch row's `notification_id`; unmatched attempts are logged and return 200 with zero mutation. | Phase 9 (09-01) |
+| T-09-12 | Client-side CAP-completion gate in `ComposeNotification.tsx` is bypassable via devtools/direct API call | Real enforcement is the server-side `422 CAP_FIELDS_INCOMPLETE` check inside `sendViaProvider()`, which runs unconditionally server-side; `notifications.ts`'s send route constructs its own hardcoded `capFields` object rather than trusting the client. | Phase 9 (09-03) |
+| T-09-13 | `GET .../notifications/:id/delivery-status`'s additive `is_cap_send` field is consumed client-side with no new access check | Same pre-existing `requirePermission('notifications','view')` gate already governed this endpoint; `is_cap_send` is derived from data already exposed via `recipients[].channel`. | Phase 9 (09-03) |
+| T-09-15 | `GET .../hris/personnel` is fetched by 3 independent frontend surfaces, widening blast radius of any future scoping mistake | All 3 consumers call the identical endpoint gated by the identical single permission boundary; roster data is intentionally agency-wide reference data by design. | Phase 9 (09-04) |
+| T-09-16 | Resource Request's roster quick-pick Combobox could theoretically be "extra input surface" on `assigned_to` | Selecting a roster option only pre-fills existing client-side React state; does not bypass the backend's own fulfill-route validation on the VARCHAR(200)-no-FK column. | Phase 9 (09-04) |
+
+## Audit trail
+
+- **Diff scoped via:** `git diff 13ef86e..HEAD --stat -- backend/ frontend/` → exactly 2 files changed (`document-adapter.ts` +9/-1, `facility-document-adapter.test.ts` +42), confirming the fix's scope matches the plan's declared `files_modified` exactly. `git diff 13ef86e..HEAD -- backend/src/server.ts` and `-- backend/src/modules/integration-gateway/routes.ts` both returned empty output, confirming zero changes to either file (the plan's explicit "no changes needed" claim for these two files, independently verified rather than taken on faith).
+- **Fix verification (T-09-17):** Read `document-adapter.ts:420-550` directly (not excerpted from the plan or SUMMARY) and confirmed the try/catch exists exactly as specified, wraps exactly the one `await recordDocumentHealth('online')` statement, logs via `app.log.warn` with the error object and a descriptive message, and does not re-throw. Confirmed `recordDocumentHealth()` (441-453) and the rest of `documentRoutes()` (458-550, minus the one inserted block) are unchanged.
+- **Empirical reproduction:** Built a fresh Docker image (`docker build -t pivota-security-audit-check .`) and ran it (`docker run -e PORT=8080`, no other env vars) — the exact DEPLOY-01 D4 contract and the exact scenario `09-UAT.md`'s Gap described as reproducibly failing. Observed: container `running`, `/healthz` → `200`, log line `"Document adapter health record failed at startup — integration_health row not yet populated"` present with the expected `AggregateError [ECONNREFUSED]` payload, no process crash, server reached `"Server listening at http://0.0.0.0:8080"`. This is independent, first-hand confirmation — not a citation of the SUMMARY's self-reported D4 pass.
+- **Test verification:** Ran `cd backend && npx tsc --noEmit` (exit 0) and `npm test -- facility-document-adapter.test.ts` (16/16 passed) independently in this audit session. Read both new test bodies directly and confirmed each tests what it claims: a live DB happy-path row check, and a structural source-read + regex assertion for the try/catch.
+- **Regression/new-surface check:** Confirmed no change to any `requirePermission(...)` gate in `documentRoutes()`'s 4 routes; confirmed `documentHealthRecorded`'s "set-before-attempt, no retry" flag semantics are unchanged; confirmed the call still takes only a hardcoded literal with no request-derived input, so no new injection/privilege/data-exposure surface was introduced by adding the catch block.
+- **Carried-forward items:** 23 items (16 declared T-09-01–T-09-16 + 3 original "fresh sweep" supplementary + 4 original accepted-risk items, some overlapping) carried forward from the original 2026-11-21 audit without re-derivation this round, since this round's own `git diff 13ef86e..HEAD --stat -- backend/ frontend/` independently confirms zero implementation files relevant to those verdicts changed (only `document-adapter.ts` and its test file changed, both fully scoped to T-09-17).
+- **Verdict rationale:** `SECURED` (upgraded from the prior round's `OPEN_THREATS`) because: (1) T-09-17, the sole confirmed HIGH/CRITICAL finding from the prior round, is now verified fixed in code via direct source read, matches the plan's exact specified remediation, is correctly scoped (no collateral changes to `recordDocumentHealth()`, `routes.ts`, or `server.ts`), is covered by passing structural and live-DB tests, and — critically — was independently empirically reproduced as fixed via a fresh, uncached `docker build`/`docker run` performed by this audit itself (not merely cited from the SUMMARY's self-report); (2) no new attack surface, permission regression, or error-masking issue was introduced by the fix; (3) all other 23 previously-audited items are unaffected (zero implementation-file overlap) and carry forward as SAFE/accepted-risk exactly as the original audit recorded them. 0 confirmed HIGH/CRITICAL findings remain open.
+
+Next: no action required for this phase's security posture. If a future phase modifies `document-adapter.ts`, `server.ts`, or any of the other 23 carried-forward items' underlying files, re-run `/pivota_spec-secure-phase` to re-verify.

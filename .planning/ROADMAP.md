@@ -89,7 +89,8 @@ Plans:
 
 ### Phase 9: Alerting & Identity Integrations
 **Goal**: Communications staff can route approved notifications through a deterministic Everbridge/AtHoc-class provider stub (with CAP-formatted public-alert representation) under the exact same named-person-approval rule F5 already enforces, and personnel roster/qualification data syncs read-only from a deterministic HR/IAM adapter stub into resource-request matching and command-role assignment — so no public alert and no roster-sourced assignment can ever happen without a human decision, and no stub provider outage silently drops a message.
-**Status**: Passed
+**Status**: Complete (2026-11-21)
+**Last Updated**: 2026-11-21T18:35:41Z
 **Depends on**: Phase 4 (F5 Notifications Integration domain), Phase 1 (F16-SSO's existing IAM integration)
 **Requirements**: F14, F16-roster
 **Success Criteria** (what must be TRUE):
@@ -98,13 +99,15 @@ Plans:
   3. When the notification-provider stub simulates an outage, the queued message is retried and any resulting delivery failure is surfaced visibly in the delivery-tracking UI — never silently dropped, discarded, or shown as successfully sent.
   4. A user can view a personnel roster list (name, role, qualification, contact) sourced read-only from the HR/IAM adapter stub, each entry showing source/as-of via `Provenance`, with HR declared as the authoritative system for personnel records in the integration-health view.
   5. Roster/qualification data populates as selectable reference options in Command Role Assignment (F1) and Resource Request matching (F4), but a person's role/qualification value can only change by resyncing from the HR stub (never a direct in-EPMP edit), and an unmatched roster record shows no matched user rather than being force-matched or guessed.
-**Plans:** 4 plans
+**Plans:** 6 plans
 
 Plans:
 - [ ] 09-01-PLAN.md — F14 backend: notification-provider adapter stub (Everbridge/IPAWS), CAP-envelope builder, adapter-level approval re-verification, retry-sweep job, delivery-callback wiring into F5's existing delivery-tracking table
 - [ ] 09-02-PLAN.md — F16-roster backend: HR/IAM roster adapter stub (read-only, email-only matching), populating Phase 1's existing personnel_roster table, integration_health wiring
 - [ ] 09-03-PLAN.md — F14 frontend: CAP fields in Compose Notification's Step 2 + send gate, CAP-send Badge on Delivery Tracking, integration-health confirmation (depends on 09-01)
 - [ ] 09-04-PLAN.md — F16-roster frontend: Personnel Roster admin screen + SideNav wiring, qualification hints in Command Role Assignment, roster quick-pick in Resource Request assignment (depends on 09-02)
+- [ ] 09-05-PLAN.md — Gap closure (UAT #1, minor): visual-discoverability fix — stack/space the Channels checkboxes in Compose Notification's Step 2 so IPAWS is no longer crammed beside the "Draft with AI" button
+- [ ] 09-06-PLAN.md — Gap closure (UAT #1, blocker): DEPLOY-01 regression fix — wrap documentRoutes()'s unguarded registration-time recordDocumentHealth() call in try/catch so a cold boot with only PORT set no longer crashes on ECONNREFUSED before /healthz can bind
 
 ## Progress
 
@@ -115,4 +118,4 @@ Phases execute in numeric order: 7 → 8 → 9 (continuing from v1.0's completed
 |-------|----------------|--------|-----------|
 | 7. Operating-Picture Read Overlays (Weather & Dispatch) | 0/TBD | Complete | 2026-11-20 |
 | 8. Record-Authority & Sync Integrations | 6/6 | Complete | 2026-11-20 |
-| 9. Alerting & Identity Integrations | 4/4 | Passed | - |
+| 9. Alerting & Identity Integrations | 5/6 | In progress | - |

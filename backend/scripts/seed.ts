@@ -4,6 +4,8 @@ import { syncHazardLayersFromEvents, runHazardFeedIngestion } from '../src/modul
 import { runEocCotsSync } from '../src/modules/integration-gateway/eoc-cots-adapter.js';
 import { runFacilitySync } from '../src/modules/integration-gateway/facility-adapter.js';
 import { linkDocument, runDocumentLinkSync } from '../src/modules/integration-gateway/document-adapter.js';
+import { sendViaProvider } from '../src/modules/integration-gateway/notification-provider-adapter.js';
+import { runHrisRosterSync } from '../src/modules/integration-gateway/hris-roster-adapter.js';
 
 interface FindOrInsertResult {
   id: string;
@@ -1568,6 +1570,55 @@ async function main() {
     );
   }
 
+  // --- Plan 09-01 (F14): directly exercise the notification-provider
+  // --- adapter against the already-seeded uatSentNotification's id, so
+  // --- notification_dispatch_log/integration_health/cap_alert_records
+  // --- rows exist immediately after `npm run seed` — same precedent as
+  // --- the EOC COTS/facility/hazard-feed sync calls below. These three
+  // --- calls run in sequence: Everbridge (SMS) success, IPAWS success
+  // --- (full capFields set, proving cap_alert_records is seeded with a
+  // --- CAP-complete row), then a forced outage demonstrating the
+  // --- offline transition is reachable. Final state after all three:
+  // --- 'Everbridge' integration_health row is 'offline' (the forced
+  // --- outage runs LAST and is the most recent recordProviderHealth
+  // --- call for that provider) — documented here for Plan 09-03's
+  // --- Playwright suite to expect.
+  await sendViaProvider({
+    notification_id: uatSentNotification.id,
+    channel: 'SMS',
+    recipients: [{ name: 'Incident Commander', contact: 'commander@epmp.local' }],
+    message: uatSentNotificationBody,
+    approved_by: commanderUser.id,
+    approved_at: hoursAgoIso(2),
+  });
+  await sendViaProvider({
+    notification_id: uatSentNotification.id,
+    channel: 'IPAWS',
+    recipients: [{ name: 'Incident Commander', contact: 'commander@epmp.local' }],
+    message: uatSentNotificationBody,
+    approved_by: commanderUser.id,
+    approved_at: hoursAgoIso(2),
+    capFields: {
+      sender: 'EPMP Agency Alerting Authority',
+      event: 'General Emergency Notification',
+      urgency: 'Immediate',
+      severity: 'Severe',
+      certainty: 'Observed',
+      area: 'Default Agency service area',
+    },
+  });
+  await sendViaProvider({
+    notification_id: uatSentNotification.id,
+    channel: 'SMS',
+    recipients: [{ name: 'Incident Commander', contact: 'commander@epmp.local' }],
+    message: 'FORCE_PROVIDER_OUTAGE',
+    approved_by: commanderUser.id,
+    approved_at: hoursAgoIso(2),
+  });
+  console.log(
+    'Notification-provider adapter: seeded Everbridge/IPAWS dispatch-log + cap_alert_records + integration_health rows (Everbridge left offline after the forced-outage demo call).',
+  );
+
   // --- Test 4 (Generate AAR — wizard half): a SECOND closed incident with
   // --- rich Timeline activity (command-role assignment, activation
   // --- change, task, fulfilled resource request, sent notification),
@@ -2106,6 +2157,25 @@ async function main() {
     );
     record('record_authority_registry', result);
   }
+
+  // Plan 09-04 (F16-roster): `record_type` carries a real UNIQUE constraint
+  // (this file's migration 1700000000000_auth-org-schema.js), so this
+  // ON CONFLICT upsert is valid against it. Deliberately a standalone
+  // statement, NOT a findOrInsert() call — findOrInsert is find-or-insert-
+  // ONLY (see its own doc comment above) and would silently no-op against
+  // the 'personnel_roster' row the authorityRows loop just above this one
+  // already found-or-inserted with `notes` left NULL (that row has existed
+  // since Phase 1, this plan is what first sets its notes). This statement
+  // is what actually makes /admin/record-authority's personnel_roster row
+  // show "Reference data only" instead of "—", on both a fresh seed run
+  // AND a re-run against an already-seeded database (idempotent either
+  // way, via ON CONFLICT DO UPDATE rather than a one-time INSERT).
+  await pool.query(
+    `INSERT INTO record_authority_registry (record_type, authoritative_system, notes)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (record_type) DO UPDATE SET notes = EXCLUDED.notes`,
+    ['personnel_roster', 'HRIS', 'Reference data only'],
+  );
 
   // Phase 6 (06-02, F18): role_landing_config rows for all 5 persona roles
   // (PER-01..PER-05) — the table 01-01's migration created but explicitly
@@ -2668,6 +2738,17 @@ async function main() {
   // the stub's documented lazy-seed design.
   await runFacilitySync();
   console.log('Facility sync: populated facilities + Facility/Asset Feed integration_health row.');
+
+  // Plan 09-02 (F16-roster): run the HRIS roster sync job once here so
+  // `personnel_roster` (one matched row against the real seeded
+  // commander@epmp.local user, one unmatched reference-only row) and
+  // integration_health's 'HRIS' row are populated immediately after
+  // `npm run seed`, matching the identical precedent above for EOC
+  // COTS/facility/hazard-feed ingestion.
+  const hrisRosterSyncResult = await runHrisRosterSync();
+  console.log(
+    `HRIS roster sync: ${hrisRosterSyncResult.synced} record(s) synced, ${hrisRosterSyncResult.matched} matched, ${hrisRosterSyncResult.unmatched} unmatched.`,
+  );
 
   console.log(
     'Seed summary: ' +

@@ -7,6 +7,7 @@ import {
   Card,
   Table,
   Select,
+  Badge,
   type TableColumn,
   type SelectOption,
   type BadgeTone,
@@ -25,6 +26,13 @@ interface DeliveryRecipient {
 interface DeliveryStatusResponse {
   recipients: DeliveryRecipient[];
   ack_percentage: number;
+  // Plan 09-01's notifications.ts send route is untouched by this field;
+  // Plan 09-03 (F14 frontend half) adds this additive-only field to the
+  // EXISTING GET /api/v1/notifications/:id/delivery-status response
+  // (notifications.ts), sourced from the notification's own `channels`
+  // array — no new endpoint, no breaking shape change for any existing
+  // consumer.
+  is_cap_send?: boolean;
 }
 
 /** Exact FRD tone mapping for delivery status, rendered via
@@ -77,6 +85,7 @@ export function DeliveryTracking(): JSX.Element {
   const ackPercentage = deliveryQuery.data?.ack_percentage ?? 0;
   const ackCount = allRecipients.filter((r) => r.status === 'Acknowledged').length;
   const totalCount = allRecipients.length;
+  const isCapSend = deliveryQuery.data?.is_cap_send ?? false;
 
   const columns: TableColumn<DeliveryRecipient>[] = [
     { key: 'name', header: 'Name/Group' },
@@ -101,6 +110,12 @@ export function DeliveryTracking(): JSX.Element {
   return (
     <div className="ep-delivery-tracking">
       <PageHeader title="Delivery tracking" />
+
+      {/* F14 (Plan 09-03): distinct, visible, never rendered identically
+          to a plain delivery-status row — a CAP-formatted public-alert
+          send (routed through IPAWS) gets this Badge; a plain SMS/Email
+          send never does. */}
+      {isCapSend ? <Badge tone="warning">Public alert (CAP)</Badge> : null}
 
       <Progress
         value={ackPercentage}

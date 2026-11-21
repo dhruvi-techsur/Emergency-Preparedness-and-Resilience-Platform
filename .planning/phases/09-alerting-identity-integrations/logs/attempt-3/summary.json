@@ -1,0 +1,33 @@
+{
+  "duration_secs": 2858.0,
+  "token_usage": {
+    "input": 572,
+    "output": 230158,
+    "total": 39884847,
+    "cache_read": 38694328,
+    "cache_write": 959789,
+    "cost": 12.441062099999995
+  },
+  "model": "claude-sonnet-5",
+  "files_changed": [
+    ".planning/ROADMAP.md",
+    ".planning/STATE.md",
+    ".planning/phases/09-alerting-identity-integrations/09-05-PLAN.md",
+    ".planning/phases/09-alerting-identity-integrations/09-05-SUMMARY.md",
+    ".planning/phases/09-alerting-identity-integrations/09-GATE.md",
+    ".planning/phases/09-alerting-identity-integrations/09-REVIEW.md",
+    ".planning/phases/09-alerting-identity-integrations/09-SECURITY.md",
+    ".planning/phases/09-alerting-identity-integrations/09-UAT.md",
+    ".planning/phases/09-alerting-identity-integrations/09-VERIFICATION.md",
+    ".planning/phases/09-alerting-identity-integrations/logs/attempt-3/execution.md",
+    ".planning/phases/09-alerting-identity-integrations/logs/attempt-3/summary.json",
+    ".planning/phases/09-alerting-identity-integrations/logs/attempt-3/verification.md",
+    "frontend/app/e2e/notification-provider-cap-delivery.spec.ts",
+    "frontend/app/src/pages/notifications/ComposeNotification.tsx"
+  ],
+  "verification_status": "passed",
+  "error_message": null,
+  "attempt_number": 3,
+  "created_at": "2026-11-20T22:55:26.162137+00:00",
+  "completed_at": "2026-11-20T23:43:04.376367800+00:00"
+}

@@ -526,7 +526,14 @@ export async function documentRoutes(app: FastifyInstance) {
   // table isn't empty on first render.
   if (!documentHealthRecorded) {
     documentHealthRecorded = true;
-    await recordDocumentHealth('online');
+    try {
+      await recordDocumentHealth('online');
+    } catch (err) {
+      app.log.warn(
+        err,
+        'Document adapter health record failed at startup — integration_health row not yet populated',
+      );
+    }
   }
 
   app.get(
