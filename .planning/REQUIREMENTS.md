@@ -24,8 +24,8 @@ All six features deferred from v1.0 are in scope for v2.0. Grouped into 3 phases
 
 ### Group C — Alerting & Identity Integrations
 
-- [ ] **F14**: Notification Provider & Public-Alerting Integration — provider-integration adapter stub for sending approved messages through an Everbridge/AtHoc-class channel, with delivery-status/acknowledgment callbacks fed back into F5's delivery view; OASIS CAP-formatted alert representation for any message routed through an IPAWS/CAP-compatible public-warning channel; every external send stays approval-controlled by a named person (`AIDraft` may fill content, but send is always a deliberate human action); graceful failure — simulated provider outages queue messages for retry and surface delivery failures in the UI rather than silently dropping them.
-- [ ] **F16-roster**: HR/IAM roster/qualification sync — read sync of personnel roster, role, qualification, and contact data from an HR/IAM adapter stub, with HR treated as authoritative for personnel records; role/qualification data flows into resource-request matching (F4) and command-role assignment (F1) as reference data, not an independently maintained EPMP personnel system of record. (Completes F16 alongside v1.0's F16-SSO, which already shipped authentication.)
+- [x] **F14**: Notification Provider & Public-Alerting Integration — provider-integration adapter stub for sending approved messages through an Everbridge/AtHoc-class channel, with delivery-status/acknowledgment callbacks fed back into F5's delivery view; OASIS CAP-formatted alert representation for any message routed through an IPAWS/CAP-compatible public-warning channel; every external send stays approval-controlled by a named person (`AIDraft` may fill content, but send is always a deliberate human action); graceful failure — simulated provider outages queue messages for retry and surface delivery failures in the UI rather than silently dropping them.
+- [x] **F16-roster**: HR/IAM roster/qualification sync — read sync of personnel roster, role, qualification, and contact data from an HR/IAM adapter stub, with HR treated as authoritative for personnel records; role/qualification data flows into resource-request matching (F4) and command-role assignment (F1) as reference data, not an independently maintained EPMP personnel system of record. (Completes F16 alongside v1.0's F16-SSO, which already shipped authentication.)
 
 ## Out of Scope
 
@@ -52,8 +52,8 @@ Populated during roadmap creation by the roadmapper agent.
 | F15 | Phase 7 | Pending |
 | F13 | Phase 8 | Pending |
 | F17 | Phase 8 | Pending |
-| F14 | Phase 9 | Pending |
-| F16-roster | Phase 9 | Pending |
+| F14 | Phase 9 | ✓ Verified |
+| F16-roster | Phase 9 | ✓ Verified |
 
 **Coverage:**
 - v2 requirements: 6 total (F12, F13, F14, F15, F16-roster, F17)

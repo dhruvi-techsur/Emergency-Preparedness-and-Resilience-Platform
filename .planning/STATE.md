@@ -3,16 +3,16 @@ pivota_spec_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
 current_plan: 10 (phase has only 4 plans; counter stays at last value per advance-plan's last_plan edge case)
-status: verifying
-stopped_at: Completed 09-05-PLAN.md
-last_updated: "2026-11-20T23:21:40.498Z"
-last_activity: 2026-11-20
+status: phase_complete
+stopped_at: Phase 9 verified passed (6/6 truths) — execute-phase run complete
+last_updated: "2026-11-21T11:10:00.000Z"
+last_activity: 2026-11-21
 progress:
   total_phases: 3
   completed_phases: 3
   total_plans: 19
   completed_plans: 19
-  percent: 67
+  percent: 100
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 
 ## Current Position
 
-Phase: Phase 9 (Alerting & Identity Integrations) — COMPLETE including gap closure (UAT gap ref 1 closed by 09-05)
+Phase: Phase 9 (Alerting & Identity Integrations) — COMPLETE and VERIFIED (status: passed, 6/6 truths)
 Current Plan: 10 (phase has only 4 original + 1 gap-closure plan; counter stays at last value per advance-plan's last_plan edge case)
 Total Plans in Phase: 5 (09-01 through 09-04, plus gap-closure plan 09-05)
-Status: All 5 plans of Phase 9 complete (09-01/09-02 wave 1 parallel, 09-03/09-04 wave 2 parallel, 09-05 gap-closure). UAT gap ref 1 (minor) closed. Ready for /pivota_spec-verify-work re-check.
-Last Activity: 2026-11-20
+Status: All 5 plans of Phase 9 complete (09-01/09-02 wave 1 parallel, 09-03/09-04 wave 2 parallel, 09-05 gap-closure). UAT gap ref 1 (minor) closed and re-verified via reproduced red-then-green evidence. Gate (build/test/boot/browser-suite) green, code review clean (0 blockers), security re-audit SECURED (0 confirmed HIGH/CRITICAL). execute-phase run (--no-transition) complete — this was the external-orchestrator (Pivota card) invocation; all artifacts were already in place from the prior execution/verification round, so this run re-confirmed gate evidence and closed out requirements traceability.
+Last Activity: 2026-11-21
 
 Plan 09-05 (this phase, gap-closure): see 09-05-SUMMARY.md for full detail. Closed UAT gap ref 1 (minor): Compose Notification Step 2's Channels checkboxes (SMS/Email/IPAWS) were rendering crammed onto one undifferentiated line immediately adjacent to the "Draft with AI" button (`.ep-checkbox` is `display: inline-flex` with no sibling spacing), making IPAWS read as decoration beside the button rather than a selectable option on first glance. Fixed with a page-local inline-style flex-column wrapper (`display:flex, flexDirection:column, gap:var(--space-2), marginBottom:var(--space-4)`) around the existing `CHANNEL_OPTIONS.map(...)` Checkbox list, matching the exact convention already used in `IntegrationHealth.tsx`/`RecordAuthority.tsx`/`SsoConfigForm.tsx`/`ApiClients.tsx` — no new CSS class or design-system component, and `Checkbox.css` untouched to avoid affecting any other page's standalone-checkbox spacing. New Playwright bounding-box assertion in `notification-provider-cap-delivery.spec.ts` test 1 proves a measurable (>8px) vertical gap between the IPAWS checkbox and the "Draft with AI" button, measured in the UN-checked state to match the UAT reporter's literal pre-interaction complaint. Zero functional/behavioral change: channel selection, CAP-field gating, and Step 3 Review summary all untouched. Zero deviations — plan executed exactly as written. `tsc --noEmit`/`npm run build` (frontend/app) both clean; `notification-provider-cap-delivery.spec.ts` (5/5) and regression `notifications-compose.spec.ts` (9/9) both pass with zero failures.
 
