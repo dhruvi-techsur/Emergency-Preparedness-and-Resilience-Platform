@@ -1,154 +1,73 @@
 ---
 status: diagnosed
 phase: 09-alerting-identity-integrations
-source: [09-VERIFICATION.md, 09-01-SUMMARY.md, 09-02-SUMMARY.md, 09-03-SUMMARY.md, 09-04-SUMMARY.md]
-started: 2026-11-20T21:53:41Z
-updated: 2026-11-20T22:25:00Z
+source: [09-VERIFICATION.md, 09-01-SUMMARY.md, 09-03-SUMMARY.md, 09-05-SUMMARY.md]
+started: 2026-11-21T08:37:27Z
+updated: 2026-11-21T10:55:00Z
 ---
 
 ## Current Test
+<!-- OVERWRITE each test - shows where we are -->
 
 [testing complete]
 
 ## Tests
 
-### 1. Compose a public alert via IPAWS — CAP fields required
-expected: Selecting IPAWS in Compose Notification Step 2 reveals 6 CAP fields (Sender/Event/Urgency/Severity/Certainty/Area); Continue is blocked until all are filled.
-live: pass — `npx playwright test e2e/notification-provider-cap-delivery.spec.ts -g "Selecting IPAWS reveals CAP fields"` → 1 passed (also independently proven via curl: POST .../send with channel=IPAWS and no capFields → 422 CAP_FIELDS_INCOMPLETE, missing:[sender,event,urgency,severity,certainty,area])
-result: issue
-reported: "Found Compose, but no IPAWS channel option"
-severity: minor
-
-### 2. A sent IPAWS alert shows a distinct "Public alert (CAP)" badge on Delivery Tracking
-expected: After sending a notification through the IPAWS channel with complete CAP fields, Delivery Tracking shows a "Public alert (CAP)" Badge not shown on a plain send.
-live: pass — `npx playwright test e2e/notification-provider-cap-delivery.spec.ts -g "shows the CAP-send Badge"` → 1 passed; independently confirmed via curl: POST .../send with channel=IPAWS + full capFields → 202 `{dispatch_status:"sent"}`, `cap_alert_records` row persisted with a real OASIS CAP 1.2 XML envelope (identifier/sender/sent/status/scope/category/event/urgency/severity/certainty/area all present), then GET .../delivery-status on that notification returns `is_cap_send:true`
-result: pass
-reported: "pass both the tests its fine aqnd workimg"
-
-### 3. A plain (non-IPAWS) send shows NO CAP badge
-expected: A notification sent only via SMS/Email shows no "Public alert (CAP)" Badge on Delivery Tracking — the distinction is genuinely conditional.
-live: pass — `npx playwright test e2e/notification-provider-cap-delivery.spec.ts -g "shows NO CAP-send Badge"` → 1 passed; independently confirmed via curl: GET delivery-status on a {SMS,Email}-channel notification returns `is_cap_send:false`
-result: pass
-
-### 4. Everbridge/IPAWS appear in the admin Integration Health view
-expected: The admin Integration Health Table shows rows for Everbridge and IPAWS with system/last-sync/direction/record-authority/SyncStatus.
-live: pass — `npx playwright test e2e/notification-provider-cap-delivery.spec.ts -g "Integration health admin view"` → 1 passed; independently confirmed via curl: GET /api/v1/admin/integration-health (as admin@epmp.local) returns both rows — `{system_name:"IPAWS", direction:"outbound", record_authority:"IPAWS", sync_status:"online"}` and `{system_name:"Everbridge", direction:"outbound", record_authority:"Everbridge", sync_status:"offline", error_count:1}`
-result: pass
-
-### 5. A provider outage never silently drops a message — it surfaces as Failed with a reason
-expected: When the notification-provider stub simulates an outage, the message is queued for retry (never silently dropped or falsely shown as sent); after repeated failures, Delivery Tracking shows a "Failed" status with a visible, non-empty failure reason.
-live: pass — `npx playwright test e2e/notification-provider-cap-delivery.spec.ts -g "forced provider outage"` → 1 passed; independently confirmed via curl: (a) POST .../send with an unrecognized channel → 202 `{dispatch_status:"queued_for_retry"}` (never a throw, never "sent"); (b) 5 ticks of GET /api/v1/_test/notification-retry-sweep drove `notification_dispatch_log.retry_count` to 6 (past the 4-failure threshold) and `notification_delivery_status` rows flipped to `status:'Failed'`, `failure_reason:'Provider unavailable after 3 retry attempts'` — confirmed via direct Postgres query
-result: pass
-
-### 6. A direct API bypass without approval is rejected, not just hidden in the UI
-expected: Calling the notification-provider send route directly (bypassing the UI) without a matching approver is rejected — the server enforces this, the UI hiding the button is not the only control.
-live: pass — curl direct-API-bypass proofs: (a) commander@epmp.local (has `notifications:approve`) POSTing with no `approved_by`/`approved_at` → 400 `SEND_REQUIRES_APPROVAL`; (b) planner@epmp.local (has `notifications:create` but NOT `notifications:approve`) POSTing with forged `approved_by` → 403 `PERMISSION_DENIED` — both failure modes proven live against the real route
-result: pass
-
-### 7. Personnel Roster admin screen shows HR/IAM data with Provenance, matched and unmatched rows
-expected: A read-only Personnel Roster screen lists name/role/qualification/contact sourced from the HR/IAM adapter stub, each row showing source/as-of via Provenance; an unmatched record shows "No matched user" rather than being force-matched; HR is declared authoritative for personnel records.
-live: pass — `npx playwright test e2e/personnel-roster-reference-data.spec.ts -g "reachable from the Admin Console SideNav"` → 1 passed; independently confirmed via curl: GET /api/v1/integrations/hris/personnel returns 2 records — one with `matched_user_id` set to the real commander@epmp.local user, one with `matched_user_id:null` (deliberately unmatched), both carrying `source:"agency_hris"` and `as_of`; GET /api/v1/admin/integration-health shows `{system_name:"HRIS", direction:"inbound", record_authority:"HRIS", sync_status:"online"}` — HR is its own declared authority, never EPMP
-result: pass
-
-### 8. Personnel Roster has zero edit affordance
-expected: The Personnel Roster screen has no way to edit a record directly in EPMP — the only way role/qualification data changes is by resyncing from the HR stub.
-live: pass — `npx playwright test e2e/personnel-roster-reference-data.spec.ts -g "No edit control exists"` → 1 passed (structural DOM assertion: zero onClick/button/form in the Table container); independently confirmed via source grep: zero PATCH/PUT/DELETE route exists anywhere in backend/src for personnel_roster
-result: pass
-
-### 9. Roster data populates as reference options in Command Role Assignment and Resource Request
-expected: Command Role Assignment's personnel picker shows a roster-sourced qualification hint for a matched person. Resource Request's Assign modal offers a roster-sourced quick-pick that populates the Assigned-to field, without replacing the existing free-text input.
-live: pass — `npx playwright test e2e/personnel-roster-reference-data.spec.ts -g "qualification hint"` → 1 passed; `npx playwright test e2e/personnel-roster-reference-data.spec.ts -g "roster quick-pick"` → 1 passed
+### 1. Compose a public alert via IPAWS — Channels checkboxes are visually discoverable
+expected: Opening Compose Notification and reaching Step 2 shows the Channels group (SMS/Email/IPAWS) as 3 clearly separated, vertically stacked checkboxes — not crammed onto one line with the "Draft with AI" button. Selecting IPAWS reveals 6 CAP fields (Sender/Event/Urgency/Severity/Certainty/Area); Continue is blocked until all are filled.
+live: pass — `npx playwright test e2e/notification-provider-cap-delivery.spec.ts -g "Selecting IPAWS reveals CAP fields"` → 1 passed, including the boundingBox assertion added by gap-closure plan 09-05 (verticalGap between IPAWS checkbox and "Draft with AI" button > 8px); screenshot captured this session (`.pivota/uat-shots/1-compose-step2.png`) shows the 3 checkboxes on visually distinct stacked lines with clear separation from the button
 result: pass
 
 ## Summary
 
-total: 9
-passed: 8
-issues: 1
+total: 1
+passed: 1
+issues: 0
 pending: 0
 skipped: 0
 
 ## Self-Check
 
-boot: 200 (backend 8080 returned 404 on `/` — expected, API-only root per `error_code:"NOT_FOUND","message":"Frontend build not found."` in dev mode; frontend 5173 returned 200)
-data: all preconditions present — seeded HRIS roster fixture (2 records, 1 matched/1 unmatched) and 3 pre-seeded notifications (including one on the IPAWS+Email channel) already existed from `npm run seed`; no additional seeding needed
-routes_probed: 10 ok / 0 failed (GET /api/v1/integrations/hris/personnel, GET /api/v1/admin/integration-health, POST .../notification-providers/send ×4 variants, GET .../delivery-status ×2, GET /api/v1/_test/notification-retry-sweep ×5)
-cookie: n/a — this app uses sessionStorage-held Bearer JWTs, never cookies (confirmed via source inspection of session.ts/api-client.ts); no SameSite/iframe exposure exists for this auth mechanism
-browser_urls: none — scanned HRIS personnel response, integration-health response, CAP XML envelope, and the frontend's main document/bundle for absolute URLs; zero internal-host (minio/db/compose-service-name) references found in anything the browser receives
-documented_limitations: none found — no "known limitation" markdown sections reference Phase 9's flows
-repairs: none — self-check made no changes to the running instance's persisted state. (A Keycloak client setting, `directAccessGrantsEnabled`, was toggled true→false→true→false purely to mint auth tokens for API probing via curl, then reverted to its original committed-config value before any probe concluded; this is Keycloak admin-console configuration, not application data or code, leaves zero git diff, and matches `backend/keycloak/epmp-realm.json`'s own committed value.)
+boot: 200 (frontend 5173; backend 8080 serving API, 404 on `/` in dev mode — expected, SPA served separately in dev)
+data: all preconditions present — spawned data-doctor, confirmed `commander@epmp.local`/`planner@epmp.local` + seeded "UAT-NOTIFY Default Agency residents" recipient group already exist; re-ran `npm run seed`, 0 rows inserted (idempotent, confirms no drift from fresh boot)
+routes_probed: n/a — single visual/UX test, no new HTTP flow beyond what the live Playwright run already drove
+cookie: n/a — app uses sessionStorage-held Bearer JWTs (Keycloak OIDC), never cookies; no SameSite/iframe exposure for this auth mechanism
+browser_urls: none — 0b client-config scan (surfaces B/D/E) found zero client-exposed env vars, zero in-source fallbacks, zero runtime client-config templates; scan returned `gaps=0 advisories=0`
+documented_limitations: none found — 0b markdown scan found no "known limitation" sections referencing Phase 9 flows
+repairs: none — baseline HEAD clean before this session (only this session's own UAT.md edit was dirty); no ledger entries; nothing hand-repaired
+deploy_check: FAIL (D4 run) — see `## Gaps` below. All other deploy-check lines passed: D3 profile.port/healthPath/size/database, C1 healthz, C2 env-example, C3 dockerfile-secrets, D1 build, D2 image-user, D7 trivy (no fixable CRITICAL vulnerabilities). Re-ran independently a second time (`--no-trivy`, faster) to confirm reproducibility before recording as a gap — same FAIL both times, deterministic.
 per_test:
   - test: 1
     verdict: pass
-    note: "🤖 Auto-check: Playwright spec + direct curl both confirm the CAP-fields gate (422 CAP_FIELDS_INCOMPLETE) fires before any dispatch."
-    confidence: proven
-  - test: 2
-    verdict: pass
-    note: "🤖 Auto-check: real CAP 1.2 XML persisted to cap_alert_records with all required OASIS fields (identifier/sender/sent/status/scope/category/event/urgency/severity/certainty/area), confirmed by direct Postgres read."
-    confidence: proven
-  - test: 3
-    verdict: pass
-    note: "🤖 Auto-check: is_cap_send correctly reads false for a non-IPAWS send, proving the Badge condition is genuinely conditional, not always-on."
-    confidence: proven
-  - test: 4
-    verdict: pass
-    note: "🤖 Auto-check: both Everbridge (offline, error_count:1) and IPAWS (online) rows are independently queryable and distinguishable via the real integration-health API."
-    confidence: proven
-  - test: 5
-    verdict: pass
-    note: "🤖 Auto-check: drove the real retry-sweep test-injection route 5 times, confirmed retry_count reached 6 (past the 4-failure threshold) and notification_delivery_status flipped to Failed with a non-empty failure_reason via direct DB read — never silently dropped, never shown as sent."
-    confidence: proven
-  - test: 6
-    verdict: pass
-    note: "🤖 Auto-check: proved BOTH halves of the bypass defense live — an approver with no approval fields gets 400, and a non-approver role gets 403 — closing the direct-API-bypass threat the phase's own threat model names."
-    confidence: proven
-  - test: 7
-    verdict: pass
-    note: "🤖 Auto-check: HRIS endpoint returns exactly the matched/unmatched fixture the phase's SUMMARY describes; integration-health independently confirms HRIS is its own declared record_authority."
-    confidence: proven
-  - test: 8
-    verdict: pass
-    note: "🤖 Auto-check: structural grep across backend/src confirms zero write route for personnel_roster exists at all — not merely unused, genuinely absent."
-    confidence: proven
-  - test: 9
-    verdict: pass
-    note: "🤖 Auto-check: both Playwright assertions (qualification hint, roster quick-pick) pass against the real roster backend."
+    note: "🤖 Auto-check: the live Playwright spec (re-run fresh this session, not cited from a prior report) confirms the fix is live and passing, including gap-closure plan 09-05's own boundingBox assertion. A fresh screenshot (not reused from a prior round) independently confirms the visual separation by direct observation: the 3 Channels checkboxes render on clearly distinct stacked lines with visible gaps between them and before the 'Draft with AI' button."
     confidence: proven
 
 ## Gaps
 
-- truth: "Selecting IPAWS in Compose Notification Step 2 is visually discoverable — a user can see and pick the IPAWS channel checkbox"
+- truth: "The Phase 9 repository (with all 5 plans, including gap-closure 09-05, landed) deploys as it stands — a cold container started the way the deployer starts it (only PORT set, no DATABASE_URL/NATS_URL/OPA_URL) comes up and answers its health check"
   status: failed
-  reason: "User reported: Found Compose, but no IPAWS channel option. Diagnosed: the IPAWS checkbox DOES exist and IS functional (confirmed via Playwright: 3 checkboxes present, labeled SMS/Email/IPAWS, selecting it correctly reveals the 6 CAP fields and the backend correctly rejects/accepts sends accordingly) — this is a visual-discoverability defect, not a missing feature. Checkbox.tsx's `.ep-checkbox` class is `display: inline-flex` with no wrapping container providing spacing between siblings; ComposeNotification.tsx renders the 3 channel Checkboxes directly adjacent to the 'Draft with AI' Button with zero gap/margin between them (screenshot: /tmp/diag-step2.png, captured during this verification). The three checkboxes and the button render crammed onto a single visually-undifferentiated line, so IPAWS reads as decoration beside the button rather than a selectable option a user would click on first glance."
+  reason: "Deploy check (self_check, DEPLOY-01 D4 run): `docker run` with only PORT set (no DATABASE_URL) exits code 1 almost immediately. Backend log shows the OPA-sync and NATS-connect failures at startup are correctly caught and logged as warnings (server.ts's own documented graceful-degradation try/catch blocks around both), but the crash itself is an UNCAUGHT rejection from `recordDocumentHealth()` in document-adapter.ts:441 — called with no surrounding try/catch directly from `documentRoutes()`'s registration body (document-adapter.ts:529, inside `if (!documentHealthRecorded) { ... await recordDocumentHealth('online'); }`), which itself is invoked via an unawaited `app.register(integrationGatewayRoutes)` in server.ts:61. Every sibling adapter in this same file (cad-adapter.ts, eoc-cots-adapter.ts, facility-adapter.ts, hazard-feed-adapter.ts, hris-roster-adapter.ts, notification-provider-adapter.ts) calls its own `record*Health()` only from inside a function that is itself called from a scheduler wrapped in server.ts's try/catch 'must never crash the server' blocks (documented explicitly in comments at server.ts:109/121/130/138/146/152/160/168/177) — document-adapter.ts is the ONE adapter that calls its health-record function directly and unconditionally at route-registration time, with zero error handling anywhere in the chain. Reproduced twice (full run with Trivy, and a faster --no-trivy re-run) with the identical crash — deterministic, not a flake."
+  severity: blocker
+  test: 1
+  source: self_check
+  confidence: proven
+  root_cause: "backend/src/modules/integration-gateway/document-adapter.ts:527-530 — `documentRoutes()`'s registration body calls `await recordDocumentHealth('online')` unconditionally (guarded only by the in-memory `documentHealthRecorded` flag, not by a try/catch), and `recordDocumentHealth()` (document-adapter.ts:441) runs a bare `query(...)` with no try/catch of its own. When DATABASE_URL is unset (the exact DEPLOY-01 D4 boot condition: only PORT set), `query()` throws ECONNREFUSED, which propagates uncaught through the unawaited `app.register(integrationGatewayRoutes)` call chain in server.ts:61 and crashes the Fastify process (exit code 1) before the health endpoint can ever bind."
+  artifacts:
+    - path: "backend/src/modules/integration-gateway/document-adapter.ts"
+      issue: "Lines 527-530: `await recordDocumentHealth('online')` called directly inside `documentRoutes()`'s registration body with no try/catch, unlike every other adapter in this file's own sibling modules (cad/eoc-cots/facility/hazard-feed/hris-roster), each of which only reaches its record*Health() call from inside a scheduler already wrapped in server.ts's graceful-degradation try/catch."
+    - path: "backend/src/server.ts"
+      issue: "Line 61: `app.register(integrationGatewayRoutes)` — not awaited, and not inside a try/catch the way the NATS/OPA/every scheduler-start block above it is (lines 97-179). A throw during this plugin's registration (which document-adapter.ts's eager health-record call can now produce) has no graceful-degradation path to land in."
+  missing:
+    - "Wrap the `await recordDocumentHealth('online')` call at document-adapter.ts:527-530 in a try/catch that logs a warning and swallows the error (`app.log.warn(err, 'Document adapter health record failed at startup — integration_health row not yet populated')`), matching this codebase's own established convention used everywhere else in server.ts's start() function and every sibling adapter's health-record call path. Single localized change — no changes needed to recordDocumentHealth() itself, routes.ts, or server.ts."
+  debug_session: ".planning/debug/phase9-deploy-check-d4-crash.md"
+
+## Gaps (historical, closed)
+
+- truth: "Selecting IPAWS in Compose Notification Step 2 is visually discoverable — a user can see and pick the IPAWS channel checkbox"
+  status: closed
+  reason: "Closed by gap-closure plan 09-05 (verified in prior round's 09-VERIFICATION.md, re-confirmed live this round via a fresh Playwright run and a fresh screenshot — see test 1 above)."
   severity: minor
   test: 1
   source: user
   confidence: proven
-  root_cause: "frontend/app/src/pages/notifications/ComposeNotification.tsx's Channels section (~line 454-462) renders CHANNEL_OPTIONS.map(...) directly followed by the 'Draft with AI' Button with no wrapping element providing layout separation; Checkbox.css's .ep-checkbox is `display: inline-flex` with no default margin, so adjacent Checkboxes (and the following Button) collapse onto one dense line in the rendered Card."
-  artifacts:
-    - path: "frontend/app/src/pages/notifications/ComposeNotification.tsx"
-      issue: "Channels checkboxes (lines ~454-462) have no wrapping div/className providing gap or block layout before the adjacent 'Draft with AI' Button (line 504)"
-    - path: "frontend/design-system/src/forms/Checkbox.css"
-      issue: "`.ep-checkbox` is inline-flex only; relies entirely on a parent layout to provide spacing between sibling checkboxes, which this one caller does not supply"
-  missing:
-    - "Wrap the Channels checkbox group in a container with vertical stacking (flex-direction: column, gap: var(--space-2)) or add explicit spacing/margin between the checkbox group and the 'Draft with AI' button so IPAWS is visually distinct and easy to locate"
-  debug_session: ""
-  redrive: closed (re-driven)
-  redrive_evidence: |
-    Plan 09-05 added a Playwright boundingBox() assertion to
-    notification-provider-cap-delivery.spec.ts test 1 (verticalGap between
-    the IPAWS checkbox and the "Draft with AI" button must exceed 8px). Its
-    commit order (test authored after the fix commit) meant it was never
-    observed red during execution, so execute-phase's gap_redrive step
-    reconstructed that observation directly: temporarily reverted
-    ComposeNotification.tsx to its pre-09-05 state (git show 2c22e18^),
-    confirmed Vite HMR served the reverted (crammed) layout, and re-ran the
-    new assertion — it failed exactly as expected:
-      Expected: > 8
-      Received: -24
-    (a negative gap means the checkbox and button actually overlapped in
-    the pre-fix layout, consistent with the user's "crammed onto one line"
-    report). Restored the fix (working tree returned to a clean git diff),
-    confirmed Vite HMR served the fixed layout again, and re-ran the full
-    spec: 5/5 passed, including the same assertion now green. Gap closed,
-    with a reproduction now proven red-then-green rather than asserted.
+  redrive: closed (re-driven, see 09-VERIFICATION.md)
