@@ -1,0 +1,21 @@
+{
+  "duration_secs": 354.0,
+  "token_usage": {
+    "input": 56,
+    "output": 15229,
+    "total": 2386740,
+    "cache_read": 2274018,
+    "cache_write": 97437,
+    "cost": 0.8507981000000001
+  },
+  "model": "claude-sonnet-5",
+  "files_changed": [
+    ".planning/REQUIREMENTS.md",
+    ".planning/STATE.md"
+  ],
+  "verification_status": "passed",
+  "error_message": null,
+  "attempt_number": 5,
+  "created_at": "2026-11-21T11:02:15.065841+00:00",
+  "completed_at": "2026-11-21T11:08:09.738455829+00:00"
+}
