@@ -42,7 +42,7 @@ against a real vendor's live uptime, a real API key, or a real third-party netwo
 
 - [x] **Phase 7: Operating-Picture Read Overlays (Weather & Dispatch)** - Weather/hazard and CAD/911 dispatch data appear as read-only, provenance-tagged overlays on the Operating Picture and incident workspace, via deterministic adapter stubs following F11's exact pattern (completed 2026-11-20)
 - [x] **Phase 8: Record-Authority & Sync Integrations** - EOC COTS and asset/facility/document data integrate with explicit record-authority declarations and human-resolved conflict surfacing — never a silent overwrite (completed 2026-11-20)
-- [ ] **Phase 9: Alerting & Identity Integrations** - Approved notifications route through a simulated public-alerting provider under F5's existing approval rule, and HR/IAM roster data syncs read-only into command-role and resource-request matching
+- [x] **Phase 9: Alerting & Identity Integrations** - Approved notifications route through a simulated public-alerting provider under F5's existing approval rule, and HR/IAM roster data syncs read-only into command-role and resource-request matching (completed 2026-11-21)
 
 ## Phase Details
 
@@ -118,4 +118,4 @@ Phases execute in numeric order: 7 → 8 → 9 (continuing from v1.0's completed
 |-------|----------------|--------|-----------|
 | 7. Operating-Picture Read Overlays (Weather & Dispatch) | 0/TBD | Complete | 2026-11-20 |
 | 8. Record-Authority & Sync Integrations | 6/6 | Complete | 2026-11-20 |
-| 9. Alerting & Identity Integrations | 5/6 | In progress | - |
+| 9. Alerting & Identity Integrations | 6/6 | Complete | 2026-11-21 |
