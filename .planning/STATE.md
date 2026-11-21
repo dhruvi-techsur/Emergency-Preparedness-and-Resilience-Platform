@@ -2,17 +2,17 @@
 pivota_spec_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
-current_plan: 10 (phase has only 4 plans; counter stays at last value per advance-plan's last_plan edge case)
-status: phase_complete
-stopped_at: Phase 9 verified passed (6/6 truths) — execute-phase run complete
-last_updated: "2026-11-21T11:10:00.000Z"
+current_plan: 10 (phase has only 4 original + 1 gap-closure plan; counter stays at last value per advance-plan's last_plan edge case)
+status: verifying
+stopped_at: Completed 09-06-PLAN.md (DEPLOY-01 D4 cold-boot crash fix, gap-closure)
+last_updated: "2026-11-21T17:39:51.047Z"
 last_activity: 2026-11-21
 progress:
   total_phases: 3
   completed_phases: 3
-  total_plans: 19
-  completed_plans: 19
-  percent: 100
+  total_plans: 20
+  completed_plans: 20
+  percent: 67
 ---
 
 # Project State
@@ -31,6 +31,8 @@ Current Plan: 10 (phase has only 4 original + 1 gap-closure plan; counter stays 
 Total Plans in Phase: 5 (09-01 through 09-04, plus gap-closure plan 09-05)
 Status: All 5 plans of Phase 9 complete (09-01/09-02 wave 1 parallel, 09-03/09-04 wave 2 parallel, 09-05 gap-closure). UAT gap ref 1 (minor) closed and re-verified via reproduced red-then-green evidence. Gate (build/test/boot/browser-suite) green, code review clean (0 blockers), security re-audit SECURED (0 confirmed HIGH/CRITICAL). execute-phase run (--no-transition) complete — this was the external-orchestrator (Pivota card) invocation; all artifacts were already in place from the prior execution/verification round, so this run re-confirmed gate evidence and closed out requirements traceability.
 Last Activity: 2026-11-21
+
+Plan 09-06 (this phase, gap-closure): see 09-06-SUMMARY.md for full detail. Fixed the single confirmed UAT blocker carried over from the prior round: `documentRoutes()`'s registration-time `recordDocumentHealth('online')` call (document-adapter.ts) was the ONE unguarded, registration-time DB call in the entire backend/src tree — with `DATABASE_URL` unset (the DEPLOY-01 D4 cold-boot contract), its bare `query()` call threw an uncaught `AggregateError [ECONNREFUSED]` that propagated through the unawaited `app.register()` call and crashed the process with exit code 1 before `/healthz` could bind. Fixed with a single localized try/catch + `app.log.warn`, matching the identical graceful-degradation pattern every scheduler-start block in server.ts's `start()` already uses — no changes to `recordDocumentHealth()`, `routes.ts`, or `server.ts`. Verified against the exact failing scenario: cold `docker run` with only `PORT=8080` set now stays `running` and `GET /healthz` returns 200; `pivota-deploy-check.cjs`'s D4 line (previously the sole failure) now passes, with all other D/C lines unaffected. Two new regression tests added (happy-path `integration_health` confirmation + structural try/catch assertion, mirroring 09-SECURITY.md's own grep-based-proof precedent). Zero deviations. Full backend suite (24 files, 173 tests) zero regression (confirmed on 2 consecutive clean runs after one pre-existing, unrelated test-isolation flake in `field-reports.test.ts`); `tsc --noEmit` and both builds (backend + frontend/app) clean. This was Phase 9's final outstanding gap-closure item.
 
 Plan 09-05 (this phase, gap-closure): see 09-05-SUMMARY.md for full detail. Closed UAT gap ref 1 (minor): Compose Notification Step 2's Channels checkboxes (SMS/Email/IPAWS) were rendering crammed onto one undifferentiated line immediately adjacent to the "Draft with AI" button (`.ep-checkbox` is `display: inline-flex` with no sibling spacing), making IPAWS read as decoration beside the button rather than a selectable option on first glance. Fixed with a page-local inline-style flex-column wrapper (`display:flex, flexDirection:column, gap:var(--space-2), marginBottom:var(--space-4)`) around the existing `CHANNEL_OPTIONS.map(...)` Checkbox list, matching the exact convention already used in `IntegrationHealth.tsx`/`RecordAuthority.tsx`/`SsoConfigForm.tsx`/`ApiClients.tsx` — no new CSS class or design-system component, and `Checkbox.css` untouched to avoid affecting any other page's standalone-checkbox spacing. New Playwright bounding-box assertion in `notification-provider-cap-delivery.spec.ts` test 1 proves a measurable (>8px) vertical gap between the IPAWS checkbox and the "Draft with AI" button, measured in the UN-checked state to match the UAT reporter's literal pre-interaction complaint. Zero functional/behavioral change: channel selection, CAP-field gating, and Step 3 Review summary all untouched. Zero deviations — plan executed exactly as written. `tsc --noEmit`/`npm run build` (frontend/app) both clean; `notification-provider-cap-delivery.spec.ts` (5/5) and regression `notifications-compose.spec.ts` (9/9) both pass with zero failures.
 
@@ -203,6 +205,7 @@ Progress: [███████░░░] 67%
 | Phase 09-alerting-identity-integrations P04 | 18 min | 2 tasks | 8 files |
 | Phase 09-alerting-identity-integrations P03 | 24 min | 2 tasks | 5 files |
 | Phase 09 P05 | 14 min | 2 tasks | 2 files |
+| Phase 09-alerting-identity-integrations P06 | 20 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -397,6 +400,7 @@ Recent decisions affecting current work:
 - [Phase 09-alerting-identity-integrations]: [Phase 09-03]: CAP-send signal on Delivery Tracking sourced via a new additive is_cap_send boolean on the EXISTING GET /api/v1/notifications/:id/delivery-status response, not a new endpoint
 - [Phase 09-alerting-identity-integrations]: [Phase 09-03]: Added GET /api/v1/_test/notification-retry-sweep test-injection route (mirrors cad-adapter.ts's /_test/cad-forced-outage) so Playwright can deterministically drive the retry-sweep's 4th-failure Failed escalation without waiting for the real 5-minute scheduler
 - [Phase 09-05]: Fixed via page-local inline-style flex-column wrapper matching existing IntegrationHealth.tsx/RecordAuthority.tsx convention, not a Checkbox.css/design-system change — Avoids altering checkbox spacing on every other page that renders standalone Checkboxes without their own stacking wrapper
+- [Phase 09-alerting-identity-integrations]: Single localized try/catch at documentRoutes() registration-time health-stamp call site, no changes to recordDocumentHealth()/routes.ts/server.ts, restoring DEPLOY-01 D4 cold-boot compliance
 
 ### Pending Todos
 
@@ -408,6 +412,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-20T23:21:40.496Z
-Stopped at: Completed 09-05-PLAN.md
+Last session: 2026-11-21T17:39:51.045Z
+Stopped at: Completed 09-06-PLAN.md (DEPLOY-01 D4 cold-boot crash fix, gap-closure)
 Resume file: None
