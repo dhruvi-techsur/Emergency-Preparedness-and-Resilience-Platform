@@ -376,11 +376,33 @@ describe('notification-provider-adapter — approval bypass rejection, CAP compl
       .get(`/api/v1/notifications/${notificationId}/delivery-status`)
       .set('Authorization', `Bearer ${approverToken}`);
     expect(statusRes.status).toBe(200);
-    const matchedRecipient = statusRes.body.recipients.find(
-      (r: { name: string }) => r.name && recipientContact,
+
+    // The delivery-status API response carries name/channel/status —
+    // never recipient_contact — so it cannot disambiguate which specific
+    // recipient the callback targeted when a notification has more than
+    // one recipient (true here: the shared 'Notification Provider Test
+    // Responders' role accumulates one real user per describe-block in
+    // this file, same as every sibling adapter test file's find-or-insert
+    // convention). Assert directly against the same (notification_id,
+    // recipient_contact) key the callback route itself matches on
+    // (notification-provider-adapter.ts:483-488) — proving the SPECIFIC
+    // recipient this test called back for was flipped, not merely that
+    // *some* recipient on the notification reached Acknowledged.
+    const matchedStatusRows = await query<{ status: string }>(
+      `SELECT nds.status FROM notification_delivery_status nds
+       JOIN notification_recipients nr ON nr.id = nds.notification_recipient_id
+       WHERE nr.notification_id = $1 AND nr.recipient_contact = $2`,
+      [notificationId, recipientContact],
     );
-    expect(matchedRecipient).toBeDefined();
-    expect(matchedRecipient.status).toBe('Acknowledged');
+    expect(matchedStatusRows[0]).toBeDefined();
+    expect(matchedStatusRows[0].status).toBe('Acknowledged');
+
+    // Also confirm the API response surfaces at least one Acknowledged
+    // recipient for this notification, so the delivery-status route's own
+    // read path is exercised end-to-end (not just the underlying table).
+    expect(
+      statusRes.body.recipients.some((r: { status: string }) => r.status === 'Acknowledged'),
+    ).toBe(true);
   });
 
   it('9. an unmatched callback (nonexistent external_message_id) returns 200 and mutates no existing delivery-status row', async () => {
