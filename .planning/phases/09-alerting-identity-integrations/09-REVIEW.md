@@ -5,53 +5,44 @@ blockers: 0
 warnings: 0
 files_reviewed: 2
 files_reviewed_list:
-  - frontend/app/src/pages/notifications/ComposeNotification.tsx
-  - frontend/app/e2e/notification-provider-cap-delivery.spec.ts
-reviewed_at: 2026-11-20T23:30:00Z
+  - backend/src/modules/integration-gateway/document-adapter.ts
+  - backend/src/modules/integration-gateway/facility-document-adapter.test.ts
+reviewed_at: 2026-11-21T17:43:51Z
 iteration: 1
 ---
 
 # Phase 9 Code Review
 
-**Scope note:** This is a `--gaps-only` re-review covering only plan 09-05's three commits (`2c22e18`, `1e362ed`, `1b165b3`), a UAT gap-closure fixing checkbox spacing on Compose Notification's Step 2. Plans 09-01 through 09-04 were already reviewed and shipped as `clean`; they are out of scope here and were not re-read.
+Scope note: this is a gap-closure run (`--gaps-only`) executing only 09-06-PLAN.md against commits `d883e40`/`5cb2028` (range `d3d3159..HEAD`). Plans 09-01 through 09-05 were reviewed in prior sessions and are out of scope here. Confirmed via `git log d3d3159..HEAD -- .` that the only implementation files touched in this range are the two listed above; all other changed paths in the diff (`.planning/ROADMAP.md`, `.planning/STATE.md`, `09-06-PLAN.md`, `09-06-SUMMARY.md`, `09-GATE.md`, `09-SECURITY.md`, `logs/attempt-7/*`) are planning/docs artifacts, not implementation, per the task instructions.
 
 ## BLOCKERs
 
-None found.
+None.
 
 ## WARNINGs
 
-None found.
+None.
 
-## Analysis
+## Findings detail
 
-### `ComposeNotification.tsx` (2c22e18)
+**document-adapter.ts (lines 527-537):** The previously-unguarded `await recordDocumentHealth('online')` call inside `documentRoutes()`'s registration body is now wrapped in try/catch, logging via `app.log.warn(err, ...)` and swallowing the error. This is a 1:1 structural match to the established graceful-degradation convention used elsewhere in this codebase (e.g. `gis-adapter.ts`'s `checkGisHealth()`, and every scheduler-start try/catch block in `server.ts`'s `start()` function). Verified:
+- `server.ts:61` calls `app.register(integrationGatewayRoutes)` unawaited inside `buildApp()` (a synchronous function) — confirming the plan's claimed crash mechanism (an uncaught rejection inside a registered plugin's async body propagates to an unhandled rejection at the process level) is real and not fabricated.
+- `documentHealthRecorded` is still set to `true` *before* the guarded call (unchanged from before) — matches the plan's stated "never retry on next hot-reload" semantics; this is pre-existing behavior, not newly introduced by this diff, and is explicitly documented as intentional in both the plan and the code comment.
+- No other call site touches `recordDocumentHealth` or the `documentHealthRecorded` flag — the change is fully localized, no action-at-a-distance.
+- `recordDocumentHealth()` itself, `routes.ts`, and `server.ts` are untouched, exactly as the plan specifies.
+- `cd backend && npx tsc --noEmit` — clean (0 errors).
 
-The Channels `CHANNEL_OPTIONS.map(...)` Checkbox list is now wrapped in a `<div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>`. Verified:
+**facility-document-adapter.test.ts (2 new tests, lines 327-366):**
+- Test 13 (happy path): queries `integration_health WHERE system_name = 'SharePoint'` and asserts `record_authority = 'SharePoint'` and `sync_status` in `['online','offline']`. This correctly proves the happy-path write is unaffected by the new try/catch (relies on the shared `app` import at module load already having triggered `documentRoutes()` registration against the live compose DB — same established pattern this file's other 12 tests already use). No other test file writes to `integration_health WHERE system_name = 'SharePoint'`, so no cross-test race.
+- Structural test (lines 359-366): reads `document-adapter.ts` source directly and regex-asserts the try/catch wraps `recordDocumentHealth('online')` between the `if (!documentHealthRecorded)` and the first `app.get(` call. Checked the regex (`/try\s*{[\s\S]*recordDocumentHealth\('online'\)[\s\S]*}\s*catch/`) against the actual current source slice — matches correctly; the slice boundary (`fixtureSource.indexOf('app.get(', ...)`) correctly terminates before the first route registration, so it won't accidentally span unrelated code. The comment accurately explains why a true live-failure re-trigger isn't attempted (shared `documentHealthRecorded` flag + pool singleton), and this reasoning holds up — there genuinely is no DI seam in `document-adapter.ts` to swap the query client without widening the module's public surface, which the plan explicitly says not to do.
+- `readFile`/`import.meta.url` resolution: `backend/package.json` has `"type": "module"`, vitest runs in Node ESM mode, so `import.meta.url` resolves correctly relative to the test file's own directory (same directory as `document-adapter.ts`) — no path resolution issue.
 
-- `--space-2` (8px) and `--space-4` (16px) are real tokens defined in `frontend/design-system/tokens/tokens.css:279,281` — not invented values. Inline-style token references via `var(--token)` are an established pattern already used identically elsewhere in this same directory (`IntegrationHealth.tsx`/`RecordAuthority.tsx`/`SsoConfigForm.tsx`/`ApiClients.tsx`, confirmed by grep of the broader frontend codebase for the same `var(--space-N)` inline-style convention).
-- `Checkbox.tsx`/`Checkbox.css` render each option as an `inline-flex` `<label>` with its own internal `gap: var(--space-2)` between box and text — the new wrapper's `flex-direction: column` + `gap` operates one level up, stacking the three `<label>` elements vertically without touching `.ep-checkbox`'s own internal layout. No CSS specificity collision; the wrapper is a plain unstyled div with inline styles only, no class name reused elsewhere.
-- The wrapper's `marginBottom: var(--space-4)` sits between the checkbox group and whichever element renders next — either the conditional `CAP public-alert fields` `Card` (when IPAWS is checked) or directly the `Draft with AI` `Button` (when it isn't). Both of those elements are self-contained components (`Card`/`Button`) with their own no-margin box models, so the new wrapper's margin is the only vertical separator introduced — no double-margin or collapsed-margin interaction identified.
-- No change to `toggleChannel`, `channels` state, the CAP-field gating `if` block (`handleContinueFromStep2`), or the Step 3 Review summary (`Array.from(channels).join(', ')`) — confirmed by diff: only the JSX wrapper changed, logic is byte-identical.
-- `tsc --noEmit` run directly against the frontend project: exit clean, zero errors.
-
-### `notification-provider-cap-delivery.spec.ts` (1e362ed)
-
-New assertion block inserted into test 1, after Step 2 becomes visible and before IPAWS is checked:
-- `getByLabel('IPAWS', { exact: true })` — verified the Channels `Checkbox` usage (line 464 in the modified file) has no `required` prop, so `Checkbox.tsx`'s label is the bare string `'IPAWS'` with no appended marker, making `exact: true` a correct match (the file's own existing tests already document why `exact:true` is wrong for the CAP fields below, which DO have `required` — this new assertion correctly uses `exact:true` only where that caveat doesn't apply).
-- `getByRole('button', { name: 'Draft with AI' })` — only one such button exists on Step 2 in this component tree at the point this assertion runs (confirmed via read of the full file: no other `Draft with AI`-labeled control exists).
-- The gap arithmetic (`draftWithAiButtonBox.y - (ipawsCheckboxBox.y + ipawsCheckboxBox.height)`) is the correct formula for vertical separation between two boxes where the second renders below the first — consistent with the new flex-column layout (IPAWS is the 3rd/last checkbox, Draft with AI renders after it).
-- `playwright test --list` against this spec parses all 5 tests successfully, confirming no syntax/import break was introduced.
-- The two other e2e specs that touch `ComposeNotification.tsx` (`notifications-compose.spec.ts`, `incident-to-evidence-trail.spec.ts`) do not interact with the Channels checkboxes at all (grepped for `Channel|IPAWS|SMS|Email` — no hits), so this layout change carries no regression risk to those suites.
-
-### Contract-scan c-gap disposition (re-verified, not re-filed)
-
-Re-confirmed independently (not taken on faith): `git show --name-only` across all three of plan 09-05's commits (`2c22e18`, `1e362ed`, `1b165b3`) contains neither `SignInCallback.tsx` nor `backend/src/modules/auth-org/routes.ts`; a direct `git diff --name-only` across the full Phase-9 commit range for those two specific paths returns empty. The c-gap `GET /api/v1/auth/sso/callback` flagged by the scanner is unchanged by this gap-closure plan and was already correctly dispositioned as a false positive (method-casing scanner artifact; both sides are POST) in the original 09-REVIEW.md. Per the scope note, it is not re-filed here.
+Both tests are read-only against `integration_health`/filesystem respectively; neither mutates shared state in a way that could destabilize the other 12 pre-existing tests in the same file.
 
 ## Cross-file seams checked
 
-- `ComposeNotification.tsx`'s Channels checkbox wrapper styles ↔ `Checkbox.css`'s own internal `.ep-checkbox` layout — no specificity/class collision, wrapper is unstyled inline-only. OK.
-- `ComposeNotification.tsx`'s Channels checkbox group ↔ its only two e2e consumers that exercise it (`notification-provider-cap-delivery.spec.ts` test 1 new assertion; `notifications-compose.spec.ts`/`incident-to-evidence-trail.spec.ts` do not touch Channels at all). OK.
-- `var(--space-2)`/`var(--space-4)` references (new inline styles) ↔ `tokens.css` definitions (8px/16px respectively) — tokens exist, no invented/undefined CSS variable. OK.
-- New Playwright `getByLabel('IPAWS', { exact: true })` assertion ↔ `Checkbox.tsx`'s label-rendering (no `required` marker appended for this field) — exact match is correct. OK.
-- c-gap `GET /api/v1/auth/sso/callback` (SignInCallback.tsx / auth-org/routes.ts) — independently re-verified untouched by 09-05's three commits; already dispositioned false-positive in prior review, not re-filed. OK, no new finding.
+- `document-adapter.ts`'s `documentRoutes` export ↔ `routes.ts:11,40` consumer — signature unchanged (`documentRoutes(app: FastifyInstance)`), registration call site untouched. OK.
+- `document-adapter.ts`'s `recordDocumentHealth` (private, non-exported) ↔ only call site is the one now-guarded line inside `documentRoutes()` — OK, no other consumer exists to break.
+- `facility-document-adapter.test.ts`'s new `readFile` import ↔ only used by the one new structural test — OK, no collision with existing imports in the file.
+- Contract-scan `c-gap` (SignInCallback.tsx → `/api/v1/auth/sso/callback`): confirmed via `git log d3d3159..HEAD -- frontend/app/src/pages/SignInCallback.tsx` — zero commits in this diff range. This file and its backend route are untouched by 09-06. Pre-existing, out of scope for this gap-closure plan's review — not carried into this report as a new finding, but flagged here so it isn't silently dropped; it should be tracked against whichever phase actually introduced it.
+- Contract-scan `c-adv` (api-client.ts dynamic path for `/photos`): same disposition — unrelated to 09-06's two touched files, zero commits touching `api-client.ts` in this diff range. Not carried forward as a 09-06 finding.
