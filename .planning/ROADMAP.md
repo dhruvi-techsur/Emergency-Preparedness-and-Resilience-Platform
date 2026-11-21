@@ -89,7 +89,7 @@ Plans:
 
 ### Phase 9: Alerting & Identity Integrations
 **Goal**: Communications staff can route approved notifications through a deterministic Everbridge/AtHoc-class provider stub (with CAP-formatted public-alert representation) under the exact same named-person-approval rule F5 already enforces, and personnel roster/qualification data syncs read-only from a deterministic HR/IAM adapter stub into resource-request matching and command-role assignment — so no public alert and no roster-sourced assignment can ever happen without a human decision, and no stub provider outage silently drops a message.
-**Status**: Failed
+**Status**: In progress
 **Depends on**: Phase 4 (F5 Notifications Integration domain), Phase 1 (F16-SSO's existing IAM integration)
 **Requirements**: F14, F16-roster
 **Success Criteria** (what must be TRUE):
@@ -115,4 +115,4 @@ Phases execute in numeric order: 7 → 8 → 9 (continuing from v1.0's completed
 |-------|----------------|--------|-----------|
 | 7. Operating-Picture Read Overlays (Weather & Dispatch) | 0/TBD | Complete | 2026-11-20 |
 | 8. Record-Authority & Sync Integrations | 6/6 | Complete | 2026-11-20 |
-| 9. Alerting & Identity Integrations | 0/4 | Failed | - |
+| 9. Alerting & Identity Integrations | 0/4 | In progress | - |
