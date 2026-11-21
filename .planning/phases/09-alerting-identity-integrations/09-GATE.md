@@ -3,14 +3,14 @@ phase: 09
 gate_status: passed
 build_command: "rc=0; (npm run build) || rc=$?; (cd frontend/app && npx tsc --noEmit && npm run build) || rc=$?; exit $rc"
 test_command: "npm test"
-last_updated: 2026-11-21T17:41:18Z
+last_updated: 2026-11-21T17:50:23Z
 tests_disabled_during_fixes: none
 shadowed_sources: 0
 review_blockers_open: 0
 boot_smoke: pass
 browser_suite: pass
-browser_headroom_mb: 5089
-browser_headroom_naive_mb: 1526
+browser_headroom_mb: 4837
+browser_headroom_naive_mb: 821
 waves:
   - wave: 1
     build: pass
