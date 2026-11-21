@@ -1554,3 +1554,51 @@ __GATE__ build_exit=0 test_exit=0 build_cmd=[npm run build] test_cmd=[npm test] 
 [2m   Duration [22m 3.80s[2m (transform 583ms, setup 80ms, import 4.94s, tests 4.60s, environment 1ms)[22m
 
 ```
+
+## Backend pre-push gate
+
+- Status: passed
+- Result marker + failing output tail:
+```
+__GATE__ build_exit=0 test_exit=0 build_cmd=[npm run build] test_cmd=[npm test] head=715e2b08e42c6f7e81a7b934c0f42db69703a061 test_files=64 skip_marks=0 shadow_files=0 untested=0
+{"level":30,"time":1795283922688,"pid":129005,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-4","req":{"method":"POST","url":"/api/v1/ai-drafts","host":"127.0.0.1:45739","remoteAddress":"127.0.0.1","remotePort":33420},"msg":"incoming request"}
+{"level":30,"time":1795283922690,"pid":129005,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-4","res":{"statusCode":200},"responseTime":1.6148810000000253,"msg":"request completed"}
+{"level":30,"time":1795283922691,"pid":129005,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-5","req":{"method":"POST","url":"/api/v1/ai-drafts/ff83e976-9c2d-49b5-bca2-31ce1f336666/approve","host":"127.0.0.1:33451","remoteAddress":"127.0.0.1","remotePort":60564},"msg":"incoming request"}
+{"level":30,"time":1795283922693,"pid":129005,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-5","res":{"statusCode":200},"responseTime":1.699089000000015,"msg":"request completed"}
+{"level":30,"time":1795283922694,"pid":129005,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-6","req":{"method":"POST","url":"/api/v1/ai-drafts","host":"127.0.0.1:39283","remoteAddress":"127.0.0.1","remotePort":50558},"msg":"incoming request"}
+{"level":30,"time":1795283922697,"pid":129005,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-6","res":{"statusCode":200},"responseTime":2.1399260000000027,"msg":"request completed"}
+{"level":30,"time":1795283922697,"pid":129005,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-7","req":{"method":"POST","url":"/api/v1/ai-drafts/e8598cdc-a9ee-4e1e-9bb7-43d4a31f92df/discard","host":"127.0.0.1:33135","remoteAddress":"127.0.0.1","remotePort":42172},"msg":"incoming request"}
+{"level":30,"time":1795283922699,"pid":129005,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-7","res":{"statusCode":204},"responseTime":1.4601800000000367,"msg":"request completed"}
+ [32m✓[39m src/modules/ai-assist/ai-drafts.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 101[2mms[22m[39m
+{"level":30,"time":1795283922974,"pid":129018,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-1","req":{"method":"GET","url":"/api/v1/integrations/eoc-cots/health","host":"127.0.0.1:34293","remoteAddress":"127.0.0.1","remotePort":49122},"msg":"incoming request"}
+{"level":30,"time":1795283922979,"pid":129018,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-1","res":{"statusCode":200},"responseTime":4.335706000000016,"msg":"request completed"}
+{"level":30,"time":1795283922983,"pid":129018,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-2","req":{"method":"GET","url":"/api/v1/integrations/eoc-cots/conflicts","host":"127.0.0.1:45531","remoteAddress":"127.0.0.1","remotePort":35170},"msg":"incoming request"}
+{"level":30,"time":1795283922985,"pid":129018,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-2","res":{"statusCode":200},"responseTime":2.106193000000019,"msg":"request completed"}
+{"level":30,"time":1795283922992,"pid":129018,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-3","req":{"method":"POST","url":"/api/v1/integrations/eoc-cots/exchange-records","host":"127.0.0.1:35617","remoteAddress":"127.0.0.1","remotePort":32996},"msg":"incoming request"}
+{"level":30,"time":1795283922994,"pid":129018,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-3","res":{"statusCode":400},"responseTime":2.2896860000000174,"msg":"request completed"}
+ [32m✓[39m src/modules/integration-gateway/eoc-cots-adapter.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 97[2mms[22m[39m
+{"level":30,"time":1795283923258,"pid":129028,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-1","req":{"method":"POST","url":"/api/v1/integrations/eoc-cots/conflicts/93d16fbd-a6fd-489e-83f4-bb87c4447380/resolve","host":"127.0.0.1:35749","remoteAddress":"127.0.0.1","remotePort":52242},"msg":"incoming request"}
+{"level":30,"time":1795283923263,"pid":129028,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-1","res":{"statusCode":403},"responseTime":4.617064999999968,"msg":"request completed"}
+{"level":30,"time":1795283923267,"pid":129028,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-2","req":{"method":"POST","url":"/api/v1/integrations/eoc-cots/conflicts/8d0f9464-b877-4008-aab8-0eba647682ed/resolve","host":"127.0.0.1:36807","remoteAddress":"127.0.0.1","remotePort":56366},"msg":"incoming request"}
+{"level":30,"time":1795283923271,"pid":129028,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-2","res":{"statusCode":200},"responseTime":3.8419000000000096,"msg":"request completed"}
+{"level":30,"time":1795283923272,"pid":129028,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-3","req":{"method":"POST","url":"/api/v1/integrations/eoc-cots/conflicts/8d0f9464-b877-4008-aab8-0eba647682ed/resolve","host":"127.0.0.1:40669","remoteAddress":"127.0.0.1","remotePort":49676},"msg":"incoming request"}
+{"level":30,"time":1795283923274,"pid":129028,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-3","res":{"statusCode":404},"responseTime":1.7223920000000135,"msg":"request completed"}
+{"level":30,"time":1795283923276,"pid":129028,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-4","req":{"method":"POST","url":"/api/v1/integrations/eoc-cots/conflicts/447ad342-39ed-46be-b486-53d57d4ea54d/resolve","host":"127.0.0.1:33317","remoteAddress":"127.0.0.1","remotePort":52250},"msg":"incoming request"}
+{"level":30,"time":1795283923279,"pid":129028,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-4","res":{"statusCode":200},"responseTime":2.609807999999987,"msg":"request completed"}
+{"level":30,"time":1795283923280,"pid":129028,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-5","req":{"method":"POST","url":"/api/v1/integrations/eoc-cots/conflicts/00000000-0000-0000-0000-000000000000/resolve","host":"127.0.0.1:36519","remoteAddress":"127.0.0.1","remotePort":58094},"msg":"incoming request"}
+{"level":30,"time":1795283923282,"pid":129028,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-5","res":{"statusCode":404},"responseTime":1.5258340000000317,"msg":"request completed"}
+ [32m✓[39m src/modules/integration-gateway/eoc-cots-conflicts.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 94[2mms[22m[39m
+{"level":30,"time":1795283923553,"pid":129041,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-1","req":{"method":"GET","url":"/api/v1/_test/rbac-reporting-edit-probe","host":"127.0.0.1:35451","remoteAddress":"127.0.0.1","remotePort":48238},"msg":"incoming request"}
+{"level":30,"time":1795283923557,"pid":129041,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-1","res":{"statusCode":403},"responseTime":3.807905000000005,"msg":"request completed"}
+{"level":30,"time":1795283923560,"pid":129041,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-2","req":{"method":"GET","url":"/api/v1/_test/rbac-reporting-edit-probe","host":"127.0.0.1:45453","remoteAddress":"127.0.0.1","remotePort":50044},"msg":"incoming request"}
+{"level":30,"time":1795283923561,"pid":129041,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-2","res":{"statusCode":403},"responseTime":1.3610140000000115,"msg":"request completed"}
+{"level":30,"time":1795283923562,"pid":129041,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-3","req":{"method":"GET","url":"/api/v1/_test/rbac-reporting-edit-probe","host":"127.0.0.1:38341","remoteAddress":"127.0.0.1","remotePort":39974},"msg":"incoming request"}
+{"level":30,"time":1795283923564,"pid":129041,"hostname":"pivota-sandbox-4e42a5b7","reqId":"req-3","res":{"statusCode":200},"responseTime":1.2882769999999937,"msg":"request completed"}
+ [32m✓[39m src/modules/auth-org/rbac.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 87[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m24 passed[39m[22m[90m (24)[39m
+[2m      Tests [22m [1m[32m173 passed[39m[22m[90m (173)[39m
+[2m   Start at [22m 17:58:35
+[2m   Duration [22m 8.25s[2m (transform 228ms, setup 54ms, import 3.55s, tests 3.38s, environment 1ms)[22m
+
+```
